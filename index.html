@@ -518,7 +518,7 @@ function App(){
         if(agent.id==="audit"){setPaymentState("Reconciled");if(result.decisionChain)result.decisionChain.forEach(function(d){addAudit(agent.id,"["+d.reasonCode+"] "+d.agent+": "+d.decision,null)})}
         setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="complete";return n});addAudit(agent.id,result.summary||"Complete","pass");
       }
-      if(!aborted)setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"settled",results:allResults}):x})});
+      if(!aborted){setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"settled",results:allResults}):x})});var fs={};AGENTS.forEach(function(a){fs[a.id]="complete"});setAgentStatuses(fs)}
       setIsProcessing(false);
     };
     runAgents();
