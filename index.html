@@ -252,7 +252,7 @@ function simulateAgent(agentId,payment,vert,policies){
 
 function Tabs({tabs,active,onChange,accent}){
   return React.createElement("div",{style:{display:"flex",gap:"2px",borderBottom:"1px solid var(--border)",overflow:"auto",flexShrink:0,background:"var(--surface)",padding:"0 8px"}},
-    tabs.map(function(t){return React.createElement("button",{key:t.id,onClick:function(){onChange(t.id)},style:{padding:"11px 14px",border:"none",background:"transparent",fontFamily:"var(--m)",fontSize:"11px",fontWeight:600,color:active===t.id?accent:"var(--muted)",cursor:"pointer",letterSpacing:".5px",whiteSpace:"nowrap",borderBottom:"2px solid "+(active===t.id?accent:"transparent"),transition:"all .15s"}},t.label)})
+    tabs.map(function(t){return React.createElement("button",{key:t.id,onClick:function(){onChange(t.id)},style:{padding:"11px 14px",border:"none",background:"transparent",fontFamily:"var(--m)",fontSize:"12px",fontWeight:600,color:active===t.id?accent:"var(--muted)",cursor:"pointer",letterSpacing:".5px",whiteSpace:"nowrap",borderBottom:"2px solid "+(active===t.id?accent:"transparent"),transition:"all .15s"}},t.label)})
   );
 }
 
@@ -273,7 +273,7 @@ function SC({label,value,sub,color}){
 
 function Fld({label,children}){
   return React.createElement("div",null,
-    React.createElement("label",{style:{display:"block",fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",letterSpacing:".8px",marginBottom:"4px",fontWeight:600}},label),children);
+    React.createElement("label",{style:{display:"block",fontFamily:"var(--m)",fontSize:"10px",color:"var(--muted)",letterSpacing:".8px",marginBottom:"4px",fontWeight:600}},label),children);
 }
 
 function PipelineRow({statuses,selected,onSelect,isMobile}){
@@ -284,11 +284,11 @@ function PipelineRow({statuses,selected,onSelect,isMobile}){
         React.createElement("div",{onClick:function(){onSelect(a.id)},style:{flex:1,padding:isMobile?"7px 5px":"9px 7px",borderRadius:"8px",cursor:"pointer",minWidth:0,background:sel?a.color+"12":st==="running"?a.color+"06":"var(--surface)",border:"1.5px solid "+(sel?a.color:st==="running"?a.color+"50":"var(--border)"),transition:"all .2s",position:"relative",overflow:"hidden"}},
           st==="running"?React.createElement("div",{style:{position:"absolute",top:0,left:0,right:0,height:"2px",background:"linear-gradient(90deg,transparent,"+a.color+",transparent)",animation:"shimmer 1.5s infinite"}}):null,
           React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"4px",marginBottom:"2px"}},
-            React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:isMobile?"10px":"11px",color:a.color}},a.icon),
-            React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:isMobile?"7px":"8px",fontWeight:700,color:a.color,letterSpacing:".3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},a.name.toUpperCase()),
+            React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:isMobile?"11px":"13px",color:a.color}},a.icon),
+            React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:isMobile?"8px":"10px",fontWeight:700,color:a.color,letterSpacing:".3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},a.name.toUpperCase()),
             React.createElement("div",{style:{marginLeft:"auto",width:"6px",height:"6px",borderRadius:"50%",flexShrink:0,background:st==="complete"?"#10b981":st==="failed"?"#ef4444":st==="running"?a.color:"var(--border)",boxShadow:st==="running"?"0 0 8px "+a.color:"none",animation:st==="running"?"pulse 1s infinite":"none"}})
           ),
-          React.createElement("div",{style:{fontSize:isMobile?"8px":"9px",color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},st==="running"?"Processing...":st==="complete"?"Done":st==="failed"?"Blocked":a.role)
+          React.createElement("div",{style:{fontSize:isMobile?"9px":"10px",color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},st==="running"?"Processing...":st==="complete"?"Done":st==="failed"?"Blocked":a.role)
         ),
         i<AGENTS.length-1?React.createElement("span",{style:{color:st==="complete"?"#06d6a0":"var(--border)",fontFamily:"var(--m)",fontSize:"8px",flexShrink:0}},"\u25B8"):null
       );
@@ -300,7 +300,7 @@ function StateMachine({current}){
   var idx=STATES.indexOf(current);
   return React.createElement("div",{style:{display:"flex",gap:"3px",padding:"0 16px 8px",flexWrap:"wrap",flexShrink:0}},
     STATES.map(function(s,i){return React.createElement("div",{key:s,style:{display:"flex",alignItems:"center",gap:"2px"}},
-      React.createElement("span",{style:{padding:"2px 6px",borderRadius:"4px",fontFamily:"var(--m)",fontSize:"8px",fontWeight:600,background:i<=idx?"#10b98115":"var(--surface)",color:i<=idx?"#10b981":"var(--dim)",border:i===idx?"1px solid #10b98140":"1px solid transparent"}},s.toUpperCase()),
+      React.createElement("span",{style:{padding:"2px 6px",borderRadius:"4px",fontFamily:"var(--m)",fontSize:"9px",fontWeight:600,background:i<=idx?"#10b98115":"var(--surface)",color:i<=idx?"#10b981":"var(--dim)",border:i===idx?"1px solid #10b98140":"1px solid transparent"}},s.toUpperCase()),
       i<STATES.length-1?React.createElement("span",{style:{color:i<idx?"#10b981":"var(--border)",fontSize:"7px"}},"\u2192"):null
     )})
   );
@@ -313,17 +313,17 @@ function StackDiagram({selectedRail,intentSource,isMobile}){
     React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:"2px"}},
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
         React.createElement("div",{style:{width:"60px",fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)",textAlign:"right"}},"INTENT"),
-        React.createElement("div",{style:{flex:1,display:"flex",gap:"3px"}},INTENT_SOURCES.map(function(s){return React.createElement("div",{key:s.id,style:{flex:1,padding:"4px 3px",borderRadius:"4px",textAlign:"center",background:intentSource===s.id?s.color+"15":"var(--surface)",border:"1px solid "+(intentSource===s.id?s.color:"var(--border)")}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"7px",fontWeight:600,color:intentSource===s.id?s.color:"var(--muted)"}},s.name))}))
+        React.createElement("div",{style:{flex:1,display:"flex",gap:"3px"}},INTENT_SOURCES.map(function(s){return React.createElement("div",{key:s.id,style:{flex:1,padding:"4px 3px",borderRadius:"4px",textAlign:"center",background:intentSource===s.id?s.color+"15":"var(--surface)",border:"1px solid "+(intentSource===s.id?s.color:"var(--border)")}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"8px",fontWeight:600,color:intentSource===s.id?s.color:"var(--muted)"}},s.name))}))
       ),
       React.createElement("div",{style:{textAlign:"center",fontFamily:"var(--m)",fontSize:"9px",color:"#06d6a0",padding:"1px 0"}},"\u2193"),
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
         React.createElement("div",{style:{width:"60px",fontFamily:"var(--m)",fontSize:"8px",color:"#06d6a0",textAlign:"right",fontWeight:700}},"REVVYN"),
-        React.createElement("div",{style:{flex:1,padding:"6px 10px",borderRadius:"6px",background:"linear-gradient(135deg,#06d6a008,#a78bfa08)",border:"1.5px solid #06d6a040",textAlign:"center"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",fontWeight:700,color:"#06d6a0",letterSpacing:".5px"}},"GOVERNANCE \u00B7 CONTROL \u00B7 EXECUTION"))
+        React.createElement("div",{style:{flex:1,padding:"6px 10px",borderRadius:"6px",background:"linear-gradient(135deg,#06d6a008,#a78bfa08)",border:"1.5px solid #06d6a040",textAlign:"center"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"10px",fontWeight:700,color:"#06d6a0",letterSpacing:".5px"}},"GOVERNANCE \u00B7 CONTROL \u00B7 EXECUTION"))
       ),
       React.createElement("div",{style:{textAlign:"center",fontFamily:"var(--m)",fontSize:"9px",color:"#38bdf8",padding:"1px 0"}},"\u2193"),
       React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
         React.createElement("div",{style:{width:"60px",fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)",textAlign:"right"}},"RAILS"),
-        React.createElement("div",{style:{flex:1,display:"flex",gap:"2px",flexWrap:"wrap"}},RAILS.map(function(r){return React.createElement("div",{key:r.id,style:{flex:"1 0 0",minWidth:"50px",padding:"3px 2px",borderRadius:"4px",textAlign:"center",background:selectedRail===r.id?"#10b98110":"var(--surface)",border:"1px solid "+(selectedRail===r.id?"#10b981":"var(--border)")}},React.createElement("div",{style:{fontSize:"9px"}},r.icon),React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"6px",fontWeight:600,color:selectedRail===r.id?"#10b981":"#94a3b8"}},r.provider))}))
+        React.createElement("div",{style:{flex:1,display:"flex",gap:"2px",flexWrap:"wrap"}},RAILS.map(function(r){return React.createElement("div",{key:r.id,style:{flex:"1 0 0",minWidth:"50px",padding:"3px 2px",borderRadius:"4px",textAlign:"center",background:selectedRail===r.id?"#10b98110":"var(--surface)",border:"1px solid "+(selectedRail===r.id?"#10b981":"var(--border)")}},React.createElement("div",{style:{fontSize:"9px"}},r.icon),React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"7px",fontWeight:600,color:selectedRail===r.id?"#10b981":"#94a3b8"}},r.provider))}))
       )
     )
   );
@@ -477,46 +477,46 @@ function App(){
     var runAgents=async function(){
       var aborted=false;var allResults={};
       for(var ai=0;ai<AGENTS.length;ai++){
-        var agent=AGENTS[ai];
-        if(aborted||killActive){setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="skipped";return n});continue}
-        setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="running";return n});
-        setSelectedAgent(agent.id);addAudit(agent.id,agent.name+" activated",null);
-        if(agent.id==="governance")setPaymentState("Validated");
-        if(agent.id==="control")setPaymentState("Risk Assessed");
-        if(agent.id==="execution")setPaymentState("Routed");
+        var aid=AGENTS[ai].id;var aname=AGENTS[ai].name;
+        if(aborted||killActive){(function(id){setAgentStatuses(function(p){var n=Object.assign({},p);n[id]="skipped";return n})})(aid);continue}
+        (function(id){setAgentStatuses(function(p){var n=Object.assign({},p);n[id]="running";return n})})(aid);
+        setSelectedAgent(aid);addAudit(aid,aname+" activated",null);
+        if(aid==="governance")setPaymentState("Validated");
+        if(aid==="control")setPaymentState("Risk Assessed");
+        if(aid==="execution")setPaymentState("Routed");
 
         // Staggered delay to feel real
         await new Promise(function(r){setTimeout(r,800+Math.random()*700)});
 
-        var result=simulateAgent(agent.id,payment,vertical,policies);
-        allResults[agent.id]=result;
-        setAgentResults(function(p){var n=Object.assign({},p);n[agent.id]=result;return n});
+        var result=simulateAgent(aid,payment,vertical,policies);
+        allResults[aid]=result;
+        (function(id,res){setAgentResults(function(p){var n=Object.assign({},p);n[id]=res;return n})})(aid,result);
 
-        if(agent.id==="governance"){
+        if(aid==="governance"){
           if(result.approved===false){
-            setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="failed";return n});
-            addAudit(agent.id,"REJECTED \u2014 "+result.summary,"fail");
-            if(result.checks)result.checks.filter(function(c){return c.status==="fail"}).forEach(function(c){addAudit(agent.id,"\u2717 "+c.name+": "+c.detail,"fail")});
+            (function(id){setAgentStatuses(function(p){var n=Object.assign({},p);n[id]="failed";return n})})(aid);
+            addAudit(aid,"REJECTED \u2014 "+result.summary,"fail");
+            if(result.checks)result.checks.filter(function(c){return c.status==="fail"}).forEach(function(c){addAudit(aid,"\u2717 "+c.name+": "+c.detail,"fail")});
             aborted=true;setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"rejected",results:allResults}):x})});continue;
           }
           if(result.escalationRequired){
-            addAudit(agent.id,"ESCALATION: "+result.escalationReason,"warning");
+            addAudit(aid,"ESCALATION: "+result.escalationReason,"warning");
             setEscalation({payment:payment,result:result});
             var approved=await new Promise(function(res){escRef.current=res});
             setEscalation(null);
-            if(!approved){addAudit(agent.id,"REJECTED by human","fail");setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="failed";return n});aborted=true;setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"rejected",results:allResults}):x})});continue}
-            addAudit(agent.id,"APPROVED by human","pass");setPaymentState("Approved");
+            if(!approved){addAudit(aid,"REJECTED by human","fail");(function(id){setAgentStatuses(function(p){var n=Object.assign({},p);n[id]="failed";return n})})(aid);aborted=true;setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"rejected",results:allResults}):x})});continue}
+            addAudit(aid,"APPROVED by human","pass");setPaymentState("Approved");
           }
-          if(result.checks)result.checks.forEach(function(c){addAudit(agent.id,c.name+": "+c.detail,c.status)});
+          if(result.checks)result.checks.forEach(function(c){addAudit(aid,c.name+": "+c.detail,c.status)});
         }
-        if(agent.id==="control"&&result.recommendedRail){
+        if(aid==="control"&&result.recommendedRail){
           setSelectedRail(result.recommendedRail.id);
-          addAudit(agent.id,"Rail: "+result.recommendedRail.name+" \u2014 "+result.recommendedRail.reason,"pass");
-          addAudit(agent.id,"Risk: "+result.riskScore+"/100 ("+result.riskLevel+")",result.riskLevel==="low"?"pass":"warning");
+          addAudit(aid,"Rail: "+result.recommendedRail.name+" \u2014 "+result.recommendedRail.reason,"pass");
+          addAudit(aid,"Risk: "+result.riskScore+"/100 ("+result.riskLevel+")",result.riskLevel==="low"?"pass":"warning");
         }
-        if(agent.id==="execution"){setPaymentState("Settled");addAudit(agent.id,result.status.toUpperCase()+" via "+result.selectedRail+" ["+result.provider+"]",result.status==="settled"?"pass":"warning");if(result.fees)addAudit(agent.id,"Fees: $"+result.fees.total,null)}
-        if(agent.id==="audit"){setPaymentState("Reconciled");if(result.decisionChain)result.decisionChain.forEach(function(d){addAudit(agent.id,"["+d.reasonCode+"] "+d.agent+": "+d.decision,null)})}
-        setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="complete";return n});addAudit(agent.id,result.summary||"Complete","pass");
+        if(aid==="execution"){setPaymentState("Settled");addAudit(aid,result.status.toUpperCase()+" via "+result.selectedRail+" ["+result.provider+"]",result.status==="settled"?"pass":"warning");if(result.fees)addAudit(aid,"Fees: $"+result.fees.total,null)}
+        if(aid==="audit"){setPaymentState("Reconciled");if(result.decisionChain)result.decisionChain.forEach(function(d){addAudit(aid,"["+d.reasonCode+"] "+d.agent+": "+d.decision,null)})}
+        (function(id){setAgentStatuses(function(p){var n=Object.assign({},p);n[id]="complete";return n})})(aid);addAudit(aid,result.summary||"Complete","pass");
       }
       if(!aborted)setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"settled",results:allResults}):x})});
       setIsProcessing(false);
