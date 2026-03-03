@@ -476,8 +476,8 @@ function App(){
 
     var runAgents=async function(){
       var aborted=false;var allResults={};
-      for(var ai=0;ai<AGENTS.length;ai++){
-        var agent=AGENTS[ai];
+      for(let ai=0;ai<AGENTS.length;ai++){
+        let agent=AGENTS[ai];
         if(aborted||killActive){setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="skipped";return n});continue}
         setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="running";return n});
         setSelectedAgent(agent.id);addAudit(agent.id,agent.name+" activated",null);
