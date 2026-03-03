@@ -1,33 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Revvyn — The Governance Layer for Agentic Commerce</title>
-    <meta name="description" content="AI-powered policy enforcement, risk scoring & rail optimization for autonomous payments. Protocol-agnostic. Enterprise to consumer.">
-    <meta property="og:title" content="Revvyn — The Governance Layer for Agentic Commerce">
-    <meta property="og:description" content="AI-powered policy enforcement, risk scoring & rail optimization for autonomous payments.">
-    <meta property="og:type" content="website">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a0a0f; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
-        #root { min-height: 100vh; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #1a1a2e; }
-        ::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6a6a8a; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        #root > div { animation: fadeIn 0.4s ease-out; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revvyn — The Governance Layer for Agentic Commerce</title>
+<meta name="description" content="AI-powered policy enforcement, risk scoring & rail optimization for autonomous payments.">
+<meta property="og:title" content="Revvyn — The Governance Layer for Agentic Commerce">
+<meta property="og:description" content="When an AI agent wants to spend money, Revvyn decides if it's allowed to.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+:root { --m: 'IBM Plex Mono', monospace; --b: 'Outfit', sans-serif; --bg: #06080e; --surface: #0c1019; --surface2: #111827; --border: #1e293b; --text: #e2e8f0; --muted: #64748b; --dim: #334155; --green: #06d6a0; --purple: #a78bfa; --blue: #38bdf8; --yellow: #fbbf24; --pink: #f472b6; --red: #ef4444; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--b); -webkit-font-smoothing: antialiased; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 3px; }
+select option { background: var(--surface); color: var(--text); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes glow { 0%,100%{box-shadow:0 0 20px rgba(6,214,160,0.1)} 50%{box-shadow:0 0 40px rgba(6,214,160,0.25)} }
+</style>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback } = React;
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
 
 // ═══════════════════════════════════════════════════════════
 // CONFIG
@@ -42,36 +46,11 @@ const AGENTS = [
 ];
 
 const VERTICALS = {
-  treasury: {
-    id: "treasury", label: "Enterprise Treasury", icon: "◈", accent: "#06d6a0",
-    desc: "Cross-border vendor payments, FX optimization, multi-bank routing",
-    defaults: { amount: 250000, currency: "USD", fromCountry: "US", toCountry: "DE", toCurrency: "EUR", beneficiary: "Siemens AG", purpose: "Vendor invoice #INV-2026-4471", urgency: "standard" },
-    policies: { maxSingle: 500000, maxDaily: 2000000, requireApproval: 100000, sanctions: ["KP","IR","SY","CU","RU"], kycRequired: true, dualApproval: 250000 },
-  },
-  marketplace: {
-    id: "marketplace", label: "Marketplace", icon: "◇", accent: "#38bdf8",
-    desc: "Seller payouts, split settlements, multi-currency disbursements",
-    defaults: { amount: 3200, currency: "USD", fromCountry: "US", toCountry: "IN", toCurrency: "INR", beneficiary: "Seller #SKU-88912", purpose: "Weekly payout — marketplace earnings", urgency: "standard" },
-    policies: { maxSingle: 50000, maxDaily: 500000, requireApproval: 25000, sanctions: ["KP","IR","SY"], kycRequired: true, dualApproval: 50000 },
-  },
-  ai_commerce: {
-    id: "ai_commerce", label: "AI-to-AI Commerce", icon: "◎", accent: "#a78bfa",
-    desc: "Autonomous agent transactions, programmatic spend governance",
-    defaults: { amount: 890, currency: "USD", fromCountry: "US", toCountry: "SG", toCurrency: "USD", beneficiary: "Agent-API-7x9k2", purpose: "Autonomous procurement — cloud compute", urgency: "urgent" },
-    policies: { maxSingle: 10000, maxDaily: 100000, requireApproval: 5000, sanctions: ["KP","IR","SY","CU"], kycRequired: false, dualApproval: 10000 },
-  },
-  enterprise: {
-    id: "enterprise", label: "Enterprise Direct", icon: "◐", accent: "#fbbf24",
-    desc: "Complex multi-entity payments, ERP integration, global compliance",
-    defaults: { amount: 1200000, currency: "USD", fromCountry: "US", toCountry: "JP", toCurrency: "JPY", beneficiary: "Toyota Motor Corp", purpose: "Strategic supplier — Q1 manufacturing", urgency: "standard" },
-    policies: { maxSingle: 5000000, maxDaily: 20000000, requireApproval: 500000, sanctions: ["KP","IR","SY","CU","RU","BY"], kycRequired: true, dualApproval: 1000000 },
-  },
-  consumer: {
-    id: "consumer", label: "Consumer AI Finance", icon: "◍", accent: "#f472b6",
-    desc: "Personal AI agents — yield-only spending, DeFi governance, self-custody guardrails",
-    defaults: { amount: 85, currency: "USDC", fromCountry: "US", toCountry: "US", toCurrency: "USDC", beneficiary: "Self — Spending Card", purpose: "Yield-funded purchase — within budget", urgency: "standard" },
-    policies: { maxSingle: 500, maxDaily: 2000, requireApproval: 200, sanctions: ["KP","IR","SY"], kycRequired: false, dualApproval: 500 },
-  },
+  treasury: { id: "treasury", label: "Enterprise Treasury", icon: "◈", accent: "#06d6a0", desc: "Cross-border vendor payments, FX optimization, multi-bank routing", defaults: { amount: 250000, currency: "USD", fromCountry: "US", toCountry: "DE", toCurrency: "EUR", beneficiary: "Siemens AG", purpose: "Vendor invoice #INV-2026-4471", urgency: "standard" }, policies: { maxSingle: 500000, maxDaily: 2000000, requireApproval: 100000, sanctions: ["KP","IR","SY","CU","RU"], kycRequired: true, dualApproval: 250000 } },
+  marketplace: { id: "marketplace", label: "Marketplace", icon: "◇", accent: "#38bdf8", desc: "Seller payouts, split settlements, multi-currency disbursements", defaults: { amount: 3200, currency: "USD", fromCountry: "US", toCountry: "IN", toCurrency: "INR", beneficiary: "Seller #SKU-88912", purpose: "Weekly payout — marketplace earnings", urgency: "standard" }, policies: { maxSingle: 50000, maxDaily: 500000, requireApproval: 25000, sanctions: ["KP","IR","SY"], kycRequired: true, dualApproval: 50000 } },
+  ai_commerce: { id: "ai_commerce", label: "AI-to-AI Commerce", icon: "◎", accent: "#a78bfa", desc: "Autonomous agent transactions, programmatic spend governance", defaults: { amount: 890, currency: "USD", fromCountry: "US", toCountry: "SG", toCurrency: "USD", beneficiary: "Agent-API-7x9k2", purpose: "Autonomous procurement — cloud compute", urgency: "urgent" }, policies: { maxSingle: 10000, maxDaily: 100000, requireApproval: 5000, sanctions: ["KP","IR","SY","CU"], kycRequired: false, dualApproval: 10000 } },
+  enterprise: { id: "enterprise", label: "Enterprise Direct", icon: "◐", accent: "#fbbf24", desc: "Complex multi-entity payments, ERP integration, global compliance", defaults: { amount: 1200000, currency: "USD", fromCountry: "US", toCountry: "JP", toCurrency: "JPY", beneficiary: "Toyota Motor Corp", purpose: "Strategic supplier — Q1 manufacturing", urgency: "standard" }, policies: { maxSingle: 5000000, maxDaily: 20000000, requireApproval: 500000, sanctions: ["KP","IR","SY","CU","RU","BY"], kycRequired: true, dualApproval: 1000000 } },
+  consumer: { id: "consumer", label: "Consumer AI Finance", icon: "◍", accent: "#f472b6", desc: "Personal AI agents — yield-only spending, DeFi governance, self-custody guardrails", defaults: { amount: 85, currency: "USDC", fromCountry: "US", toCountry: "US", toCurrency: "USDC", beneficiary: "Self — Spending Card", purpose: "Yield-funded purchase — within budget", urgency: "standard" }, policies: { maxSingle: 500, maxDaily: 2000, requireApproval: 200, sanctions: ["KP","IR","SY"], kycRequired: false, dualApproval: 500 } },
 };
 
 const RAILS = [
@@ -112,47 +91,34 @@ function getPrompt(agentId, payment, vert, policies, prior) {
   const railsCtx = JSON.stringify(RAILS.map(r => ({ id:r.id, name:r.name, speed:r.speed, cost:r.cost, provider:r.provider, type:r.type })));
   const p = {
     orchestrator: `You are the Orchestrator Agent in Revvyn — the governance layer for agentic commerce. Revvyn sits as the intelligence layer BETWEEN intent sources (Google UCP, OpenAI agents, ERPs, DeFi agents, human users) and execution rails (Visa, Mastercard, WooshPay, SWIFT, stablecoins, DeFi protocols, self-custody cards).
-
 You are processing a payment for the "${vert.label}" vertical. Classify this intent and prepare routing context.
 ${vert.id === "consumer" ? "\nCONSUMER AI FINANCE CONTEXT: The core rule is yield-only spending. The AI agent can ONLY spend from DeFi yield (e.g. Aave/Compound returns), never from principal. Enforce budget caps based on available yield. Principal protection is the highest-priority policy. Think of this as a personal Yield Guardian." : ""}
-
 Respond ONLY with valid JSON (no markdown, no backticks):
 {"classification":"standard|high-value|cross-border|recurring|urgent|micro","intentSource":"${payment.intentSource || 'human'}","priority":"low|medium|high|critical","requiredChecks":["list"],"routingHints":["list"],"estimatedComplexity":"low|medium|high","summary":"one sentence"}
-
 Context: ${ctx}`,
 
     governance: `You are the Governance Agent in Revvyn. You enforce compliance, policy, and regulatory rules. This is the CRITICAL differentiator — neither Google, Visa, Mastercard, nor WooshPay provides this governance layer.
-
 Active policies: Max single: $${policies.maxSingle.toLocaleString()}. Daily: $${policies.maxDaily.toLocaleString()}. Approval above: $${policies.requireApproval.toLocaleString()}. Dual approval: $${policies.dualApproval.toLocaleString()}. Sanctioned: ${policies.sanctions.join(",")}. KYC: ${policies.kycRequired}.
-${vert.id === "consumer" ? "\nCONSUMER YIELD GUARDIAN CONTEXT: The most critical rule is PRINCIPAL PROTECTION. The user's DeFi principal must NEVER be touched. Only accrued yield can be spent. If the requested amount exceeds available yield, DENY the transaction. Check yield balance, enforce budget caps, and ensure the spending source is verified yield — not principal drawdown." : ""}
-
+${vert.id === "consumer" ? "\nCONSUMER YIELD GUARDIAN CONTEXT: The most critical rule is PRINCIPAL PROTECTION. The user's DeFi principal must NEVER be touched. Only accrued yield can be spent. If the requested amount exceeds available yield, DENY the transaction." : ""}
 Respond ONLY with valid JSON:
 {"approved":true/false,"checks":[{"name":"name","status":"pass|fail|warning","detail":"explanation"}],"complianceScore":0-100,"escalationRequired":true/false,"escalationReason":"reason or null","escalationType":"none|human_review|dual_approval|senior_approval","regulatoryFrameworks":["PSD2","FATF","SOC2","PCI-DSS","ISO20022","GDPR","MiCA"],"summary":"one sentence"}
-
 Context: ${ctx}`,
 
     control: `You are the Control Agent in Revvyn. You perform risk assessment and SELECT the optimal payment rail from the competitive landscape: Visa Intelligent Commerce, Mastercard Agent Pay, WooshPay API, SWIFT gpi, SEPA Instant, stablecoins (USDC/USDT), RTP/FedNow, DeFi protocols (Aave/Compound), and Self-Custody Cards (Wirex Pay/Gnosis Safe).
-${vert.id === "consumer" ? "CONSUMER CONTEXT: For personal AI agent transactions, prefer DeFi and self-custody rails (Aave yield → USDC → self-custody spending card). Near-zero fees on L2, full user control, no intermediary. Traditional rails are fallback only." : "Pick the BEST rail based on: cost, speed, reliability, corridor coverage, and payment characteristics."}
-
+${vert.id === "consumer" ? "CONSUMER CONTEXT: For personal AI agent transactions, prefer DeFi and self-custody rails. Near-zero fees on L2, full user control." : "Pick the BEST rail based on: cost, speed, reliability, corridor coverage, and payment characteristics."}
 Available rails: ${railsCtx}
-
 Respond ONLY with valid JSON:
-{"riskScore":0-100,"riskLevel":"low|medium|high|critical","fraudIndicators":[{"indicator":"name","severity":"low|medium|high","detail":"explanation"}],"recommendedRail":{"id":"id","name":"name","provider":"provider","reason":"detailed reason for selection including cost/speed tradeoff"},"alternativeRails":[{"id":"id","name":"name","reason":"why alternative"}],"fxOptimization":{"applicable":true/false,"strategy":"description","estimatedSavings":"amount"},"humanReviewRequired":true/false,"summary":"one sentence including which rail was chosen and why"}
-
+{"riskScore":0-100,"riskLevel":"low|medium|high|critical","fraudIndicators":[{"indicator":"name","severity":"low|medium|high","detail":"explanation"}],"recommendedRail":{"id":"id","name":"name","provider":"provider","reason":"detailed reason for selection"},"alternativeRails":[{"id":"id","name":"name","reason":"why alternative"}],"fxOptimization":{"applicable":true/false,"strategy":"description","estimatedSavings":"amount"},"humanReviewRequired":true/false,"summary":"one sentence including which rail was chosen and why"}
 Context: ${ctx}`,
 
-    execution: `You are the Execution Agent in Revvyn. You handle settlement via the selected rail. The rail was chosen by the Control Agent — simulate realistic execution through that specific provider.
-
+    execution: `You are the Execution Agent in Revvyn. You handle settlement via the selected rail. Simulate realistic execution.
 Respond ONLY with valid JSON:
-{"status":"settled|pending|failed","selectedRail":"rail name from control agent","provider":"Visa|Mastercard|WooshPay|SWIFT|SEPA|Circle|TCH|Aave|Wirex","transactionId":"${genTx()}","settlementTime":"realistic time for this rail","fees":{"total":number,"currency":"USD","breakdown":{"network":number,"fx":number,"processing":number,"compliance":number}},"fxRate":number_or_null,"convertedAmount":number_or_null,"ledgerEntries":[{"type":"debit|credit","account":"name","amount":number,"currency":"code"}],"networkResponse":{"code":"200|201|202","message":"realistic response from the rail provider"},"summary":"one sentence"}
-
+{"status":"settled|pending|failed","selectedRail":"rail name","provider":"Visa|Mastercard|WooshPay|SWIFT|SEPA|Circle|TCH|Aave|Wirex","transactionId":"${genTx()}","settlementTime":"realistic time","fees":{"total":number,"currency":"USD","breakdown":{"network":number,"fx":number,"processing":number,"compliance":number}},"fxRate":number_or_null,"convertedAmount":number_or_null,"ledgerEntries":[{"type":"debit|credit","account":"name","amount":number,"currency":"code"}],"networkResponse":{"code":"200","message":"realistic response"},"summary":"one sentence"}
 Context: ${ctx}`,
 
-    audit: `You are the Audit Agent in Revvyn. Create a comprehensive, explainable audit trail that satisfies regulatory requirements across PSD2, FATF, SOC2, ISO 20022, MiCA, and GDPR.
-
+    audit: `You are the Audit Agent in Revvyn. Create a comprehensive, explainable audit trail satisfying PSD2, FATF, SOC2, ISO 20022, MiCA, and GDPR.
 Respond ONLY with valid JSON:
-{"auditId":"AUD-${Date.now().toString(36).toUpperCase()}","decisionChain":[{"agent":"name","decision":"what","reasonCode":"CODE","confidence":0-100}],"complianceStatus":"compliant|non-compliant|review-needed","riskClassification":"low|medium|high","regulatoryTags":["specific regulations"],"railProvider":"which provider was used","dataRetention":"7 years","recommendations":["actionable recommendations"],"summary":"one sentence"}
-
+{"auditId":"AUD-${Date.now().toString(36).toUpperCase()}","decisionChain":[{"agent":"name","decision":"what","reasonCode":"CODE","confidence":0-100}],"complianceStatus":"compliant|non-compliant|review-needed","riskClassification":"low|medium|high","regulatoryTags":["specific regulations"],"railProvider":"which provider","dataRetention":"7 years","recommendations":["actionable recommendations"],"summary":"one sentence"}
 Context: ${ctx}`
   };
   return p[agentId];
@@ -171,17 +137,109 @@ async function callAgent(id, payment, vert, policies, prior = {}) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// COMPONENTS
+// HERO
+// ═══════════════════════════════════════════════════════════
+
+function Hero({ onEnter }) {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "40px 24px", position: "relative", overflow: "hidden" }}>
+      {/* Background effects */}
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 50% at 50% -20%, rgba(6,214,160,0.08) 0%, transparent 60%)" }} />
+      <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 40% at 80% 80%, rgba(167,139,250,0.05) 0%, transparent 50%)" }} />
+
+      <div style={{ textAlign: "center", maxWidth: "720px", position: "relative", zIndex: 1 }}>
+        {/* Logo */}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "12px", marginBottom: "32px", animation: "fadeUp 0.6s ease-out" }}>
+          <div style={{ width: "48px", height: "48px", borderRadius: "14px", background: "linear-gradient(135deg, #06d6a0, #06d6a088)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", fontWeight: 800, color: "#000", animation: "glow 3s ease-in-out infinite" }}>R</div>
+          <span style={{ fontFamily: "var(--m)", fontSize: "28px", fontWeight: 700, letterSpacing: "3px", color: "#e2e8f0" }}>REVVYN</span>
+        </div>
+
+        {/* Headline */}
+        <h1 style={{ fontFamily: "var(--b)", fontSize: "clamp(28px, 5vw, 52px)", fontWeight: 800, lineHeight: 1.1, marginBottom: "20px", animation: "fadeUp 0.6s ease-out 0.1s both" }}>
+          The Governance Layer for{" "}
+          <span style={{ background: "linear-gradient(135deg, #06d6a0, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            Agentic Commerce
+          </span>
+        </h1>
+
+        {/* Subheadline */}
+        <p style={{ fontSize: "clamp(16px, 2.2vw, 20px)", color: "#94a3b8", lineHeight: 1.6, marginBottom: "40px", maxWidth: "560px", margin: "0 auto 40px", animation: "fadeUp 0.6s ease-out 0.2s both" }}>
+          When an AI agent wants to spend money, Revvyn decides if it's allowed to.
+          <br /><br />
+          <span style={{ color: "#64748b", fontSize: "clamp(14px, 1.8vw, 16px)" }}>
+            AI-powered policy enforcement, risk scoring & rail optimization across 5 verticals, 9 payment rails, and every major protocol.
+          </span>
+        </p>
+
+        {/* Stats row */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "clamp(20px, 4vw, 48px)", marginBottom: "48px", animation: "fadeUp 0.6s ease-out 0.3s both", flexWrap: "wrap" }}>
+          {[
+            { n: "5", label: "Verticals", color: "#06d6a0" },
+            { n: "9", label: "Payment Rails", color: "#38bdf8" },
+            { n: "5", label: "AI Agents", color: "#a78bfa" },
+          ].map(s => (
+            <div key={s.label} style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "var(--m)", fontSize: "clamp(28px, 4vw, 40px)", fontWeight: 700, color: s.color }}>{s.n}</div>
+              <div style={{ fontFamily: "var(--m)", fontSize: "11px", color: "#64748b", letterSpacing: "1px" }}>{s.label.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Architecture preview */}
+        <div style={{ marginBottom: "48px", animation: "fadeUp 0.6s ease-out 0.4s both" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxWidth: "480px", margin: "0 auto" }}>
+            <div style={{ padding: "10px 16px", borderRadius: "8px", background: "#1e293b20", border: "1px solid #1e293b" }}>
+              <div style={{ fontFamily: "var(--m)", fontSize: "10px", color: "#64748b", letterSpacing: "1px", marginBottom: "4px" }}>INTENT LAYER</div>
+              <div style={{ fontSize: "13px", color: "#94a3b8" }}>Google UCP · OpenAI Agents · ERPs · DeFi Agents · Human Users</div>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "16px", color: "#06d6a0" }}>↓</div>
+            <div style={{ padding: "14px 16px", borderRadius: "10px", background: "linear-gradient(135deg, rgba(6,214,160,0.08), rgba(167,139,250,0.06))", border: "1.5px solid rgba(6,214,160,0.3)" }}>
+              <div style={{ fontFamily: "var(--m)", fontSize: "13px", fontWeight: 700, color: "#06d6a0", letterSpacing: "1px" }}>REVVYN — GOVERNANCE · CONTROL · EXECUTION</div>
+              <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>Policy Engine → Risk Engine → Rail Optimizer → Settlement → Audit</div>
+            </div>
+            <div style={{ textAlign: "center", fontSize: "16px", color: "#38bdf8" }}>↓</div>
+            <div style={{ padding: "10px 16px", borderRadius: "8px", background: "#1e293b20", border: "1px solid #1e293b" }}>
+              <div style={{ fontFamily: "var(--m)", fontSize: "10px", color: "#64748b", letterSpacing: "1px", marginBottom: "4px" }}>EXECUTION LAYER</div>
+              <div style={{ fontSize: "13px", color: "#94a3b8" }}>Visa · Mastercard · SWIFT · SEPA · WooshPay · USDC · RTP · DeFi · Self-Custody</div>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <button onClick={onEnter} style={{
+          padding: "16px 48px", borderRadius: "12px", border: "none",
+          background: "linear-gradient(135deg, #06d6a0, #06d6a0bb)",
+          color: "#000", fontFamily: "var(--m)", fontSize: "14px", fontWeight: 700,
+          cursor: "pointer", letterSpacing: "1px",
+          boxShadow: "0 4px 24px rgba(6,214,160,0.25)",
+          transition: "all 0.2s", animation: "fadeUp 0.6s ease-out 0.5s both",
+        }}
+          onMouseOver={e => e.target.style.transform = "translateY(-2px)"}
+          onMouseOut={e => e.target.style.transform = "translateY(0)"}
+        >
+          ▶ LAUNCH LIVE DEMO
+        </button>
+
+        <p style={{ fontFamily: "var(--m)", fontSize: "11px", color: "#334155", marginTop: "16px", animation: "fadeUp 0.6s ease-out 0.6s both" }}>
+          Powered by Claude AI · Real-time agent orchestration
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD COMPONENTS
 // ═══════════════════════════════════════════════════════════
 
 function Tabs({ tabs, active, onChange, accent }) {
   return (
-    <div style={{ display: "flex", gap: "1px", borderBottom: "1px solid #1b2030", overflow: "auto", flexShrink: 0, background: "#0d1117" }}>
+    <div style={{ display: "flex", gap: "2px", borderBottom: "1px solid var(--border)", overflow: "auto", flexShrink: 0, background: "var(--surface)", padding: "0 8px" }}>
       {tabs.map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{
-          padding: "9px 14px", border: "none", background: active === t.id ? "#141a26" : "transparent",
-          fontFamily: "var(--m)", fontSize: "9px", fontWeight: 600, color: active === t.id ? accent : "#4a5568",
-          cursor: "pointer", letterSpacing: "0.4px", whiteSpace: "nowrap",
+          padding: "12px 16px", border: "none", background: "transparent",
+          fontFamily: "var(--m)", fontSize: "11px", fontWeight: 600, color: active === t.id ? accent : "var(--muted)",
+          cursor: "pointer", letterSpacing: "0.5px", whiteSpace: "nowrap",
           borderBottom: `2px solid ${active === t.id ? accent : "transparent"}`, transition: "all 0.15s",
         }}>{t.label}</button>
       ))}
@@ -191,33 +249,33 @@ function Tabs({ tabs, active, onChange, accent }) {
 
 function PipelineRow({ statuses, results, selected, onSelect }) {
   return (
-    <div style={{ display: "flex", gap: "3px", padding: "10px 12px", overflowX: "auto", flexShrink: 0 }}>
+    <div style={{ display: "flex", gap: "6px", padding: "12px 16px", overflowX: "auto", flexShrink: 0 }}>
       {AGENTS.map((a, i) => {
         const st = statuses[a.id] || "pending";
         const sel = selected === a.id;
         return (
-          <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "3px", flex: "1 0 0", minWidth: 0 }}>
+          <div key={a.id} style={{ display: "flex", alignItems: "center", gap: "4px", flex: "1 0 0", minWidth: 0 }}>
             <div onClick={() => onSelect(a.id)} style={{
-              flex: 1, padding: "9px 7px", borderRadius: "8px", cursor: "pointer", minWidth: 0,
-              background: sel ? `${a.color}12` : st === "running" ? `${a.color}06` : "#0d1117",
-              border: `1.5px solid ${sel ? a.color : st === "running" ? a.color + "50" : "#1b2030"}`,
+              flex: 1, padding: "10px 8px", borderRadius: "10px", cursor: "pointer", minWidth: 0,
+              background: sel ? `${a.color}12` : st === "running" ? `${a.color}06` : "var(--surface)",
+              border: `1.5px solid ${sel ? a.color : st === "running" ? a.color + "50" : "var(--border)"}`,
               transition: "all 0.2s", position: "relative", overflow: "hidden",
             }}>
               {st === "running" && <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: `linear-gradient(90deg, transparent, ${a.color}, transparent)`, animation: "shimmer 1.5s infinite" }} />}
-              <div style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "2px" }}>
-                <span style={{ fontFamily: "var(--m)", fontSize: "10px", color: a.color }}>{a.icon}</span>
-                <span style={{ fontFamily: "var(--m)", fontSize: "7px", fontWeight: 700, color: a.color, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name.toUpperCase()}</span>
-                <div style={{ marginLeft: "auto", width: "5px", height: "5px", borderRadius: "50%", flexShrink: 0,
-                  background: st === "complete" ? "#10b981" : st === "failed" ? "#ef4444" : st === "running" ? a.color : "#1b2030",
-                  boxShadow: st === "running" ? `0 0 6px ${a.color}` : "none",
+              <div style={{ display: "flex", alignItems: "center", gap: "5px", marginBottom: "3px" }}>
+                <span style={{ fontFamily: "var(--m)", fontSize: "12px", color: a.color }}>{a.icon}</span>
+                <span style={{ fontFamily: "var(--m)", fontSize: "9px", fontWeight: 700, color: a.color, letterSpacing: "0.3px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name.toUpperCase()}</span>
+                <div style={{ marginLeft: "auto", width: "7px", height: "7px", borderRadius: "50%", flexShrink: 0,
+                  background: st === "complete" ? "#10b981" : st === "failed" ? "#ef4444" : st === "running" ? a.color : "var(--border)",
+                  boxShadow: st === "running" ? `0 0 8px ${a.color}` : "none",
                   animation: st === "running" ? "pulse 1s infinite" : "none",
                 }} />
               </div>
-              <div style={{ fontSize: "7px", color: "#4a5568", fontFamily: "var(--b)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "10px", color: "var(--muted)", fontFamily: "var(--b)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {st === "running" ? "Processing..." : st === "complete" ? "Done" : st === "failed" ? "Blocked" : a.role}
               </div>
             </div>
-            {i < AGENTS.length - 1 && <span style={{ color: st === "complete" ? "#06d6a0" : "#1b2030", fontFamily: "var(--m)", fontSize: "7px", flexShrink: 0 }}>▸</span>}
+            {i < AGENTS.length - 1 && <span style={{ color: st === "complete" ? "#06d6a0" : "var(--border)", fontFamily: "var(--m)", fontSize: "10px", flexShrink: 0 }}>▸</span>}
           </div>
         );
       })}
@@ -225,75 +283,66 @@ function PipelineRow({ statuses, results, selected, onSelect }) {
   );
 }
 
-function StackDiagram({ selectedRail, intentSource }) {
-  const srcColor = INTENT_SOURCES.find(s => s.id === intentSource)?.color || "#4a5568";
-  const railObj = RAILS.find(r => r.id === selectedRail);
+function StateMachine({ current }) {
+  const idx = STATES.indexOf(current);
   return (
-    <div style={{ padding: "10px 12px", flexShrink: 0 }}>
-      <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", letterSpacing: "0.8px", marginBottom: "6px" }}>ARCHITECTURE STACK</div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-        {/* Intent Layer */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div style={{ width: "70px", fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", textAlign: "right" }}>INTENT</div>
-          <div style={{ flex: 1, display: "flex", gap: "3px" }}>
+    <div style={{ display: "flex", gap: "4px", padding: "0 16px 10px", flexWrap: "wrap", flexShrink: 0 }}>
+      {STATES.map((s, i) => (
+        <div key={s} style={{ display: "flex", alignItems: "center", gap: "3px" }}>
+          <span style={{
+            padding: "3px 8px", borderRadius: "4px", fontFamily: "var(--m)", fontSize: "9px", fontWeight: 600,
+            background: i <= idx ? "#10b98115" : "var(--surface)", color: i <= idx ? "#10b981" : "var(--dim)",
+            border: i === idx ? "1px solid #10b98140" : "1px solid transparent",
+          }}>{s.toUpperCase()}</span>
+          {i < STATES.length - 1 && <span style={{ color: i < idx ? "#10b981" : "var(--border)", fontSize: "8px" }}>→</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StackDiagram({ selectedRail, intentSource }) {
+  return (
+    <div style={{ padding: "12px 16px", flexShrink: 0 }}>
+      <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", letterSpacing: "1px", marginBottom: "8px" }}>ARCHITECTURE STACK</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ width: "70px", fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", textAlign: "right" }}>INTENT</div>
+          <div style={{ flex: 1, display: "flex", gap: "4px" }}>
             {INTENT_SOURCES.map(s => (
-              <div key={s.id} style={{
-                flex: 1, padding: "4px 3px", borderRadius: "4px", textAlign: "center",
-                background: intentSource === s.id ? `${s.color}15` : "#0d1117",
-                border: `1px solid ${intentSource === s.id ? s.color : "#1b2030"}`,
+              <div key={s.id} style={{ flex: 1, padding: "5px 4px", borderRadius: "5px", textAlign: "center",
+                background: intentSource === s.id ? `${s.color}15` : "var(--surface)",
+                border: `1px solid ${intentSource === s.id ? s.color : "var(--border)"}`,
               }}>
-                <div style={{ fontFamily: "var(--m)", fontSize: "6px", fontWeight: 600, color: intentSource === s.id ? s.color : "#4a5568" }}>{s.name}</div>
+                <div style={{ fontFamily: "var(--m)", fontSize: "8px", fontWeight: 600, color: intentSource === s.id ? s.color : "var(--muted)" }}>{s.name}</div>
               </div>
             ))}
           </div>
         </div>
-        {/* Arrow */}
-        <div style={{ textAlign: "center", fontFamily: "var(--m)", fontSize: "8px", color: "#06d6a0", padding: "1px 0" }}>↓</div>
-        {/* REVVYN LAYER */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div style={{ width: "70px", fontFamily: "var(--m)", fontSize: "7px", color: "#06d6a0", textAlign: "right", fontWeight: 700 }}>REVVYN</div>
-          <div style={{ flex: 1, padding: "6px 10px", borderRadius: "6px", background: "linear-gradient(135deg, #06d6a008, #a78bfa08)", border: "1.5px solid #06d6a040", textAlign: "center" }}>
-            <div style={{ fontFamily: "var(--m)", fontSize: "8px", fontWeight: 700, color: "#06d6a0", letterSpacing: "0.5px" }}>GOVERNANCE · CONTROL · EXECUTION</div>
-            <div style={{ fontFamily: "var(--m)", fontSize: "6px", color: "#64748b", marginTop: "1px" }}>Policy Engine → Risk Engine → Rail Optimizer → Settlement</div>
+        <div style={{ textAlign: "center", fontFamily: "var(--m)", fontSize: "10px", color: "#06d6a0", padding: "2px 0" }}>↓</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ width: "70px", fontFamily: "var(--m)", fontSize: "9px", color: "#06d6a0", textAlign: "right", fontWeight: 700 }}>REVVYN</div>
+          <div style={{ flex: 1, padding: "8px 12px", borderRadius: "8px", background: "linear-gradient(135deg, #06d6a008, #a78bfa08)", border: "1.5px solid #06d6a040", textAlign: "center" }}>
+            <div style={{ fontFamily: "var(--m)", fontSize: "10px", fontWeight: 700, color: "#06d6a0", letterSpacing: "0.5px" }}>GOVERNANCE · CONTROL · EXECUTION</div>
+            <div style={{ fontFamily: "var(--m)", fontSize: "8px", color: "var(--muted)", marginTop: "2px" }}>Policy → Risk → Rail Optimizer → Settlement</div>
           </div>
         </div>
-        {/* Arrow */}
-        <div style={{ textAlign: "center", fontFamily: "var(--m)", fontSize: "8px", color: "#38bdf8", padding: "1px 0" }}>↓</div>
-        {/* Rail Layer */}
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div style={{ width: "70px", fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", textAlign: "right" }}>RAILS</div>
-          <div style={{ flex: 1, display: "flex", gap: "2px", flexWrap: "wrap" }}>
+        <div style={{ textAlign: "center", fontFamily: "var(--m)", fontSize: "10px", color: "#38bdf8", padding: "2px 0" }}>↓</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div style={{ width: "70px", fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", textAlign: "right" }}>RAILS</div>
+          <div style={{ flex: 1, display: "flex", gap: "3px", flexWrap: "wrap" }}>
             {RAILS.map(r => (
-              <div key={r.id} style={{
-                flex: "1 0 0", minWidth: "55px", padding: "3px 2px", borderRadius: "4px", textAlign: "center",
-                background: selectedRail === r.id ? "#10b98110" : "#0d1117",
-                border: `1px solid ${selectedRail === r.id ? "#10b981" : "#1b2030"}`,
+              <div key={r.id} style={{ flex: "1 0 0", minWidth: "60px", padding: "4px 3px", borderRadius: "5px", textAlign: "center",
+                background: selectedRail === r.id ? "#10b98110" : "var(--surface)",
+                border: `1px solid ${selectedRail === r.id ? "#10b981" : "var(--border)"}`,
               }}>
-                <div style={{ fontSize: "8px" }}>{r.icon}</div>
-                <div style={{ fontFamily: "var(--m)", fontSize: "5px", fontWeight: 600, color: selectedRail === r.id ? "#10b981" : "#94a3b8" }}>{r.name.length > 12 ? r.provider : r.name}</div>
+                <div style={{ fontSize: "10px" }}>{r.icon}</div>
+                <div style={{ fontFamily: "var(--m)", fontSize: "7px", fontWeight: 600, color: selectedRail === r.id ? "#10b981" : "#94a3b8" }}>{r.provider}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function StateMachine({ current }) {
-  const idx = STATES.indexOf(current);
-  return (
-    <div style={{ display: "flex", gap: "2px", padding: "0 12px 8px", flexWrap: "wrap", flexShrink: 0 }}>
-      {STATES.map((s, i) => (
-        <div key={s} style={{ display: "flex", alignItems: "center", gap: "2px" }}>
-          <span style={{
-            padding: "2px 5px", borderRadius: "3px", fontFamily: "var(--m)", fontSize: "6px", fontWeight: 600,
-            background: i <= idx ? "#10b98115" : "#0d1117", color: i <= idx ? "#10b981" : "#262d3d",
-            border: i === idx ? "1px solid #10b98140" : "1px solid transparent",
-          }}>{s.toUpperCase()}</span>
-          {i < STATES.length - 1 && <span style={{ color: i < idx ? "#10b981" : "#1b2030", fontSize: "6px" }}>→</span>}
-        </div>
-      ))}
     </div>
   );
 }
@@ -303,40 +352,38 @@ function PaymentForm({ vertical, onSubmit, isProcessing, killActive }) {
   const [form, setForm] = useState({ ...v.defaults, intentSource: "human" });
   useEffect(() => { setForm({ ...VERTICALS[vertical].defaults, intentSource: vertical === "consumer" ? "defi_agent" : "human" }); }, [vertical]);
   const u = (k, val) => setForm(f => ({ ...f, [k]: val }));
-
-  const inp = { width: "100%", padding: "7px 9px", borderRadius: "5px", background: "#0d1117", border: "1px solid #1b2030", color: "#e2e8f0", fontFamily: "var(--m)", fontSize: "11px", outline: "none", boxSizing: "border-box" };
+  const inp = { width: "100%", padding: "10px 12px", borderRadius: "8px", background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", fontFamily: "var(--m)", fontSize: "13px", outline: "none", boxSizing: "border-box" };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "12px" }}>
-      <div style={{ padding: "10px", borderRadius: "8px", background: `${v.accent}08`, border: `1px solid ${v.accent}20` }}>
-        <div style={{ fontFamily: "var(--m)", fontSize: "11px", fontWeight: 700, color: v.accent }}>{v.icon} {v.label}</div>
-        <div style={{ fontSize: "10px", color: "#4a5568", marginTop: "2px" }}>{v.desc}</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "16px 20px", maxWidth: "600px" }}>
+      <div style={{ padding: "14px", borderRadius: "10px", background: `${v.accent}08`, border: `1px solid ${v.accent}20` }}>
+        <div style={{ fontFamily: "var(--m)", fontSize: "14px", fontWeight: 700, color: v.accent }}>{v.icon} {v.label}</div>
+        <div style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>{v.desc}</div>
       </div>
 
-      {/* Intent Source */}
       <Fld label="INTENT SOURCE">
-        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
           {INTENT_SOURCES.map(s => (
             <button key={s.id} onClick={() => u("intentSource", s.id)} style={{
-              flex: "1 0 0", minWidth: "60px", padding: "6px 4px", borderRadius: "5px", border: `1px solid ${form.intentSource === s.id ? s.color : "#1b2030"}`,
-              background: form.intentSource === s.id ? `${s.color}12` : "#0d1117", cursor: "pointer", textAlign: "center",
+              flex: "1 0 0", minWidth: "70px", padding: "8px 6px", borderRadius: "8px", border: `1px solid ${form.intentSource === s.id ? s.color : "var(--border)"}`,
+              background: form.intentSource === s.id ? `${s.color}12` : "var(--surface)", cursor: "pointer", textAlign: "center",
             }}>
-              <div style={{ fontFamily: "var(--m)", fontSize: "7px", fontWeight: 600, color: form.intentSource === s.id ? s.color : "#4a5568" }}>{s.name}</div>
+              <div style={{ fontFamily: "var(--m)", fontSize: "9px", fontWeight: 600, color: form.intentSource === s.id ? s.color : "var(--muted)" }}>{s.name}</div>
             </button>
           ))}
         </div>
       </Fld>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
         <Fld label="AMOUNT"><input type="number" value={form.amount} onChange={e => u("amount", Number(e.target.value))} style={inp} /></Fld>
         <Fld label="CURRENCY"><select value={form.currency} onChange={e => u("currency", e.target.value)} style={inp}>{CURRENCIES.map(c => <option key={c}>{c}</option>)}</select></Fld>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
         <Fld label="FROM"><select value={form.fromCountry} onChange={e => u("fromCountry", e.target.value)} style={inp}>{COUNTRIES.map(c => <option key={c}>{c}</option>)}</select></Fld>
         <Fld label="TO"><select value={form.toCountry} onChange={e => u("toCountry", e.target.value)} style={inp}>{[...COUNTRIES, ...SANCTIONED].map(c => <option key={c}>{c}</option>)}</select></Fld>
-        <Fld label="CCY"><select value={form.toCurrency} onChange={e => u("toCurrency", e.target.value)} style={inp}>{CURRENCIES.map(c => <option key={c}>{c}</option>)}</select></Fld>
+        <Fld label="TO CCY"><select value={form.toCurrency} onChange={e => u("toCurrency", e.target.value)} style={inp}>{CURRENCIES.map(c => <option key={c}>{c}</option>)}</select></Fld>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
         <Fld label="BENEFICIARY"><input value={form.beneficiary} onChange={e => u("beneficiary", e.target.value)} style={inp} /></Fld>
         <Fld label="URGENCY"><select value={form.urgency} onChange={e => u("urgency", e.target.value)} style={inp}><option value="standard">Standard</option><option value="urgent">Urgent</option><option value="critical">Critical</option></select></Fld>
       </div>
@@ -344,10 +391,11 @@ function PaymentForm({ vertical, onSubmit, isProcessing, killActive }) {
 
       <button onClick={() => onSubmit({ ...form, id: genId(), timestamp: new Date().toISOString(), vertical })} disabled={isProcessing || killActive}
         style={{
-          padding: "12px", borderRadius: "8px", border: "none",
-          background: killActive ? "#ef444420" : isProcessing ? "#1b2030" : `linear-gradient(135deg, ${v.accent}, ${v.accent}bb)`,
-          color: killActive ? "#ef4444" : isProcessing ? "#4a5568" : "#000",
-          fontFamily: "var(--m)", fontSize: "11px", fontWeight: 700, cursor: (isProcessing || killActive) ? "not-allowed" : "pointer", letterSpacing: "0.8px",
+          padding: "14px", borderRadius: "10px", border: "none",
+          background: killActive ? "#ef444420" : isProcessing ? "var(--border)" : `linear-gradient(135deg, ${v.accent}, ${v.accent}bb)`,
+          color: killActive ? "#ef4444" : isProcessing ? "var(--muted)" : "#000",
+          fontFamily: "var(--m)", fontSize: "13px", fontWeight: 700, cursor: (isProcessing || killActive) ? "not-allowed" : "pointer", letterSpacing: "1px",
+          transition: "all 0.2s",
         }}>
         {killActive ? "⛔ HALTED" : isProcessing ? "⏳ AGENTS PROCESSING..." : "▶ SUBMIT PAYMENT INTENT"}
       </button>
@@ -356,15 +404,15 @@ function PaymentForm({ vertical, onSubmit, isProcessing, killActive }) {
 }
 
 function Fld({ label, children }) {
-  return <div><label style={{ display: "block", fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", letterSpacing: "0.8px", marginBottom: "3px", fontWeight: 600 }}>{label}</label>{children}</div>;
+  return <div><label style={{ display: "block", fontFamily: "var(--m)", fontSize: "10px", color: "var(--muted)", letterSpacing: "0.8px", marginBottom: "5px", fontWeight: 600 }}>{label}</label>{children}</div>;
 }
 
 function PolicyEditor({ vertical, policies, onChange }) {
   const v = VERTICALS[vertical];
   const fmt = n => "$" + Number(n).toLocaleString();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px", padding: "12px" }}>
-      <div style={{ fontSize: "11px", color: "#64748b" }}>Active governance rules for <span style={{ color: v.accent, fontWeight: 600 }}>{v.label}</span></div>
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px", padding: "16px 20px", maxWidth: "600px" }}>
+      <div style={{ fontSize: "14px", color: "#94a3b8" }}>Active governance rules for <span style={{ color: v.accent, fontWeight: 600 }}>{v.label}</span></div>
       {[
         { key: "maxSingle", label: "MAX SINGLE PAYMENT", max: vertical === "consumer" ? 5000 : 10000000 },
         { key: "maxDaily", label: "DAILY LIMIT", max: vertical === "consumer" ? 20000 : 50000000 },
@@ -372,24 +420,24 @@ function PolicyEditor({ vertical, policies, onChange }) {
         { key: "dualApproval", label: "DUAL APPROVAL", max: vertical === "consumer" ? 5000 : 10000000 },
       ].map(({ key, label, max }) => (
         <div key={key}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-            <span style={{ fontFamily: "var(--m)", fontSize: "8px", color: "#4a5568", letterSpacing: "0.5px", fontWeight: 600 }}>{label}</span>
-            <span style={{ fontFamily: "var(--m)", fontSize: "10px", color: v.accent, fontWeight: 600 }}>{fmt(policies[key])}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+            <span style={{ fontFamily: "var(--m)", fontSize: "10px", color: "var(--muted)", letterSpacing: "0.5px", fontWeight: 600 }}>{label}</span>
+            <span style={{ fontFamily: "var(--m)", fontSize: "13px", color: v.accent, fontWeight: 600 }}>{fmt(policies[key])}</span>
           </div>
           <input type="range" min={0} max={max} step={vertical === "consumer" ? 50 : 50000} value={policies[key]}
-            onChange={e => onChange({ ...policies, [key]: Number(e.target.value) })} style={{ width: "100%", accentColor: v.accent, height: "3px" }} />
+            onChange={e => onChange({ ...policies, [key]: Number(e.target.value) })} style={{ width: "100%", accentColor: v.accent, height: "4px" }} />
         </div>
       ))}
-      <div style={{ padding: "8px", borderRadius: "6px", background: "#0d1117", border: "1px solid #1b2030" }}>
-        <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", marginBottom: "4px" }}>SANCTIONED</div>
-        <div style={{ display: "flex", gap: "3px", flexWrap: "wrap" }}>
-          {policies.sanctions.map(s => <span key={s} style={{ padding: "2px 5px", borderRadius: "3px", fontSize: "8px", fontFamily: "var(--m)", fontWeight: 600, background: "#ef444415", color: "#ef4444" }}>{s}</span>)}
+      <div style={{ padding: "12px", borderRadius: "8px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+        <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", marginBottom: "6px", letterSpacing: "0.5px" }}>SANCTIONED COUNTRIES</div>
+        <div style={{ display: "flex", gap: "5px", flexWrap: "wrap" }}>
+          {policies.sanctions.map(s => <span key={s} style={{ padding: "3px 8px", borderRadius: "4px", fontSize: "11px", fontFamily: "var(--m)", fontWeight: 600, background: "#ef444415", color: "#ef4444" }}>{s}</span>)}
         </div>
       </div>
       {vertical === "consumer" && (
-        <div style={{ padding: "8px", borderRadius: "6px", background: "#f472b608", border: "1px solid #f472b620" }}>
-          <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#f472b6", marginBottom: "4px", fontWeight: 600 }}>YIELD GUARDIAN RULES</div>
-          <div style={{ fontSize: "9px", color: "#94a3b8", lineHeight: 1.4 }}>Principal protection: ON. Only accrued DeFi yield may be spent. Preferred rails: Aave → USDC → Self-Custody Card (Wirex/Gnosis). Kill switch halts all agent spending instantly.</div>
+        <div style={{ padding: "12px", borderRadius: "8px", background: "#f472b608", border: "1px solid #f472b620" }}>
+          <div style={{ fontFamily: "var(--m)", fontSize: "10px", color: "#f472b6", marginBottom: "6px", fontWeight: 600, letterSpacing: "0.5px" }}>YIELD GUARDIAN RULES</div>
+          <div style={{ fontSize: "13px", color: "#94a3b8", lineHeight: 1.5 }}>Principal protection: ON. Only accrued DeFi yield may be spent. Preferred rails: Aave → USDC → Self-Custody Card (Wirex/Gnosis). Kill switch halts all agent spending instantly.</div>
         </div>
       )}
     </div>
@@ -399,20 +447,19 @@ function PolicyEditor({ vertical, policies, onChange }) {
 function AgentDetail({ agentId, results }) {
   const agent = AGENTS.find(a => a.id === agentId);
   const result = results[agentId];
-  if (!result) return <div style={{ padding: "20px", textAlign: "center", color: "#262d3d", fontSize: "10px" }}>Click an agent to inspect</div>;
-
+  if (!result) return <div style={{ padding: "32px", textAlign: "center", color: "var(--dim)", fontSize: "13px" }}>Click an agent above to inspect its decision</div>;
   return (
-    <div style={{ padding: "12px", overflowY: "auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-        <span style={{ fontFamily: "var(--m)", fontSize: "14px", color: agent.color }}>{agent.icon}</span>
+    <div style={{ padding: "16px 20px", overflowY: "auto", maxWidth: "700px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+        <span style={{ fontFamily: "var(--m)", fontSize: "18px", color: agent.color }}>{agent.icon}</span>
         <div>
-          <div style={{ fontFamily: "var(--m)", fontSize: "12px", fontWeight: 700, color: agent.color }}>{agent.name}</div>
-          <div style={{ fontSize: "9px", color: "#4a5568" }}>{agent.role}</div>
+          <div style={{ fontFamily: "var(--m)", fontSize: "15px", fontWeight: 700, color: agent.color }}>{agent.name}</div>
+          <div style={{ fontSize: "12px", color: "var(--muted)" }}>{agent.role}</div>
         </div>
       </div>
-      {result.summary && <div style={{ padding: "8px 10px", borderRadius: "6px", background: `${agent.color}08`, border: `1px solid ${agent.color}20`, marginBottom: "10px", fontSize: "11px", color: "#cbd5e1", lineHeight: 1.4 }}>{result.summary}</div>}
+      {result.summary && <div style={{ padding: "12px 14px", borderRadius: "8px", background: `${agent.color}08`, border: `1px solid ${agent.color}20`, marginBottom: "14px", fontSize: "14px", color: "#cbd5e1", lineHeight: 1.5 }}>{result.summary}</div>}
 
-      <div style={{ display: "flex", gap: "5px", marginBottom: "10px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: "8px", marginBottom: "14px", flexWrap: "wrap" }}>
         {result.complianceScore !== undefined && <Badge label="Compliance" value={`${result.complianceScore}%`} color={result.complianceScore > 80 ? "#10b981" : "#fbbf24"} />}
         {result.riskScore !== undefined && <Badge label="Risk" value={`${result.riskScore}/100`} color={result.riskScore < 40 ? "#10b981" : result.riskScore < 70 ? "#fbbf24" : "#ef4444"} />}
         {result.approved !== undefined && <Badge label="Status" value={result.approved ? "APPROVED" : "REJECTED"} color={result.approved ? "#10b981" : "#ef4444"} />}
@@ -423,11 +470,11 @@ function AgentDetail({ agentId, results }) {
       </div>
 
       {result.checks && (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", marginBottom: "4px" }}>CHECKS</div>
+        <div style={{ marginBottom: "14px" }}>
+          <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", marginBottom: "6px", letterSpacing: "0.5px" }}>COMPLIANCE CHECKS</div>
           {result.checks.map((c, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "5px", fontSize: "9px", marginBottom: "3px", padding: "3px 5px", borderRadius: "3px", background: "#0d1117" }}>
-              <span style={{ padding: "1px 3px", borderRadius: "2px", fontFamily: "var(--m)", fontSize: "6px", fontWeight: 700, flexShrink: 0, background: c.status === "pass" ? "#10b98115" : c.status === "fail" ? "#ef444415" : "#fbbf2415", color: c.status === "pass" ? "#10b981" : c.status === "fail" ? "#ef4444" : "#fbbf24" }}>{c.status.toUpperCase()}</span>
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "8px", fontSize: "12px", marginBottom: "4px", padding: "6px 8px", borderRadius: "5px", background: "var(--surface)" }}>
+              <span style={{ padding: "2px 5px", borderRadius: "3px", fontFamily: "var(--m)", fontSize: "8px", fontWeight: 700, flexShrink: 0, background: c.status === "pass" ? "#10b98115" : c.status === "fail" ? "#ef444415" : "#fbbf2415", color: c.status === "pass" ? "#10b981" : c.status === "fail" ? "#ef4444" : "#fbbf24" }}>{c.status.toUpperCase()}</span>
               <span style={{ color: "#94a3b8" }}><strong style={{ color: "#cbd5e1" }}>{c.name}:</strong> {c.detail}</span>
             </div>
           ))}
@@ -435,20 +482,20 @@ function AgentDetail({ agentId, results }) {
       )}
 
       {result.decisionChain && (
-        <div style={{ marginBottom: "10px" }}>
-          <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", marginBottom: "4px" }}>DECISION CHAIN</div>
+        <div style={{ marginBottom: "14px" }}>
+          <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", marginBottom: "6px", letterSpacing: "0.5px" }}>DECISION CHAIN</div>
           {result.decisionChain.map((d, i) => (
-            <div key={i} style={{ display: "flex", gap: "5px", fontSize: "9px", marginBottom: "2px", padding: "3px 5px", borderRadius: "3px", background: "#0d1117" }}>
-              <span style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#38bdf8", fontWeight: 600 }}>[{d.reasonCode}]</span>
+            <div key={i} style={{ display: "flex", gap: "8px", fontSize: "12px", marginBottom: "3px", padding: "6px 8px", borderRadius: "5px", background: "var(--surface)" }}>
+              <span style={{ fontFamily: "var(--m)", fontSize: "9px", color: "#38bdf8", fontWeight: 600 }}>[{d.reasonCode}]</span>
               <span style={{ color: "#94a3b8", flex: 1 }}>{d.agent}: {d.decision}</span>
-              <span style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568" }}>{d.confidence}%</span>
+              <span style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)" }}>{d.confidence}%</span>
             </div>
           ))}
         </div>
       )}
 
-      <details><summary style={{ fontFamily: "var(--m)", fontSize: "8px", color: "#4a5568", cursor: "pointer" }}>Raw JSON</summary>
-        <pre style={{ marginTop: "4px", padding: "8px", borderRadius: "5px", background: "#080a10", fontSize: "7px", color: "#4a5568", fontFamily: "var(--m)", lineHeight: 1.4, border: "1px solid #1b2030", whiteSpace: "pre-wrap", wordBreak: "break-word", overflow: "auto", maxHeight: "250px" }}>{JSON.stringify(result, null, 2)}</pre>
+      <details><summary style={{ fontFamily: "var(--m)", fontSize: "10px", color: "var(--muted)", cursor: "pointer" }}>Raw JSON</summary>
+        <pre style={{ marginTop: "6px", padding: "12px", borderRadius: "6px", background: "#080a10", fontSize: "10px", color: "var(--muted)", fontFamily: "var(--m)", lineHeight: 1.4, border: "1px solid var(--border)", whiteSpace: "pre-wrap", wordBreak: "break-word", overflow: "auto", maxHeight: "300px" }}>{JSON.stringify(result, null, 2)}</pre>
       </details>
     </div>
   );
@@ -456,9 +503,9 @@ function AgentDetail({ agentId, results }) {
 
 function Badge({ label, value, color }) {
   return (
-    <div style={{ padding: "4px 7px", borderRadius: "5px", background: `${color}10`, border: `1px solid ${color}20` }}>
-      <div style={{ fontFamily: "var(--m)", fontSize: "6px", color: "#4a5568" }}>{label}</div>
-      <div style={{ fontFamily: "var(--m)", fontSize: "10px", fontWeight: 700, color }}>{value}</div>
+    <div style={{ padding: "6px 10px", borderRadius: "8px", background: `${color}10`, border: `1px solid ${color}20` }}>
+      <div style={{ fontFamily: "var(--m)", fontSize: "8px", color: "var(--muted)" }}>{label}</div>
+      <div style={{ fontFamily: "var(--m)", fontSize: "13px", fontWeight: 700, color }}>{value}</div>
     </div>
   );
 }
@@ -467,16 +514,16 @@ function AuditTrail({ entries }) {
   const ref = useRef(null);
   useEffect(() => { ref.current?.scrollTo(0, ref.current.scrollHeight); }, [entries]);
   return (
-    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: "3px", padding: "8px 12px", overflowY: "auto" }}>
-      {entries.length === 0 && <div style={{ color: "#262d3d", fontSize: "10px", textAlign: "center", padding: "16px" }}>Audit trail populates as agents process...</div>}
+    <div ref={ref} style={{ display: "flex", flexDirection: "column", gap: "4px", padding: "12px 16px", overflowY: "auto" }}>
+      {entries.length === 0 && <div style={{ color: "var(--dim)", fontSize: "13px", textAlign: "center", padding: "24px" }}>Audit trail populates as agents process...</div>}
       {entries.map((e, i) => (
-        <div key={i} style={{ padding: "5px 7px", borderRadius: "4px", background: "#0d1117", borderLeft: `2px solid ${AGENTS.find(a => a.id === e.agent)?.color || "#1b2030"}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1px" }}>
-            <span style={{ fontFamily: "var(--m)", fontSize: "7px", fontWeight: 600, color: AGENTS.find(a => a.id === e.agent)?.color, textTransform: "uppercase" }}>{e.agent}</span>
-            <span style={{ fontFamily: "var(--m)", fontSize: "6px", color: "#262d3d" }}>{e.time}</span>
+        <div key={i} style={{ padding: "8px 10px", borderRadius: "6px", background: "var(--surface)", borderLeft: `3px solid ${AGENTS.find(a => a.id === e.agent)?.color || "var(--border)"}` }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+            <span style={{ fontFamily: "var(--m)", fontSize: "9px", fontWeight: 600, color: AGENTS.find(a => a.id === e.agent)?.color, textTransform: "uppercase" }}>{e.agent}</span>
+            <span style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--dim)" }}>{e.time}</span>
           </div>
-          <div style={{ fontSize: "8px", color: "#94a3b8", lineHeight: 1.3 }}>{e.message}</div>
-          {e.status && <span style={{ display: "inline-block", marginTop: "2px", padding: "1px 4px", borderRadius: "2px", fontSize: "6px", fontFamily: "var(--m)", fontWeight: 700, background: e.status === "pass" ? "#10b98115" : e.status === "fail" ? "#ef444415" : "#fbbf2415", color: e.status === "pass" ? "#10b981" : e.status === "fail" ? "#ef4444" : "#fbbf24" }}>{e.status.toUpperCase()}</span>}
+          <div style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.4 }}>{e.message}</div>
+          {e.status && <span style={{ display: "inline-block", marginTop: "3px", padding: "2px 6px", borderRadius: "3px", fontSize: "8px", fontFamily: "var(--m)", fontWeight: 700, background: e.status === "pass" ? "#10b98115" : e.status === "fail" ? "#ef444415" : "#fbbf2415", color: e.status === "pass" ? "#10b981" : e.status === "fail" ? "#ef4444" : "#fbbf24" }}>{e.status.toUpperCase()}</span>}
         </div>
       ))}
     </div>
@@ -489,47 +536,46 @@ function Analytics({ payments, vertical }) {
   const rejected = payments.filter(p => p.finalStatus === "rejected");
   const total = payments.reduce((s, p) => s + (p.payment?.amount || 0), 0);
   const avgRisk = settled.length ? Math.round(settled.reduce((s, p) => s + (p.results?.control?.riskScore || 0), 0) / settled.length) : 0;
-
   const railCounts = {};
   settled.forEach(p => { const r = p.results?.execution?.selectedRail || p.results?.execution?.provider || "unknown"; railCounts[r] = (railCounts[r] || 0) + 1; });
 
   return (
-    <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "10px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+    <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "12px", maxWidth: "600px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
         <SC label="Processed" value={payments.length} sub={vertical === "consumer" ? `$${total.toLocaleString()}` : `$${(total/1e6).toFixed(1)}M`} color={v.accent} />
         <SC label="Settled" value={settled.length} sub={`${payments.length ? Math.round(settled.length/payments.length*100) : 0}%`} color="#10b981" />
         <SC label="Rejected" value={rejected.length} sub={`${payments.length ? Math.round(rejected.length/payments.length*100) : 0}%`} color="#ef4444" />
         <SC label="Avg Risk" value={avgRisk} sub={avgRisk < 40 ? "Low" : "Med"} color={avgRisk < 40 ? "#10b981" : "#fbbf24"} />
       </div>
       {Object.keys(railCounts).length > 0 && (
-        <div style={{ padding: "8px", borderRadius: "6px", background: "#0d1117", border: "1px solid #1b2030" }}>
-          <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", marginBottom: "6px" }}>RAIL USAGE</div>
+        <div style={{ padding: "12px", borderRadius: "8px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+          <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", marginBottom: "8px", letterSpacing: "0.5px" }}>RAIL USAGE</div>
           {Object.entries(railCounts).map(([r, c]) => (
-            <div key={r} style={{ display: "flex", justifyContent: "space-between", fontSize: "9px", marginBottom: "2px" }}>
+            <div key={r} style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
               <span style={{ color: "#94a3b8" }}>{r}</span>
               <span style={{ fontFamily: "var(--m)", fontWeight: 600, color: v.accent }}>{c}x</span>
             </div>
           ))}
         </div>
       )}
-      {payments.slice(0, 6).map(p => (
-        <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "5px 7px", borderRadius: "3px", background: "#0d1117", fontSize: "9px", alignItems: "center" }}>
-          <span style={{ fontFamily: "var(--m)", color: v.accent, fontWeight: 600, fontSize: "8px" }}>{p.payment.id}</span>
-          <span style={{ color: "#4a5568", fontSize: "8px" }}>{p.payment.currency} {Number(p.payment.amount).toLocaleString()}</span>
-          <span style={{ fontFamily: "var(--m)", fontSize: "7px", fontWeight: 700, color: p.finalStatus === "settled" ? "#10b981" : p.finalStatus === "rejected" ? "#ef4444" : "#38bdf8" }}>{(p.finalStatus || "...").toUpperCase()}</span>
+      {payments.slice(0, 8).map(p => (
+        <div key={p.id} style={{ display: "flex", justifyContent: "space-between", padding: "8px 10px", borderRadius: "6px", background: "var(--surface)", fontSize: "12px", alignItems: "center" }}>
+          <span style={{ fontFamily: "var(--m)", color: v.accent, fontWeight: 600, fontSize: "10px" }}>{p.payment.id}</span>
+          <span style={{ color: "var(--muted)" }}>{p.payment.currency} {Number(p.payment.amount).toLocaleString()}</span>
+          <span style={{ fontFamily: "var(--m)", fontSize: "9px", fontWeight: 700, color: p.finalStatus === "settled" ? "#10b981" : p.finalStatus === "rejected" ? "#ef4444" : "#38bdf8" }}>{(p.finalStatus || "...").toUpperCase()}</span>
         </div>
       ))}
-      {payments.length === 0 && <div style={{ textAlign: "center", color: "#262d3d", fontSize: "10px", padding: "12px" }}>No data yet</div>}
+      {payments.length === 0 && <div style={{ textAlign: "center", color: "var(--dim)", fontSize: "13px", padding: "16px" }}>Submit payments to see analytics</div>}
     </div>
   );
 }
 
 function SC({ label, value, sub, color }) {
   return (
-    <div style={{ padding: "10px", borderRadius: "8px", background: "#0d1117", border: "1px solid #1b2030" }}>
-      <div style={{ fontFamily: "var(--m)", fontSize: "6px", color: "#4a5568", letterSpacing: "0.5px" }}>{label.toUpperCase()}</div>
-      <div style={{ fontFamily: "var(--m)", fontSize: "20px", fontWeight: 700, color, lineHeight: 1.1 }}>{value}</div>
-      <div style={{ fontSize: "8px", color: "#4a5568", marginTop: "1px" }}>{sub}</div>
+    <div style={{ padding: "14px", borderRadius: "10px", background: "var(--surface)", border: "1px solid var(--border)" }}>
+      <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", letterSpacing: "0.5px" }}>{label.toUpperCase()}</div>
+      <div style={{ fontFamily: "var(--m)", fontSize: "28px", fontWeight: 700, color, lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>{sub}</div>
     </div>
   );
 }
@@ -540,34 +586,33 @@ function CompetitiveLandscape() {
     { name: "OpenAI ACP", role: "Commerce Protocol", layer: "top", color: "#10b981", desc: "Agentic Commerce Protocol — transaction standard for AI agents" },
     { name: "REVVYN", role: "Governance + Control", layer: "middle", color: "#06d6a0", desc: "Policy enforcement, risk scoring, rail optimization, audit trail — THE GOVERNANCE LAYER" },
     { name: "Visa", role: "Card Execution", layer: "bottom", color: "#1a1f71", desc: "Intelligent Commerce — agent-to-network payment via Visa rails" },
-    { name: "Mastercard", role: "Card Execution", layer: "bottom", color: "#eb001b", desc: "Agent Pay — agent-to-network payment via Mastercard rails" },
+    { name: "Mastercard", role: "Card Execution", layer: "bottom", color: "#eb001b", desc: "Agent Pay — agent-to-network via Mastercard rails" },
     { name: "WooshPay", role: "API Execution", layer: "bottom", color: "#6366f1", desc: "Cross-border API — 150+ countries, local payment methods" },
-    { name: "DeFi / Self-Custody", role: "On-Chain Execution", layer: "bottom", color: "#f472b6", desc: "Aave, Compound, Safe wallets, Wirex Pay — consumer AI agents spending from DeFi yield" },
+    { name: "DeFi / Self-Custody", role: "On-Chain Execution", layer: "bottom", color: "#f472b6", desc: "Aave, Compound, Safe wallets, Wirex Pay — consumer AI agents" },
   ];
 
   return (
-    <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-      <div style={{ fontSize: "11px", color: "#94a3b8", lineHeight: 1.4 }}>
-        The agentic commerce stack has three layers. Google owns intent. Visa/Mastercard/WooshPay own execution. DeFi rails enable consumer AI agents (like the "Yield Guardian"). <span style={{ color: "#06d6a0", fontWeight: 600 }}>Nobody owns the governance and intelligence layer in between — from enterprise to consumer. That layer is Revvyn.</span>
+    <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: "10px", maxWidth: "700px" }}>
+      <div style={{ fontSize: "14px", color: "#94a3b8", lineHeight: 1.5 }}>
+        The agentic commerce stack has three layers. Google owns intent. Visa/Mastercard/WooshPay own execution. DeFi rails enable consumer AI agents.{" "}
+        <span style={{ color: "#06d6a0", fontWeight: 600 }}>Nobody owns the governance layer in between. That's Revvyn.</span>
       </div>
-
       {["top", "middle", "bottom"].map(layer => (
         <div key={layer}>
-          <div style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568", letterSpacing: "0.8px", marginBottom: "4px" }}>
+          <div style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)", letterSpacing: "1px", marginBottom: "5px" }}>
             {layer === "top" ? "INTENT LAYER" : layer === "middle" ? "REVVYN — GOVERNANCE & CONTROL" : "EXECUTION LAYER"}
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {players.filter(p => p.layer === layer).map(p => (
-              <div key={p.name} style={{
-                padding: "8px 10px", borderRadius: "6px",
-                background: p.layer === "middle" ? "#06d6a008" : "#0d1117",
-                border: `1px solid ${p.layer === "middle" ? "#06d6a040" : "#1b2030"}`,
+              <div key={p.name} style={{ padding: "10px 14px", borderRadius: "8px",
+                background: p.layer === "middle" ? "#06d6a008" : "var(--surface)",
+                border: `1px solid ${p.layer === "middle" ? "#06d6a040" : "var(--border)"}`,
               }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
-                  <span style={{ fontFamily: "var(--m)", fontSize: "10px", fontWeight: 700, color: p.color }}>{p.name}</span>
-                  <span style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#4a5568" }}>{p.role}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "3px" }}>
+                  <span style={{ fontFamily: "var(--m)", fontSize: "13px", fontWeight: 700, color: p.color }}>{p.name}</span>
+                  <span style={{ fontFamily: "var(--m)", fontSize: "9px", color: "var(--muted)" }}>{p.role}</span>
                 </div>
-                <div style={{ fontSize: "9px", color: "#64748b", lineHeight: 1.3 }}>{p.desc}</div>
+                <div style={{ fontSize: "12px", color: "var(--muted)", lineHeight: 1.4 }}>{p.desc}</div>
               </div>
             ))}
           </div>
@@ -579,25 +624,25 @@ function CompetitiveLandscape() {
 
 function EscalationModal({ payment, result, onApprove, onReject }) {
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000c", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "16px" }}>
-      <div style={{ background: "#0c1021", border: "1px solid #fbbf2440", borderRadius: "12px", padding: "20px", maxWidth: "400px", width: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-          <div style={{ width: "28px", height: "28px", borderRadius: "7px", background: "#fbbf2418", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px", border: "1px solid #fbbf2440" }}>⚠</div>
+    <div style={{ position: "fixed", inset: 0, background: "#000c", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+      <div style={{ background: "var(--surface2)", border: "1px solid #fbbf2440", borderRadius: "16px", padding: "24px", maxWidth: "440px", width: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+          <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#fbbf2418", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "18px", border: "1px solid #fbbf2440" }}>⚠</div>
           <div>
-            <div style={{ fontFamily: "var(--m)", fontSize: "11px", fontWeight: 700, color: "#fbbf24" }}>HUMAN REVIEW REQUIRED</div>
-            <div style={{ fontSize: "9px", color: "#4a5568" }}>Revvyn pipeline paused</div>
+            <div style={{ fontFamily: "var(--m)", fontSize: "14px", fontWeight: 700, color: "#fbbf24" }}>HUMAN REVIEW REQUIRED</div>
+            <div style={{ fontSize: "12px", color: "var(--muted)" }}>Revvyn pipeline paused — awaiting decision</div>
           </div>
         </div>
-        <div style={{ padding: "8px", borderRadius: "6px", background: "#0d1117", border: "1px solid #1b2030", marginBottom: "10px", fontSize: "10px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
-          <div><span style={{ color: "#4a5568" }}>ID:</span> <span style={{ color: "#e2e8f0", fontFamily: "var(--m)", fontWeight: 600 }}>{payment.id}</span></div>
-          <div><span style={{ color: "#4a5568" }}>Amount:</span> <span style={{ color: "#e2e8f0", fontFamily: "var(--m)" }}>{payment.currency} {Number(payment.amount).toLocaleString()}</span></div>
-          <div><span style={{ color: "#4a5568" }}>To:</span> <span style={{ color: "#e2e8f0" }}>{payment.beneficiary}</span></div>
-          <div><span style={{ color: "#4a5568" }}>Route:</span> <span style={{ color: "#e2e8f0" }}>{payment.fromCountry} → {payment.toCountry}</span></div>
+        <div style={{ padding: "12px", borderRadius: "8px", background: "var(--surface)", border: "1px solid var(--border)", marginBottom: "12px", fontSize: "13px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+          <div><span style={{ color: "var(--muted)" }}>ID:</span> <span style={{ color: "var(--text)", fontFamily: "var(--m)", fontWeight: 600 }}>{payment.id}</span></div>
+          <div><span style={{ color: "var(--muted)" }}>Amount:</span> <span style={{ color: "var(--text)", fontFamily: "var(--m)" }}>{payment.currency} {Number(payment.amount).toLocaleString()}</span></div>
+          <div><span style={{ color: "var(--muted)" }}>To:</span> <span style={{ color: "var(--text)" }}>{payment.beneficiary}</span></div>
+          <div><span style={{ color: "var(--muted)" }}>Route:</span> <span style={{ color: "var(--text)" }}>{payment.fromCountry} → {payment.toCountry}</span></div>
         </div>
-        {result?.escalationReason && <div style={{ padding: "6px 8px", borderRadius: "5px", background: "#fbbf2408", border: "1px solid #fbbf2420", marginBottom: "10px", fontSize: "9px", color: "#e2e8f0", lineHeight: 1.3 }}><span style={{ fontFamily: "var(--m)", fontSize: "7px", color: "#fbbf24", fontWeight: 600 }}>REASON: </span>{result.escalationReason}</div>}
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button onClick={onReject} style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "1px solid #ef444440", background: "#ef444410", color: "#ef4444", fontFamily: "var(--m)", fontSize: "10px", fontWeight: 700, cursor: "pointer" }}>✕ REJECT</button>
-          <button onClick={onApprove} style={{ flex: 1, padding: "9px", borderRadius: "6px", border: "none", background: "linear-gradient(135deg, #10b981, #059669)", color: "#000", fontFamily: "var(--m)", fontSize: "10px", fontWeight: 700, cursor: "pointer" }}>✓ APPROVE</button>
+        {result?.escalationReason && <div style={{ padding: "10px 12px", borderRadius: "8px", background: "#fbbf2408", border: "1px solid #fbbf2420", marginBottom: "12px", fontSize: "12px", color: "var(--text)", lineHeight: 1.4 }}><span style={{ fontFamily: "var(--m)", fontSize: "9px", color: "#fbbf24", fontWeight: 600 }}>REASON: </span>{result.escalationReason}</div>}
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button onClick={onReject} style={{ flex: 1, padding: "12px", borderRadius: "8px", border: "1px solid #ef444440", background: "#ef444410", color: "#ef4444", fontFamily: "var(--m)", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>✕ REJECT</button>
+          <button onClick={onApprove} style={{ flex: 1, padding: "12px", borderRadius: "8px", border: "none", background: "linear-gradient(135deg, #10b981, #059669)", color: "#000", fontFamily: "var(--m)", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>✓ APPROVE</button>
         </div>
       </div>
     </div>
@@ -605,10 +650,11 @@ function EscalationModal({ payment, result, onApprove, onReject }) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// MAIN
+// MAIN APP
 // ═══════════════════════════════════════════════════════════
 
 function App() {
+  const [showHero, setShowHero] = useState(true);
   const [vertical, setVertical] = useState("treasury");
   const [policies, setPolicies] = useState(VERTICALS.treasury.policies);
   const [payments, setPayments] = useState([]);
@@ -699,54 +745,49 @@ function App() {
     setIsProcessing(false);
   }, [vertical, policies, killActive, addAudit]);
 
+  if (showHero) return <Hero onEnter={() => setShowHero(false)} />;
+
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "#080a12", color: "#e2e8f0", fontFamily: "var(--b)", overflow: "hidden" }}>
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: "var(--bg)", color: "var(--text)", fontFamily: "var(--b)", overflow: "hidden" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-        :root { --m: 'IBM Plex Mono', monospace; --b: 'Outfit', sans-serif; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-        @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
-        * { box-sizing: border-box; margin: 0; scrollbar-width: thin; scrollbar-color: #1b2030 transparent; }
-        ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-thumb { background: #1b2030; border-radius: 3px; }
-        select option { background: #0d1117; color: #e2e8f0; }
         input:focus, select:focus { border-color: ${v.accent} !important; outline: none; }
-        input[type=range] { -webkit-appearance: none; background: #1b2030; border-radius: 3px; height: 3px; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: ${v.accent}; }
+        input[type=range] { -webkit-appearance: none; background: var(--border); border-radius: 4px; height: 4px; cursor: pointer; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: ${v.accent}; }
         details summary { cursor: pointer; } details summary:hover { color: #94a3b8; }
       `}</style>
 
       {/* HEADER */}
-      <div style={{ padding: "8px 14px", borderBottom: "1px solid #1b2030", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0a0e18", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <div style={{ width: "26px", height: "26px", borderRadius: "6px", background: `linear-gradient(135deg, ${v.accent}, ${v.accent}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, color: "#000" }}>R</div>
+      <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: `linear-gradient(135deg, ${v.accent}, ${v.accent}88)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "15px", fontWeight: 800, color: "#000", cursor: "pointer" }} onClick={() => setShowHero(true)}>R</div>
           <div>
-            <div style={{ fontFamily: "var(--m)", fontSize: "11px", fontWeight: 700 }}>REVVYN</div>
-            <div style={{ fontSize: "8px", color: "#4a5568", fontFamily: "var(--m)" }}>The Governance Layer — Protocol-Agnostic · Enterprise to Consumer</div>
+            <div style={{ fontFamily: "var(--m)", fontSize: "14px", fontWeight: 700 }}>REVVYN</div>
+            <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "var(--m)" }}>The Governance Layer — Protocol-Agnostic · Enterprise to Consumer</div>
           </div>
         </div>
         <div onClick={() => { setKillActive(!killActive); addAudit("orchestrator", killActive ? "System resumed" : "⛔ KILL SWITCH", killActive ? "pass" : "fail"); }}
-          style={{ display: "flex", alignItems: "center", gap: "5px", padding: "4px 10px", borderRadius: "5px", cursor: "pointer", background: killActive ? "#ef444412" : "#10b98108", border: `1px solid ${killActive ? "#ef444440" : "#10b98130"}` }}>
-          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: killActive ? "#ef4444" : "#10b981", boxShadow: `0 0 5px ${killActive ? "#ef4444" : "#10b981"}` }} />
-          <span style={{ fontFamily: "var(--m)", fontSize: "8px", fontWeight: 700, color: killActive ? "#ef4444" : "#10b981" }}>{killActive ? "HALTED" : "LIVE"}</span>
+          style={{ display: "flex", alignItems: "center", gap: "6px", padding: "6px 14px", borderRadius: "8px", cursor: "pointer", background: killActive ? "#ef444412" : "#10b98108", border: `1px solid ${killActive ? "#ef444440" : "#10b98130"}` }}>
+          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: killActive ? "#ef4444" : "#10b981", boxShadow: `0 0 6px ${killActive ? "#ef4444" : "#10b981"}` }} />
+          <span style={{ fontFamily: "var(--m)", fontSize: "10px", fontWeight: 700, color: killActive ? "#ef4444" : "#10b981" }}>{killActive ? "HALTED" : "LIVE"}</span>
         </div>
       </div>
 
       {/* VERTICALS */}
-      <div style={{ display: "flex", gap: "2px", padding: "5px 10px", borderBottom: "1px solid #1b2030", background: "#0a0e18", flexShrink: 0, overflowX: "auto" }}>
+      <div style={{ display: "flex", gap: "4px", padding: "8px 12px", borderBottom: "1px solid var(--border)", background: "var(--surface)", flexShrink: 0, overflowX: "auto" }}>
         {Object.values(VERTICALS).map(vt => (
           <button key={vt.id} onClick={() => setVertical(vt.id)} style={{
-            padding: "5px 10px", borderRadius: "5px", border: `1px solid ${vertical === vt.id ? vt.accent : "transparent"}`,
+            padding: "7px 14px", borderRadius: "8px", border: `1px solid ${vertical === vt.id ? vt.accent : "transparent"}`,
             background: vertical === vt.id ? `${vt.accent}12` : "transparent", cursor: "pointer",
-            fontFamily: "var(--m)", fontSize: "8px", fontWeight: 600, color: vertical === vt.id ? vt.accent : "#4a5568", whiteSpace: "nowrap",
+            fontFamily: "var(--m)", fontSize: "10px", fontWeight: 600, color: vertical === vt.id ? vt.accent : "var(--muted)", whiteSpace: "nowrap",
           }}>{vt.icon} {vt.label.toUpperCase()}</button>
         ))}
       </div>
 
-      {/* PIPELINE */}
+      {/* PIPELINE ROW */}
       <PipelineRow statuses={agentStatuses} results={agentResults} selected={selectedAgent} onSelect={s => { setSelectedAgent(s); setMainTab("pipeline"); }} />
       {paymentState && <StateMachine current={paymentState} />}
 
-      {/* STACK DIAGRAM */}
+      {/* STACK */}
       <StackDiagram selectedRail={selectedRail} intentSource={intentSource} />
 
       {/* TABS */}
@@ -774,8 +815,8 @@ function App() {
   );
 }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
