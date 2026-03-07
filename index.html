@@ -148,20 +148,59 @@ function now(){return new Date().toTimeString().slice(0,8)}
 
 // ─── Live Sanctions Engine ──────────────────────────────────────────────────────
 
-// Fallback SDN name list — real entities from the OFAC SDN list
-const SDN_FALLBACK=new Set([
-  "BANK MELLI IRAN","BANK MELLAT","BANK SADERAT IRAN","BANK SEPAH","BANK TEJARAT",
-  "MAHAN AIR","IRAN AIR","CASPIAN AIR",
-  "ISLAMIC REVOLUTIONARY GUARD CORPS","IRGC","IRGC-QF","QUDS FORCE",
-  "WAGNER GROUP","PMC WAGNER","CONCORD MANAGEMENT",
-  "KOREAN RYONBONG GENERAL CORPORATION","KOREA MINING DEVELOPMENT TRADING CORPORATION","NAMCHONGANG TRADING",
-  "SYRIAN ARAB AIRLINES","CHAM WINGS AIRLINES",
-  "ROSOBORONEXPORT","ROSTEC","ALMAZ-ANTEY","UNITED AIRCRAFT CORPORATION",
-  "HEZBOLLAH","HAMAS","PALESTINIAN ISLAMIC JIHAD","AL-AQSA MARTYRS",
-  "AL-QAEDA","AL QAEDA","ISIS","ISIL","ISLAMIC STATE","JABHAT AL-NUSRA",
-  "BANCO CENTRAL DE VENEZUELA","PDVSA","PETROLEOS DE VENEZUELA",
-  "MYANMAR ECONOMIC CORPORATION","MYANMAR GEMS ENTERPRISE",
+// ─── Sanctions Fallback — real entities from OFAC SDN, EU Consolidated & UN SC lists ──
+
+const SDN_FALLBACK_OFAC=new Set([
+  "BANK MELLI IRAN","BANK MELLAT","BANK SADERAT IRAN","BANK SEPAH","BANK TEJARAT","BANK REFAH KARGARAN",
+  "MAHAN AIR","IRAN AIR","CASPIAN AIR","POUYA AIR","MERAJ AIR",
+  "ISLAMIC REVOLUTIONARY GUARD CORPS","IRGC","IRGC-QF","QUDS FORCE","BASIJ",
+  "WAGNER GROUP","PMC WAGNER","CONCORD MANAGEMENT AND CONSULTING",
+  "KOREAN RYONBONG GENERAL CORPORATION","KOREA MINING DEVELOPMENT TRADING CORPORATION","NAMCHONGANG TRADING","GREEN PINE ASSOCIATED CORPORATION",
+  "SYRIAN ARAB AIRLINES","CHAM WINGS AIRLINES","SYRIAN AIR",
+  "ROSOBORONEXPORT","ROSTEC","ALMAZ-ANTEY","UNITED AIRCRAFT CORPORATION","TACTICAL MISSILES CORPORATION",
+  "HEZBOLLAH","HAMAS","PALESTINIAN ISLAMIC JIHAD","AL-AQSA MARTYRS BRIGADE",
+  "AL-QAEDA","AL QAEDA","ISIS","ISIL","ISLAMIC STATE","JABHAT AL-NUSRA","HAYAT TAHRIR AL-SHAM",
+  "BANCO CENTRAL DE VENEZUELA","PDVSA","PETROLEOS DE VENEZUELA","BANDES",
+  "MYANMAR ECONOMIC CORPORATION","MYANMAR GEMS ENTERPRISE","MEC","MEHL",
+  "TRANSNEFT","GAZPROMBANK","VTB BANK","SBERBANK","NOVATEK","LUKOIL",
 ]);
+
+const SDN_FALLBACK_EU=new Set([
+  // EU-specific designations
+  "IGOR SECHIN","SERGEI CHEMEZOV","NIKOLAI PATRUSHEV","ALEXANDER BORTNIKOV",
+  "YEVGENY PRIGOZHIN","DMITRY UTKIN","ANDREI TROSHEV",
+  "ROSSIYA BANK","SOGAZ","BANK ROSSIYA","INVESTCAPITALBANK",
+  "CRIMEA SEAPORT","KERCH FERRY","FEODOSIA ENTERPRISE",
+  "DONETSK PEOPLES REPUBLIC","LUHANSK PEOPLES REPUBLIC",
+  "ENTERPRISE FOR NUCLEAR TECHNOLOGIES","ORGANIZATION OF AEROSPACE INDUSTRIES",
+  "TOSAN ERTEBAT COMPANY","ELECTRONIC COMPONENTS INDUSTRIES",
+  "AL-NUSRAH FRONT","ANSAR AL-DINE","MOVEMENT FOR ONENESS AND JIHAD",
+  "ISLAMIC JIHAD UNION","EAST TURKESTAN ISLAMIC MOVEMENT",
+  "JUND AL-SHAM","ASBAT AL-ANSAR","OSBAT AL-ANSAR",
+]);
+
+const SDN_FALLBACK_UN=new Set([
+  // UN Security Council 1267/1988/1718/2231 Committee designations
+  "TALIBAN","ISLAMIC EMIRATE OF AFGHANISTAN","QUETTA SHURA",
+  "HAQQANI NETWORK","SIRAJUDDIN HAQQANI",
+  "AL-SHABAAB","HARAKAT AL-SHABAAB AL-MUJAHIDEEN",
+  "ANSARUL ISLAM","JAMAAT NUSRAT AL-ISLAM",
+  "KOREA RYONHA MACHINERY JOINT VENTURE CORPORATION",
+  "KOREA KUMRYONG TRADING CORPORATION","PAEKSAN TRADING CORPORATION",
+  "GENERAL BUREAU OF ATOMIC ENERGY","SECOND NATURAL SCIENCE ACADEMY",
+  "COMMITTEE FOR SPACE TECHNOLOGY","RECONNAISSANCE GENERAL BUREAU",
+  "HOUTHI","ANSAR ALLAH","ANSARALLAH","ABDULMALIK AL-HOUTHI",
+  "ISLAMIC REVOLUTIONARY GUARD CORPS NAVY","IRGC-N",
+]);
+
+// Combined fallback across all three lists
+const SDN_FALLBACK=new Set([...SDN_FALLBACK_OFAC,...SDN_FALLBACK_EU,...SDN_FALLBACK_UN]);
+
+// Add two-word prefix keys for partial matching
+for(const name of [...SDN_FALLBACK]){
+  const words=name.split(/\s+/);
+  if(words.length>=2) SDN_FALLBACK.add(words.slice(0,2).join(" "));
+}
 
 // Normalize name for matching
 function normalizeName(name){
@@ -187,8 +226,8 @@ function checkSDNMatch(name,sdnNames){
 // Global sanctions state — updated by loadSanctionsData()
 let SANCTIONS_STATE={
   status:"loading",
-  ofacNames:SDN_FALLBACK,euNames:new Set(),unNames:new Set(),
-  ofacCount:0,euCount:0,unCount:0,
+  ofacNames:SDN_FALLBACK_OFAC,euNames:SDN_FALLBACK_EU,unNames:SDN_FALLBACK_UN,
+  ofacCount:SDN_FALLBACK_OFAC.size,euCount:SDN_FALLBACK_EU.size,unCount:SDN_FALLBACK_UN.size,
   lastUpdated:null,dataDate:null,
   feeds:{ofac:"loading",eu:"loading",un:"loading"},
 };
@@ -249,57 +288,80 @@ function parseUnXML(text){
   return {names,count};
 }
 
-const PROXY="https://api.allorigins.win/raw?url=";
+// CORS proxies — tried in order until one works
+const PROXIES=[
+  "https://api.allorigins.win/raw?url=",
+  "https://corsproxy.io/?",
+  "https://api.codetabs.com/v1/proxy?quest=",
+];
+
+async function fetchViaProxy(url,timeout=18000){
+  for(const proxy of PROXIES){
+    try{
+      const res=await fetch(proxy+encodeURIComponent(url),{signal:AbortSignal.timeout(timeout)});
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text=await res.text();
+      if(text.length<200) throw new Error("Response too short");
+      return text;
+    }catch(e){
+      console.warn(`[Revvyn] Proxy ${proxy} failed for ${url.slice(0,40)}:`,e.message);
+    }
+  }
+  throw new Error(`All proxies failed for ${url}`);
+}
 
 async function loadSanctionsData(onUpdate){
   const date=new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-  let ofacNames=SDN_FALLBACK,euNames=new Set(),unNames=new Set();
-  let ofacCount=SDN_FALLBACK.size,euCount=0,unCount=0;
+  let ofacNames=SDN_FALLBACK_OFAC,euNames=SDN_FALLBACK_EU,unNames=SDN_FALLBACK_UN;
+  let ofacCount=SDN_FALLBACK_OFAC.size,euCount=SDN_FALLBACK_EU.size,unCount=SDN_FALLBACK_UN.size;
   let ofacStatus="cached",euStatus="cached",unStatus="cached";
 
-  // Run all three fetches in parallel
+  // EU has multiple known URL variants
+  const EU_URLS=[
+    "https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList/content",
+    "https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content",
+  ];
+
   const [ofacResult,euResult,unResult]=await Promise.allSettled([
     // OFAC SDN
     (async()=>{
-      const res=await fetch(PROXY+encodeURIComponent("https://www.treasury.gov/ofac/downloads/sdn.csv"),{signal:AbortSignal.timeout(20000)});
-      if(!res.ok) throw new Error(`OFAC HTTP ${res.status}`);
-      const text=await res.text();
-      if(text.length<1000) throw new Error("OFAC response too short");
+      const text=await fetchViaProxy("https://www.treasury.gov/ofac/downloads/sdn.csv");
       const {names,count}=parseOfacCSV(text);
-      if(count<100) throw new Error("OFAC too few entries");
+      if(count<100) throw new Error("Too few OFAC entries: "+count);
       return {names,count};
     })(),
-    // EU Consolidated Sanctions
+    // EU Consolidated — try multiple URLs
     (async()=>{
-      const res=await fetch(PROXY+encodeURIComponent("https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList/content"),{signal:AbortSignal.timeout(20000)});
-      if(!res.ok) throw new Error(`EU HTTP ${res.status}`);
-      const text=await res.text();
-      if(text.length<500) throw new Error("EU response too short");
-      const {names,count}=parseEuCSV(text);
-      return {names,count};
+      let lastErr;
+      for(const url of EU_URLS){
+        try{
+          const text=await fetchViaProxy(url);
+          const {names,count}=parseEuCSV(text);
+          if(count>5) return {names,count};
+        }catch(e){lastErr=e;}
+      }
+      throw lastErr||new Error("EU fetch failed");
     })(),
-    // UN Security Council Sanctions
+    // UN Security Council
     (async()=>{
-      const res=await fetch(PROXY+encodeURIComponent("https://scsanctions.un.org/feed/"),{signal:AbortSignal.timeout(15000)});
-      if(!res.ok) throw new Error(`UN HTTP ${res.status}`);
-      const text=await res.text();
-      if(text.length<200) throw new Error("UN response too short");
+      const text=await fetchViaProxy("https://scsanctions.un.org/feed/");
       const {names,count}=parseUnXML(text);
+      if(count<5) throw new Error("Too few UN entries: "+count);
       return {names,count};
     })(),
   ]);
 
   if(ofacResult.status==="fulfilled"){
     ofacNames=ofacResult.value.names;ofacCount=ofacResult.value.count;ofacStatus="live";
-  }else{console.warn("[Revvyn] OFAC failed:",ofacResult.reason?.message);}
+  }else{console.warn("[Revvyn] OFAC live fetch failed — using fallback:",ofacResult.reason?.message);}
 
   if(euResult.status==="fulfilled"){
     euNames=euResult.value.names;euCount=euResult.value.count;euStatus="live";
-  }else{console.warn("[Revvyn] EU failed:",euResult.reason?.message);}
+  }else{console.warn("[Revvyn] EU live fetch failed — using fallback:",euResult.reason?.message);}
 
   if(unResult.status==="fulfilled"){
     unNames=unResult.value.names;unCount=unResult.value.count;unStatus="live";
-  }else{console.warn("[Revvyn] UN failed:",unResult.reason?.message);}
+  }else{console.warn("[Revvyn] UN live fetch failed — using fallback:",unResult.reason?.message);}
 
   const anyLive=ofacStatus==="live"||euStatus==="live"||unStatus==="live";
   SANCTIONS_STATE={
@@ -342,10 +404,10 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
   // Country-level sanction: policy list + OFAC country list
   const isCountrySanctioned=policies.sanctions.includes(payment.toCountry)||OFAC_COUNTRIES.has(payment.toCountry);
 
-  // Live SDN entity name check — OFAC + EU + UN
+  // Entity screening — check beneficiary against all three live lists
   const sdnCheckOfac=checkSDNMatch(payment.beneficiary,sdn.ofacNames);
-  const sdnCheckEu=sdn.euNames.size>0?checkSDNMatch(payment.beneficiary,sdn.euNames):{match:false,matched:null};
-  const sdnCheckUn=sdn.unNames.size>0?checkSDNMatch(payment.beneficiary,sdn.unNames):{match:false,matched:null};
+  const sdnCheckEu=checkSDNMatch(payment.beneficiary,sdn.euNames.size>0?sdn.euNames:SDN_FALLBACK_EU);
+  const sdnCheckUn=checkSDNMatch(payment.beneficiary,sdn.unNames.size>0?sdn.unNames:SDN_FALLBACK_UN);
   const sdnCheck=sdnCheckOfac.match?{...sdnCheckOfac,list:"OFAC SDN"}:sdnCheckEu.match?{...sdnCheckEu,list:"EU Consolidated"}:sdnCheckUn.match?{...sdnCheckUn,list:"UN Security Council"}:{match:false,matched:null,list:null};
   const isSanctioned=isCountrySanctioned||sdnCheck.match;
 
