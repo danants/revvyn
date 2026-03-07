@@ -26,7 +26,7 @@ select option{background:var(--surface);color:var(--text)}
 @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes glow{0%,100%{box-shadow:0 0 20px rgba(0,212,255,.1)}50%{box-shadow:0 0 40px rgba(0,212,255,.3)}}
-@keyframes nodeGlow{0%,100%{box-shadow:0 0 12px var(--c,.5)}50%{box-shadow:0 0 24px var(--c,1)}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -34,7 +34,7 @@ select option{background:var(--surface);color:var(--text)}
 <script type="text/babel">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
 
-// ─── Constants ─────────────────────────────────────────────────────────────────
+// ─── Constants ──────────────────────────────────────────────────────────────────
 
 const AGENTS=[
   {id:"orchestrator",name:"Orchestrator",icon:"◉",color:"#06d6a0",role:"Intent classification"},
@@ -68,37 +68,52 @@ const VERTICALS={
 };
 
 const RAILS=[
-  {id:"visa",      name:"Visa Intelligent Commerce",speed:"Instant",   cost:"2.4%",   provider:"Visa",       type:"card"},
-  {id:"mastercard",name:"Mastercard Agent Pay",     speed:"Instant",   cost:"2.5%",   provider:"Mastercard", type:"card"},
-  {id:"swift",     name:"SWIFT gpi",                speed:"T+2",       cost:"$25–50", provider:"SWIFT",      type:"bank"},
-  {id:"sepa",      name:"SEPA Instant",             speed:"~8s",       cost:"€0.20",  provider:"SEPA",       type:"bank"},
-  {id:"wooshpay",  name:"WooshPay API",             speed:"~4 min",    cost:"1.2%",   provider:"WooshPay",   type:"api"},
-  {id:"stablecoin",name:"USDC / USDT",              speed:"~2 min",    cost:"$0.01",  provider:"Circle",     type:"crypto"},
-  {id:"rtp",       name:"RTP / FedNow",             speed:"~3s",       cost:"$0.50",  provider:"TCH/Fed",    type:"instant"},
-  {id:"defi",      name:"DeFi / Aave",              speed:"~12s",      cost:"Gas",    provider:"Aave",       type:"defi"},
-  {id:"selfcustody",name:"Self-Custody Card",       speed:"Instant",   cost:"$0.02",  provider:"Wirex",      type:"self"},
+  {id:"visa",      name:"Visa Intelligent Commerce",speed:"Instant",cost:"2.4%",  provider:"Visa",      type:"card"},
+  {id:"mastercard",name:"Mastercard Agent Pay",     speed:"Instant",cost:"2.5%",  provider:"Mastercard",type:"card"},
+  {id:"swift",     name:"SWIFT gpi",               speed:"T+2",    cost:"$25–50",provider:"SWIFT",     type:"bank"},
+  {id:"sepa",      name:"SEPA Instant",            speed:"~8s",    cost:"€0.20", provider:"SEPA",      type:"bank"},
+  {id:"wooshpay",  name:"WooshPay API",            speed:"~4 min", cost:"1.2%",  provider:"WooshPay",  type:"api"},
+  {id:"stablecoin",name:"USDC / USDT",             speed:"~2 min", cost:"$0.01", provider:"Circle",    type:"crypto"},
+  {id:"rtp",       name:"RTP / FedNow",            speed:"~3s",    cost:"$0.50", provider:"TCH/Fed",   type:"instant"},
+  {id:"defi",      name:"DeFi / Aave",             speed:"~12s",   cost:"Gas",   provider:"Aave",      type:"defi"},
+  {id:"selfcustody",name:"Self-Custody Card",      speed:"Instant",cost:"$0.02", provider:"Wirex",     type:"self"},
 ];
 
 const INTENT_SOURCES=[
-  {id:"google_ucp",  name:"Google UCP",    color:"#4285f4"},
-  {id:"openai",      name:"OpenAI Agent",  color:"#10b981"},
-  {id:"erp",         name:"ERP System",    color:"#fbbf24"},
-  {id:"human",       name:"Human User",    color:"#f472b6"},
-  {id:"custom_agent",name:"Custom AI",     color:"#a78bfa"},
-  {id:"defi_agent",  name:"DeFi Agent",    color:"#38bdf8"},
+  {id:"google_ucp",  name:"Google UCP",   color:"#4285f4"},
+  {id:"openai",      name:"OpenAI Agent", color:"#10b981"},
+  {id:"erp",         name:"ERP System",   color:"#fbbf24"},
+  {id:"human",       name:"Human User",   color:"#f472b6"},
+  {id:"custom_agent",name:"Custom AI",    color:"#a78bfa"},
+  {id:"defi_agent",  name:"DeFi Agent",   color:"#38bdf8"},
 ];
 
-const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH","KP","IR","SY","CU","RU"];
+const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH","KP","IR","SY","CU","RU","BY","VE","MM"];
 const CURRENCIES=["USD","EUR","GBP","JPY","SGD","BRL","NGN","AED","INR","AUD","CHF","CAD","USDC","USDT"];
 const FX={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
 const TX_STATES=["Created","Validated","Risk Assessed","Approved","Routed","Settled","Reconciled"];
 
+// Full OFAC-aligned sanctioned country codes
+const OFAC_COUNTRIES=new Set(["KP","IR","SY","CU","RU","BY","VE","MM","SD","YE","LY","ZW","SS","CF","ML","NI"]);
+
 const COMPS=[
-  {name:"Circuit & Chisel",raised:"$19.2M",lead:"Primary VC, ParaFi, Stripe",   what:"ATXP protocol for agent-to-agent payments",    gap:"No policy engine, no compliance, no multi-rail governance"},
-  {name:"Natural",         raised:"$9.8M", lead:"Abstract, Human Capital",       what:"B2B agentic payment automation",                gap:"No governance, no risk scoring, no audit trail"},
-  {name:"Nekuda",          raised:"$5M",   lead:"Madrona, Visa, Amex Ventures",  what:"Agent checkout & credential management",        gap:"No policy enforcement, no rail optimization, no DeFi"},
-  {name:"t54 Labs",        raised:"$5M",   lead:"Anagram, Franklin Templeton",   what:"Know Your Agent identity & compliance",         gap:"No payment governance, no rail selection, no policy engine"},
-  {name:"Based",           raised:"$11.5M",lead:"Pantera, Coinbase Ventures",    what:"Consumer agentic commerce on Hyperliquid",     gap:"No enterprise governance, no multi-rail, no compliance"},
+  {name:"Circuit & Chisel",raised:"$19.2M",lead:"Primary VC, ParaFi, Stripe",  what:"ATXP protocol for agent-to-agent payments",   gap:"No policy engine, no compliance, no multi-rail governance"},
+  {name:"Natural",         raised:"$9.8M", lead:"Abstract, Human Capital",      what:"B2B agentic payment automation",               gap:"No governance, no risk scoring, no audit trail"},
+  {name:"Nekuda",          raised:"$5M",   lead:"Madrona, Visa, Amex Ventures", what:"Agent checkout & credential management",       gap:"No policy enforcement, no rail optimization, no DeFi"},
+  {name:"t54 Labs",        raised:"$5M",   lead:"Anagram, Franklin Templeton",  what:"Know Your Agent identity & compliance",        gap:"No payment governance, no rail selection, no policy engine"},
+  {name:"Based",           raised:"$11.5M",lead:"Pantera, Coinbase Ventures",   what:"Consumer agentic commerce on Hyperliquid",    gap:"No enterprise governance, no multi-rail, no compliance"},
+];
+
+// Demo SDN presets — real entities on the OFAC list
+const SDN_DEMO_ENTITIES=[
+  "Bank Melli Iran",
+  "Bank Mellat",
+  "Mahan Air",
+  "Islamic Revolutionary Guard Corps",
+  "Wagner Group",
+  "Korean Ryonbong General Corporation",
+  "Syrian Arab Airlines",
+  "Rosoboronexport",
 ];
 
 function genId(){return "PAY-"+Math.random().toString(36).substr(2,8).toUpperCase()}
@@ -106,7 +121,129 @@ function genTx(){return "RVN-"+Date.now().toString(36).toUpperCase()+Math.random
 function fmtAmt(n){return "$"+Number(n).toLocaleString()}
 function now(){return new Date().toTimeString().slice(0,8)}
 
-// ─── Simulation Engine ─────────────────────────────────────────────────────────
+// ─── Live Sanctions Engine ──────────────────────────────────────────────────────
+
+// Fallback SDN name list — real entities from the OFAC SDN list
+const SDN_FALLBACK=new Set([
+  "BANK MELLI IRAN","BANK MELLAT","BANK SADERAT IRAN","BANK SEPAH","BANK TEJARAT",
+  "MAHAN AIR","IRAN AIR","CASPIAN AIR",
+  "ISLAMIC REVOLUTIONARY GUARD CORPS","IRGC","IRGC-QF","QUDS FORCE",
+  "WAGNER GROUP","PMC WAGNER","CONCORD MANAGEMENT",
+  "KOREAN RYONBONG GENERAL CORPORATION","KOREA MINING DEVELOPMENT TRADING CORPORATION","NAMCHONGANG TRADING",
+  "SYRIAN ARAB AIRLINES","CHAM WINGS AIRLINES",
+  "ROSOBORONEXPORT","ROSTEC","ALMAZ-ANTEY","UNITED AIRCRAFT CORPORATION",
+  "HEZBOLLAH","HAMAS","PALESTINIAN ISLAMIC JIHAD","AL-AQSA MARTYRS",
+  "AL-QAEDA","AL QAEDA","ISIS","ISIL","ISLAMIC STATE","JABHAT AL-NUSRA",
+  "BANCO CENTRAL DE VENEZUELA","PDVSA","PETROLEOS DE VENEZUELA",
+  "MYANMAR ECONOMIC CORPORATION","MYANMAR GEMS ENTERPRISE",
+]);
+
+// Normalize name for matching
+function normalizeName(name){
+  return name.toUpperCase().trim()
+    .replace(/[.,\-']/g,"")
+    .replace(/\s+/g," ");
+}
+
+// Check if a name matches any SDN entry (fuzzy — catches common variants)
+function checkSDNMatch(name,sdnNames){
+  const norm=normalizeName(name);
+  // Exact match
+  if(sdnNames.has(norm)) return {match:true,matched:norm};
+  // Check if any SDN name is contained in the input or vice versa
+  for(const sdn of sdnNames){
+    if(norm.includes(sdn)||sdn.includes(norm)){
+      if(norm.length>4&&sdn.length>4) return {match:true,matched:sdn};
+    }
+  }
+  return {match:false,matched:null};
+}
+
+// Global sanctions state — updated by loadSanctionsData()
+let SANCTIONS_STATE={
+  status:"loading", // loading | live | cached | error
+  ofacNames:SDN_FALLBACK,
+  euNames:new Set(),
+  unNames:new Set(),
+  count:SDN_FALLBACK.size,
+  lastUpdated:null,
+  source:"Initialising...",
+  dataDate:null,
+};
+
+async function loadSanctionsData(onUpdate){
+  // Try to load OFAC SDN list via CORS proxy
+  const sources=[
+    {
+      name:"OFAC SDN",
+      url:"https://api.allorigins.win/raw?url="+encodeURIComponent("https://www.treasury.gov/ofac/downloads/sdn.csv"),
+      parse:(text)=>{
+        const names=new Set();
+        const lines=text.split("\n");
+        let count=0;
+        for(const line of lines){
+          if(!line.trim()) continue;
+          // CSV: "num","NAME","type","program",...
+          const m=line.match(/^"?(\d+)"?,\s*"([^"]+)"/);
+          if(m&&m[2]){
+            const name=m[2].trim().toUpperCase();
+            if(name&&name!=="-0-"&&name.length>3){
+              names.add(name);
+              // Also add first two words as partial match key
+              const words=name.split(/\s+/);
+              if(words.length>=2) names.add(words.slice(0,2).join(" "));
+              count++;
+            }
+          }
+        }
+        return {names,count};
+      }
+    }
+  ];
+
+  for(const source of sources){
+    try{
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),20000);
+      const res=await fetch(source.url,{signal:controller.signal});
+      clearTimeout(timeout);
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const text=await res.text();
+      if(text.length<1000) throw new Error("Response too short");
+      const {names,count}=source.parse(text);
+      if(count<100) throw new Error("Too few entries parsed");
+      SANCTIONS_STATE={
+        status:"live",
+        ofacNames:names,
+        euNames:new Set(),
+        unNames:new Set(),
+        count,
+        lastUpdated:new Date().toLocaleTimeString("en-US",{hour12:false}),
+        source:`${source.name} · OFAC Treasury.gov`,
+        dataDate:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),
+      };
+      onUpdate({...SANCTIONS_STATE});
+      return;
+    }catch(e){
+      console.warn(`[Revvyn] ${source.name} fetch failed:`,e.message);
+    }
+  }
+
+  // All fetches failed — use fallback
+  SANCTIONS_STATE={
+    status:"cached",
+    ofacNames:SDN_FALLBACK,
+    euNames:new Set(),
+    unNames:new Set(),
+    count:SDN_FALLBACK.size,
+    lastUpdated:new Date().toLocaleTimeString("en-US",{hour12:false}),
+    source:"Reference SDN list (network unavailable)",
+    dataDate:null,
+  };
+  onUpdate({...SANCTIONS_STATE});
+}
+
+// ─── Simulation Engine ──────────────────────────────────────────────────────────
 
 function pickRail(payment,vert){
   const {toCountry,toCurrency,amount,urgency}=payment;
@@ -128,9 +265,17 @@ function altRails(primary,amount){
   return alts.slice(0,2);
 }
 
-function simulate(agentId,payment,vert,policies){
+function simulate(agentId,payment,vert,policies,sanctionsState){
   const v=VERTICALS[vert];
-  const isSanctioned=policies.sanctions.includes(payment.toCountry)||["KP","IR","SY","CU"].includes(payment.toCountry);
+  const sdn=sanctionsState||SANCTIONS_STATE;
+
+  // Country-level sanction: policy list + OFAC country list
+  const isCountrySanctioned=policies.sanctions.includes(payment.toCountry)||OFAC_COUNTRIES.has(payment.toCountry);
+
+  // Live SDN entity name check
+  const sdnCheck=checkSDNMatch(payment.beneficiary,sdn.ofacNames);
+  const isSanctioned=isCountrySanctioned||sdnCheck.match;
+
   const overMax=payment.amount>policies.maxSingle;
   const needsDual=payment.amount>=policies.dualApproval&&!overMax;
   const isCross=payment.fromCountry!==payment.toCountry;
@@ -144,6 +289,8 @@ function simulate(agentId,payment,vert,policies){
   const feeRate=payment.amount>500000?0.0008:payment.amount>100000?0.0015:payment.amount>10000?0.003:0.024;
   const totalFee=Math.max(0.50,Math.round(payment.amount*feeRate*100)/100);
   const txId=genTx();
+  const liveLabel=sdn.status==="live"?"Live OFAC":"Cached SDN";
+  const sourceLabel=sdn.status==="live"?`OFAC Treasury.gov · ${sdn.count.toLocaleString()} entities · ${sdn.dataDate||sdn.lastUpdated}`:`Reference SDN list · ${sdn.count} entities`;
 
   if(agentId==="orchestrator") return {
     classification:isHV?"high-value":isCross?"cross-border":payment.urgency==="urgent"?"urgent":"standard",
@@ -155,22 +302,39 @@ function simulate(agentId,payment,vert,policies){
   };
 
   if(agentId==="governance"){
-    if(isSanctioned) return {
+    // SDN entity hit
+    if(sdnCheck.match&&!isCountrySanctioned) return {
       approved:false,
       checks:[
-        {name:"OFAC Sanctions Screening",status:"fail",detail:`Destination ${payment.toCountry} is on the OFAC/EU consolidated sanctions list. Transaction blocked.`},
+        {name:"OFAC SDN Entity Screen",status:"fail",detail:`Beneficiary "${payment.beneficiary}" matched SDN entity "${sdnCheck.matched}" on the ${liveLabel}. Transaction blocked under OFAC sanctions.`,live:true},
+        {name:"Country Screening",status:"pass",detail:`Destination country ${payment.toCountry} is not subject to country-level sanctions.`},
         {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — sanctions block takes precedence"},
+        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — SDN entity block takes precedence"},
+      ],
+      complianceScore:8,escalationRequired:false,escalationReason:null,
+      regulatoryFrameworks:["OFAC","31 CFR Part 501","FATF-R6","PSD2"],
+      sdnHit:{entity:sdnCheck.matched,source:sourceLabel},
+      summary:`REJECTED — Beneficiary matched OFAC SDN entity "${sdnCheck.matched}". Transaction blocked. Source: ${sourceLabel}.`
+    };
+    // Country sanction hit
+    if(isCountrySanctioned) return {
+      approved:false,
+      checks:[
+        {name:"OFAC Country Screening",status:"fail",detail:`Destination ${payment.toCountry} is subject to comprehensive OFAC sanctions. Transaction blocked.`,live:true},
+        {name:"OFAC SDN Entity Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" not matched on ${liveLabel} (${sdn.count.toLocaleString()} entities checked).`,live:sdn.status==="live"},
+        {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single limit of ${fmtAmt(policies.maxSingle)}`},
+        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — country sanctions block takes precedence"},
       ],
       complianceScore:12,escalationRequired:false,escalationReason:null,
       regulatoryFrameworks:["OFAC","EU-Sanctions","FATF-R6","PSD2"],
-      summary:`REJECTED — ${payment.toCountry} is sanctioned. Transaction blocked at governance layer.`
+      summary:`REJECTED — ${payment.toCountry} is a sanctioned jurisdiction. Transaction blocked at governance layer.`
     };
     if(overMax) return {
       approved:false,
       checks:[
         {name:"Amount Validation",status:"fail",detail:`${payment.currency} ${fmtAmt(payment.amount)} exceeds max single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"OFAC Sanctions Screening",status:"pass",detail:`${payment.toCountry} cleared against OFAC, EU, UN databases`},
+        {name:"OFAC SDN Entity Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" cleared against ${liveLabel} (${sdn.count.toLocaleString()} entities).`,live:sdn.status==="live"},
+        {name:"OFAC Country Screening",status:"pass",detail:`${payment.toCountry} cleared against OFAC country sanctions list.`},
         {name:"Daily Volume Check",status:"warning",detail:`Would consume ${Math.round(payment.amount/policies.maxDaily*100)}% of daily limit`},
       ],
       complianceScore:35,escalationRequired:false,escalationReason:null,
@@ -178,7 +342,8 @@ function simulate(agentId,payment,vert,policies){
       summary:"REJECTED — Amount exceeds maximum single payment policy threshold."
     };
     const checks=[
-      {name:"OFAC Sanctions Screening",status:"pass",detail:`${payment.toCountry} cleared against OFAC, EU, and UN consolidated sanctions databases. No matches.`},
+      {name:"OFAC SDN Entity Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" screened against ${liveLabel} · ${sdn.count.toLocaleString()} entities. No matches found.`,live:sdn.status==="live"},
+      {name:"OFAC Country Screening",status:"pass",detail:`${payment.toCountry} cleared. Not subject to OFAC comprehensive country sanctions.`,live:true},
       {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within limit of ${fmtAmt(policies.maxSingle)} (${Math.round(payment.amount/policies.maxSingle*100)}% utilisation)`},
       {name:"Beneficiary Verification",status:"pass",detail:`"${payment.beneficiary}" verified against KYC registry. No adverse media or PEP flags.`},
       {name:"Daily Volume Check",status:payment.amount>policies.maxDaily*0.5?"warning":"pass",detail:`Daily volume at ${Math.round(payment.amount/policies.maxDaily*100)}% of ${fmtAmt(policies.maxDaily)} limit${payment.amount>policies.maxDaily*0.5?". Approaching threshold.":"."}`},
@@ -193,7 +358,7 @@ function simulate(agentId,payment,vert,policies){
       escalationRequired:needsDual&&policies.hitl,
       escalationReason:needsDual?`${payment.currency} ${fmtAmt(payment.amount)} meets dual approval threshold (${fmtAmt(policies.dualApproval)}). Human authorisation required.`:null,
       regulatoryFrameworks:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]),
-      summary:`APPROVED — All ${checks.length} compliance checks passed.${needsDual?" Dual approval escalation triggered.":""} Compliance score: ${isCross?87:94}%.`
+      summary:`APPROVED — All ${checks.length} compliance checks passed.${needsDual?" Dual approval escalation triggered.":""} Compliance score: ${isCross?87:94}%. SDN source: ${sourceLabel}.`
     };
   }
 
@@ -216,10 +381,9 @@ function simulate(agentId,payment,vert,policies){
   };
 
   if(agentId==="execution") return {
-    status:"settled",
-    selectedRail:rail.name,provider:rail.provider,transactionId:txId,
+    status:"settled",selectedRail:rail.name,provider:rail.provider,transactionId:txId,
     settlementTime:rail.id==="swift"?"T+2 (48h est.)":rail.id==="sepa"?"8.2 seconds":rail.id==="rtp"?"3.1 seconds":rail.id==="visa"||rail.id==="mastercard"?"Sub-second":rail.id==="stablecoin"?"2 min 14s":rail.id==="defi"?"12.4s (2 blocks)":rail.id==="selfcustody"?"Instant":"4 min 38s",
-    fees:{total:totalFee,breakdown:{network:Math.round(totalFee*0.45*100)/100,fx:isCrossCcy?Math.round(totalFee*0.3*100)/100:0,processing:Math.round(totalFee*0.2*100)/100,compliance:Math.round(totalFee*0.05*100)/100}},
+    fees:{total:totalFee,breakdown:{network:Math.round(totalFee*.45*100)/100,fx:isCrossCcy?Math.round(totalFee*.3*100)/100:0,processing:Math.round(totalFee*.2*100)/100,compliance:Math.round(totalFee*.05*100)/100}},
     fxRate:isCrossCcy?fxRate:null,convertedAmount:converted,
     ledgerEntries:[
       {type:"debit", account:`Operating — ${payment.fromCountry}`,amount:payment.amount,   currency:payment.currency},
@@ -240,31 +404,28 @@ function simulate(agentId,payment,vert,policies){
     complianceStatus:"compliant",
     riskClassification:riskScore<30?"low":riskScore<60?"medium":"high",
     regulatoryTags:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]).concat(vert==="consumer"?["DeFi-Governance"]:[]),
-    dataRetention:"7 years",
+    dataRetention:"7 years",sanctionsSource:sourceLabel,
     recommendations:[
       isCross?`Consider pre-funded FX positions for recurring ${payment.fromCountry}→${payment.toCountry} corridor`:"Domestic rail performing within SLA",
       isHV?"Implement batch processing for high-value payments to reduce overhead":"Current volume within optimal parameters",
       "Next review: Quarterly compliance audit per SOC2 Type II",
     ],
-    summary:`Audit complete. 5-agent decision chain recorded. ${["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].length+(isCross?2:0)} regulatory frameworks. Classification: compliant.`
+    summary:`Audit complete. 5-agent decision chain recorded. ${["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].length+(isCross?2:0)} regulatory frameworks. SDN data: ${sourceLabel}.`
   };
 }
 
-// ─── UI Helpers ────────────────────────────────────────────────────────────────
+// ─── UI Helpers ─────────────────────────────────────────────────────────────────
 
 const css=`
 .inp{width:100%;padding:9px 11px;border-radius:3px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;box-sizing:border-box}
 .inp:focus{border-color:var(--accent,#06d6a0)}
 .lbl{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-.badge{padding:2px 7px;border-radius:2px;font-size:9px;letter-spacing:.08em;font-family:var(--mono);font-weight:500}
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden}
-.ph{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.015);flex-shrink:0}
-.ph h2{font-family:var(--sans);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.ph-dot{width:6px;height:6px;border-radius:50%}
-.tag{padding:3px 8px;border-radius:2px;font-size:9px;font-family:var(--mono);letter-spacing:.06em;font-weight:500}
-.btn-kill{padding:9px 14px;border-radius:3px;border:1px solid rgba(255,69,96,.35);background:rgba(255,69,96,.07);color:#ff4560;font-family:var(--mono);font-size:10px;letter-spacing:.1em;cursor:pointer;transition:all .15s}
+.tag{padding:2px 7px;border-radius:2px;font-size:9px;font-family:var(--mono);letter-spacing:.06em;font-weight:500}
+.btn-kill{padding:7px 12px;border-radius:3px;border:1px solid rgba(255,69,96,.35);background:rgba(255,69,96,.07);color:#ff4560;font-family:var(--mono);font-size:9px;letter-spacing:.1em;cursor:pointer;transition:all .15s}
 .btn-kill:hover{background:rgba(255,69,96,.15)}
 .btn-kill.halted{border-color:rgba(255,184,77,.4);background:rgba(255,184,77,.08);color:#ffb84d}
+.live-dot{width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite}
 `;
 
 function StyleInjector(){
@@ -272,7 +433,7 @@ function StyleInjector(){
     const s=document.createElement("style");
     s.textContent=css;
     document.head.appendChild(s);
-    return ()=>document.head.removeChild(s);
+    return()=>document.head.removeChild(s);
   },[]);
   return null;
 }
@@ -288,29 +449,54 @@ function Badge({label,value,color}){
   </div>;
 }
 
-// ─── Header ─────────────────────────────────────────────────────────────────
+// ─── Sanctions Status Badge ──────────────────────────────────────────────────────
 
-function Header({vertical,killActive,onKillToggle,onHero}){
+function SanctionsStatus({state}){
+  if(!state) return null;
+  const isLive=state.status==="live";
+  const isLoading=state.status==="loading";
+  const color=isLive?"#00e5a0":isLoading?"#ffb84d":"#6b8299";
+  return <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:3,background:color+"10",border:`1px solid ${color}25`}}>
+    {isLoading
+      ?<div style={{width:6,height:6,border:`1px solid ${color}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>
+      :<div className="live-dot" style={{background:color,flexShrink:0}}/>
+    }
+    <div style={{display:"flex",flexDirection:"column",gap:0}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:700,color,letterSpacing:".1em",whiteSpace:"nowrap"}}>
+        {isLoading?"LOADING SANCTIONS DATA...":isLive?"LIVE OFAC DATA":"CACHED SDN LIST"}
+      </div>
+      {!isLoading&&<div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)",whiteSpace:"nowrap"}}>
+        {isLive?`${state.count.toLocaleString()} entities · ${state.dataDate||state.lastUpdated}`:`${state.count} entities · reference list`}
+      </div>}
+    </div>
+  </div>;
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────────
+
+function Header({vertical,killActive,onKillToggle,onHero,sanctionsState}){
   const v=VERTICALS[vertical];
-  return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",borderBottom:"1px solid var(--border)",background:"rgba(6,8,14,.97)",backdropFilter:"blur(10px)",flexShrink:0,zIndex:10}}>
-    <div style={{display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onClick={onHero}>
-      <div style={{width:30,height:30,borderRadius:6,background:`linear-gradient(135deg,${v.accent},${v.accent}88)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:800,fontSize:14,color:"#000",animation:"glow 3s ease-in-out infinite"}}
-      >R</div>
+  return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",borderBottom:"1px solid var(--border)",background:"rgba(6,8,14,.97)",flexShrink:0,gap:12}}>
+    <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={onHero}>
+      <div style={{width:30,height:30,borderRadius:6,background:`linear-gradient(135deg,${v.accent},${v.accent}88)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:800,fontSize:14,color:"#000",animation:"glow 3s ease-in-out infinite"}}>R</div>
       <div>
-        <div style={{fontFamily:"var(--sans)",fontSize:15,fontWeight:800,letterSpacing:"-.3px"}}>Revvyn</div>
-        <div style={{fontSize:9,color:"var(--muted)",letterSpacing:".12em",textTransform:"uppercase"}}>Governance Sandbox · Design Partner Preview</div>
+        <div style={{fontFamily:"var(--sans)",fontSize:14,fontWeight:800,letterSpacing:"-.3px"}}>Revvyn</div>
+        <div style={{fontSize:9,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase"}}>Governance Sandbox</div>
       </div>
     </div>
+    <div style={{flex:1,display:"flex",justifyContent:"center"}}>
+      <SanctionsStatus state={sanctionsState}/>
+    </div>
     <button className={`btn-kill${killActive?" halted":""}`} onClick={onKillToggle}>
-      {killActive?"⬛ HALTED — CLICK TO RESUME":"⬛ Kill Switch"}
+      {killActive?"⬛ HALTED":"⬛ Kill Switch"}
     </button>
   </div>;
 }
 
-// ─── Vertical Tabs ─────────────────────────────────────────────────────────
+// ─── Vertical Tabs ────────────────────────────────────────────────────────────────
 
 function VerticalTabs({active,onChange}){
-  return <div style={{display:"flex",gap:2,padding:"6px 8px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
+  return <div style={{display:"flex",gap:2,padding:"5px 8px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
     {Object.values(VERTICALS).map(v=><button key={v.id} onClick={()=>onChange(v.id)} style={{
       padding:"5px 12px",borderRadius:3,border:`1px solid ${active===v.id?v.accent:"transparent"}`,
       background:active===v.id?v.accent+"12":"transparent",cursor:"pointer",
@@ -320,152 +506,233 @@ function VerticalTabs({active,onChange}){
   </div>;
 }
 
-// ─── Agent Pipeline (horizontal) ───────────────────────────────────────────
+// ─── Agent Pipeline ───────────────────────────────────────────────────────────────
 
-function AgentPipeline({statuses,selected,onSelect,accent}){
-  return <div style={{display:"flex",gap:4,padding:"10px 16px",background:"var(--surface)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto"}}>
+function AgentPipeline({statuses,selected,onSelect}){
+  return <div style={{display:"flex",gap:4,padding:"8px 14px",background:"var(--surface)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto"}}>
     {AGENTS.map((a,i)=>{
       const st=statuses[a.id]||"idle";
       const isSel=selected===a.id;
       return <React.Fragment key={a.id}>
         <div onClick={()=>onSelect(a.id)} style={{
-          flex:"1 0 0",minWidth:100,padding:"8px 10px",borderRadius:3,cursor:"pointer",
+          flex:"1 0 0",minWidth:90,padding:"7px 9px",borderRadius:3,cursor:"pointer",
           background:isSel?a.color+"10":st==="running"?a.color+"06":"var(--card)",
-          border:`1.5px solid ${isSel?a.color:st==="running"?a.color+"60":st==="complete"?a.color+"40":st==="failed"?a.color+"40":"var(--border)"}`,
+          border:`1.5px solid ${isSel?a.color:st==="running"?a.color+"60":st==="complete"?a.color+"40":st==="failed"?"#ff456040":"var(--border)"}`,
           position:"relative",overflow:"hidden",transition:"all .2s"
         }}>
           {st==="running"&&<div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${a.color},transparent)`,animation:"shimmer 1.5s infinite"}}/>}
-          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:3}}>
-            <span style={{fontFamily:"var(--mono)",fontSize:12,color:a.color}}>{a.icon}</span>
-            <span style={{fontFamily:"var(--sans)",fontSize:10,fontWeight:700,color:a.color,letterSpacing:".04em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
-            <div style={{marginLeft:"auto",width:6,height:6,borderRadius:"50%",flexShrink:0,
+          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
+            <span style={{fontSize:11,color:a.color}}>{a.icon}</span>
+            <span style={{fontFamily:"var(--sans)",fontSize:9,fontWeight:700,color:a.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
+            <div style={{marginLeft:"auto",width:5,height:5,borderRadius:"50%",flexShrink:0,
               background:st==="complete"?a.color:st==="failed"?"#ff4560":st==="running"?a.color:"var(--border)",
-              boxShadow:st==="running"?`0 0 8px ${a.color}`:"none",
+              boxShadow:st==="running"?`0 0 6px ${a.color}`:"none",
               animation:st==="running"?"pulse 1s infinite":"none"
             }}/>
           </div>
-          <div style={{fontSize:9,color:"var(--muted)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+          <div style={{fontSize:8,color:"var(--muted)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
             {st==="running"?"Processing...":st==="complete"?"Done ✓":st==="failed"?"Blocked ✗":a.role}
           </div>
         </div>
-        {i<AGENTS.length-1&&<div style={{display:"flex",alignItems:"center",color:st==="complete"?a.color:"var(--border)",fontSize:9,flexShrink:0}}>▸</div>}
+        {i<AGENTS.length-1&&<div style={{display:"flex",alignItems:"center",color:st==="complete"?a.color:"var(--border)",fontSize:8,flexShrink:0}}>▸</div>}
       </React.Fragment>;
     })}
   </div>;
 }
 
-// ─── Lifecycle Bar ──────────────────────────────────────────────────────────
+// ─── Lifecycle Bar ────────────────────────────────────────────────────────────────
 
 function LifecycleBar({current}){
   const idx=TX_STATES.indexOf(current);
-  return <div style={{display:"flex",alignItems:"center",padding:"6px 16px",background:"var(--card)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto",gap:0}}>
+  return <div style={{display:"flex",alignItems:"center",padding:"5px 14px",background:"var(--card)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto",gap:0}}>
     {TX_STATES.map((s,i)=><React.Fragment key={s}>
       <span style={{
-        padding:"3px 8px",borderRadius:2,fontSize:9,fontFamily:"var(--mono)",
-        fontWeight:i===idx?600:400,letterSpacing:".08em",whiteSpace:"nowrap",
+        padding:"2px 7px",borderRadius:2,fontSize:8,fontFamily:"var(--mono)",fontWeight:i===idx?600:400,
+        letterSpacing:".08em",whiteSpace:"nowrap",transition:"all .3s",
         background:i===idx?"rgba(0,212,255,.12)":i<idx?"rgba(0,229,160,.06)":"transparent",
         color:i===idx?"#00d4ff":i<idx?"#00e5a0":"var(--dim)",
         border:i===idx?"1px solid rgba(0,212,255,.25)":"1px solid transparent",
-        transition:"all .3s"
       }}>{s.toUpperCase()}</span>
-      {i<TX_STATES.length-1&&<span style={{color:i<idx?"#00e5a0":"var(--border)",fontSize:9,padding:"0 2px",transition:"color .3s"}}>→</span>}
+      {i<TX_STATES.length-1&&<span style={{color:i<idx?"#00e5a0":"var(--border)",fontSize:8,padding:"0 1px",transition:"color .3s"}}>→</span>}
     </React.Fragment>)}
   </div>;
 }
 
-// ─── Policy Panel ───────────────────────────────────────────────────────────
+// ─── Metrics Bar ──────────────────────────────────────────────────────────────────
 
-function PolicyPanel({vertical,policies,onChange}){
+function MetricsBar({payments}){
+  const settled=payments.filter(p=>p.finalStatus==="settled").length;
+  const rejected=payments.filter(p=>p.finalStatus==="rejected").length;
+  const escalated=payments.filter(p=>p.wasEscalated).length;
+  const sdnBlocked=payments.filter(p=>p.sdnBlocked).length;
+  const items=[
+    {label:"Total",value:payments.length,color:"#00d4ff"},
+    {label:"Settled",value:settled,color:"#00e5a0"},
+    {label:"Blocked",value:rejected,color:"#ff4560"},
+    {label:"SDN Hits",value:sdnBlocked,color:"#a78bfa"},
+    {label:"Escalated",value:escalated,color:"#ffb84d"},
+  ];
+  return <div style={{display:"flex",borderBottom:"1px solid var(--border)",background:"var(--card)",flexShrink:0}}>
+    {items.map(m=><div key={m.label} style={{flex:1,padding:"8px 12px",borderRight:"1px solid var(--border)"}}>
+      <div style={{fontFamily:"var(--sans)",fontSize:18,fontWeight:800,color:m.color,lineHeight:1}}>{m.value}</div>
+      <div style={{fontSize:8,color:"var(--muted)",marginTop:2,letterSpacing:".08em",textTransform:"uppercase"}}>{m.label}</div>
+    </div>)}
+  </div>;
+}
+
+// ─── Stack Diagram ────────────────────────────────────────────────────────────────
+
+function StackDiagram({selectedRail,intentSource,vertical}){
   const v=VERTICALS[vertical];
-  const sliders=[
-    {key:"maxSingle",    label:"Transaction Limit",  max:vertical==="consumer"?2000:5000000},
-    {key:"maxDaily",     label:"Daily Spend Limit",  max:vertical==="consumer"?10000:30000000},
-    {key:"requireApproval",label:"Approval Threshold",max:vertical==="consumer"?1000:2000000},
-    {key:"dualApproval", label:"Dual Approval",      max:vertical==="consumer"?2000:5000000},
-  ];
-  const toggles=[
-    {key:"sanctions",       label:"Sanctions Screening",    sub:"OFAC, EU, UN watchlists"},
-    {key:"kycRequired",     label:"KYC / AML Verification", sub:"Counterparty identity check"},
-    {key:"hitl",            label:"Human-in-the-Loop",      sub:"Escalate high-risk for approval"},
-    {key:"verifiableIntent",label:"Verifiable Intent",      sub:"Mastercard / ERC-8004 / Visa TAP"},
-    {key:"killswitch",      label:"Kill Switch Active",     sub:"Instant halt capability"},
-  ];
-  const update=(k,val)=>onChange({...policies,[k]:val});
-
-  return <div style={{display:"flex",flexDirection:"column",gap:0,overflowY:"auto",flex:1}}>
-    <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
-      <div style={{fontSize:11,color:"var(--muted)"}}>Active governance rules for <span style={{color:v.accent,fontWeight:600}}>{v.label}</span></div>
-
-      {sliders.map(s=><div key={s.key}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-          <label className="lbl" style={{margin:0}}>{s.label}</label>
-          <span style={{fontFamily:"var(--mono)",fontSize:11,color:v.accent,fontWeight:600}}>
-            ${Number(policies[s.key]).toLocaleString()}
-          </span>
-        </div>
-        <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]}
-          onChange={e=>update(s.key,Number(e.target.value))}
-          style={{width:"100%",height:3,accentColor:v.accent,cursor:"pointer",background:"var(--border)",border:"none",padding:0,appearance:"none",WebkitAppearance:"none",borderRadius:2}}
-        />
-      </div>)}
-
-      <div style={{borderTop:"1px solid var(--border)",paddingTop:14,display:"flex",flexDirection:"column",gap:0}}>
-        {toggles.map(t=><div key={t.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:"1px solid rgba(255,255,255,.03)"}}>
-          <div>
-            <div style={{fontSize:12,color:"var(--text)"}}>{t.label}</div>
-            <div style={{fontSize:9,color:"var(--muted)",marginTop:2}}>{t.sub}</div>
-          </div>
-          <div style={{position:"relative",width:36,height:20,flexShrink:0,cursor:"pointer"}} onClick={()=>update(t.key,!policies[t.key])}>
-            <div style={{position:"absolute",inset:0,borderRadius:20,background:policies[t.key]?v.accent+"40":"var(--border)",transition:"background .2s"}}/>
-            <div style={{position:"absolute",width:14,height:14,borderRadius:"50%",top:3,left:policies[t.key]?19:3,
-              background:policies[t.key]?v.accent:"var(--muted)",
-              boxShadow:policies[t.key]?`0 0 8px ${v.accent}`:"none",
-              transition:"all .2s"
-            }}/>
-          </div>
+  return <div style={{padding:"8px 14px 4px",flexShrink:0,display:"flex",flexDirection:"column",gap:3}}>
+    <div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)",letterSpacing:"1px",marginBottom:3}}>ARCHITECTURE STACK</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:48,fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)",textAlign:"right",flexShrink:0}}>INTENT</div>
+      <div style={{flex:1,display:"flex",gap:2}}>
+        {INTENT_SOURCES.map(s=><div key={s.id} style={{flex:1,padding:"2px 2px",borderRadius:2,textAlign:"center",background:intentSource===s.id?s.color+"14":"var(--card)",border:`1px solid ${intentSource===s.id?s.color:"var(--border)"}`}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:intentSource===s.id?s.color:"var(--dim)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
         </div>)}
       </div>
-
-      <div style={{padding:"10px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)"}}>
-        <div className="lbl" style={{marginBottom:6}}>Sanctioned Countries (from policy)</div>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-          {policies.sanctions.map(s=><span key={s} style={{padding:"2px 7px",borderRadius:2,fontSize:9,fontFamily:"var(--mono)",fontWeight:600,background:"rgba(255,69,96,.12)",color:"#ff4560"}}>{s}</span>)}
-        </div>
+    </div>
+    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:8,color:v.accent,paddingLeft:54}}>↓</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:48,fontFamily:"var(--mono)",fontSize:7,color:v.accent,textAlign:"right",fontWeight:700,flexShrink:0}}>REVVYN</div>
+      <div style={{flex:1,padding:"5px 8px",borderRadius:3,background:`linear-gradient(135deg,${v.accent}08,rgba(167,139,250,.04))`,border:`1.5px solid ${v.accent}28`,textAlign:"center"}}>
+        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:700,color:v.accent,letterSpacing:".5px"}}>GOVERNANCE · CONTROL · EXECUTION</div>
       </div>
-
-      {vertical==="consumer"&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(244,114,182,.06)",border:"1px solid rgba(244,114,182,.2)"}}>
-        <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#f472b6",marginBottom:4,letterSpacing:".08em",textTransform:"uppercase"}}>Yield Guardian</div>
-        <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Principal protection: ON. Only accrued DeFi yield may be spent. Autonomous agents cannot touch principal.</div>
-      </div>}
+    </div>
+    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:8,color:"#38bdf8",paddingLeft:54}}>↓</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:48,fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)",textAlign:"right",flexShrink:0}}>RAILS</div>
+      <div style={{flex:1,display:"flex",gap:2,flexWrap:"wrap"}}>
+        {RAILS.map(r=><div key={r.id} style={{flex:"1 0 0",minWidth:36,padding:"2px 2px",borderRadius:2,textAlign:"center",background:selectedRail===r.id?"rgba(0,229,160,.1)":"var(--card)",border:`1px solid ${selectedRail===r.id?"#00e5a0":"var(--border)"}`}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:selectedRail===r.id?"#00e5a0":"#64748b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.provider}</div>
+        </div>)}
+      </div>
     </div>
   </div>;
 }
 
-// ─── Payment Form ───────────────────────────────────────────────────────────
+// ─── Policy Panel ─────────────────────────────────────────────────────────────────
+
+function PolicyPanel({vertical,policies,onChange}){
+  const v=VERTICALS[vertical];
+  const sliders=[
+    {key:"maxSingle",    label:"Transaction Limit",   max:vertical==="consumer"?2000:5000000},
+    {key:"maxDaily",     label:"Daily Spend Limit",   max:vertical==="consumer"?10000:30000000},
+    {key:"requireApproval",label:"Approval Threshold",max:vertical==="consumer"?1000:2000000},
+    {key:"dualApproval", label:"Dual Approval",       max:vertical==="consumer"?2000:5000000},
+  ];
+  const toggles=[
+    {key:"sanctions",       label:"Sanctions Screening",    sub:"Live OFAC SDN + country lists"},
+    {key:"kycRequired",     label:"KYC / AML Verification", sub:"Counterparty identity check"},
+    {key:"hitl",            label:"Human-in-the-Loop",      sub:"Escalate for approval"},
+    {key:"verifiableIntent",label:"Verifiable Intent",      sub:"Mastercard / ERC-8004 / Visa TAP"},
+    {key:"killswitch",      label:"Kill Switch Active",     sub:"Instant halt capability"},
+  ];
+  const upd=(k,val)=>onChange({...policies,[k]:val});
+  return <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
+    <div style={{fontSize:11,color:"var(--muted)"}}>Active governance rules for <span style={{color:v.accent,fontWeight:600}}>{v.label}</span></div>
+    {sliders.map(s=><div key={s.key}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+        <label className="lbl" style={{margin:0}}>{s.label}</label>
+        <span style={{fontFamily:"var(--mono)",fontSize:11,color:v.accent,fontWeight:600}}>${Number(policies[s.key]).toLocaleString()}</span>
+      </div>
+      <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]} onChange={e=>upd(s.key,Number(e.target.value))}
+        style={{width:"100%",height:3,accentColor:v.accent,cursor:"pointer",background:"var(--border)",border:"none",padding:0,appearance:"none",WebkitAppearance:"none",borderRadius:2}}/>
+    </div>)}
+    <div style={{borderTop:"1px solid var(--border)",paddingTop:14,display:"flex",flexDirection:"column",gap:0}}>
+      {toggles.map(t=><div key={t.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,.03)"}}>
+        <div>
+          <div style={{fontSize:12,color:"var(--text)"}}>{t.label}</div>
+          <div style={{fontSize:9,color:"var(--muted)",marginTop:1}}>{t.sub}</div>
+        </div>
+        <div style={{position:"relative",width:34,height:18,flexShrink:0,cursor:"pointer"}} onClick={()=>upd(t.key,!policies[t.key])}>
+          <div style={{position:"absolute",inset:0,borderRadius:18,background:policies[t.key]?v.accent+"40":"var(--border)",transition:"background .2s"}}/>
+          <div style={{position:"absolute",width:12,height:12,borderRadius:"50%",top:3,left:policies[t.key]?19:3,background:policies[t.key]?v.accent:"var(--muted)",boxShadow:policies[t.key]?`0 0 6px ${v.accent}`:"none",transition:"all .2s"}}/>
+        </div>
+      </div>)}
+    </div>
+    <div style={{padding:"10px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)"}}>
+      <div className="lbl" style={{marginBottom:6}}>Sanctioned Countries</div>
+      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{policies.sanctions.map(s=><span key={s} style={{padding:"2px 6px",borderRadius:2,fontSize:9,fontFamily:"var(--mono)",fontWeight:600,background:"rgba(255,69,96,.12)",color:"#ff4560"}}>{s}</span>)}</div>
+    </div>
+    {vertical==="consumer"&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(244,114,182,.06)",border:"1px solid rgba(244,114,182,.2)"}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#f472b6",marginBottom:4,letterSpacing:".08em",textTransform:"uppercase"}}>Yield Guardian</div>
+      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Principal protection: ON. Only accrued DeFi yield may be spent.</div>
+    </div>}
+  </div>;
+}
+
+// ─── Payment Form ──────────────────────────────────────────────────────────────────
+
+const PRESETS={
+  treasury:[
+    {label:"Standard B2B",    data:{amount:250000,toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",urgency:"standard",intentSource:"erp"}},
+    {label:"Over Limit",      data:{amount:600000,toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",urgency:"standard",intentSource:"erp"}},
+    {label:"SDN Entity Hit",  data:{amount:45000, toCountry:"AE",toCurrency:"USD",beneficiary:"Bank Melli Iran",urgency:"urgent",intentSource:"erp"}},
+    {label:"Sanctioned Country",data:{amount:50000,toCountry:"IR",toCurrency:"USD",beneficiary:"Tehran Corp",urgency:"standard",intentSource:"erp"}},
+    {label:"High Value",      data:{amount:1800000,toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",urgency:"standard",intentSource:"erp"}},
+  ],
+  marketplace:[
+    {label:"Standard Payout", data:{amount:3200,toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",urgency:"standard",intentSource:"human"}},
+    {label:"SDN Entity Hit",  data:{amount:8000,toCountry:"AE",toCurrency:"USD",beneficiary:"Mahan Air",urgency:"urgent",intentSource:"human"}},
+    {label:"Over Limit",      data:{amount:55000,toCountry:"NG",toCurrency:"NGN",beneficiary:"Lagos Trader Co",urgency:"standard",intentSource:"human"}},
+  ],
+  ai_commerce:[
+    {label:"Agent Procurement",data:{amount:890,toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",urgency:"urgent",intentSource:"openai"}},
+    {label:"SDN Entity Hit",  data:{amount:2000,toCountry:"AE",toCurrency:"USD",beneficiary:"Wagner Group",urgency:"urgent",intentSource:"custom_agent"}},
+    {label:"Over Limit",      data:{amount:15000,toCountry:"US",toCurrency:"USD",beneficiary:"Cloud Compute LLC",urgency:"critical",intentSource:"google_ucp"}},
+  ],
+  enterprise:[
+    {label:"Standard",        data:{amount:1200000,toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",urgency:"standard",intentSource:"erp"}},
+    {label:"SDN Entity Hit",  data:{amount:500000,toCountry:"AE",toCurrency:"USD",beneficiary:"Rosoboronexport",urgency:"standard",intentSource:"erp"}},
+    {label:"Sanctioned Country",data:{amount:300000,toCountry:"RU",toCurrency:"USD",beneficiary:"Moscow Trade LLC",urgency:"standard",intentSource:"erp"}},
+  ],
+  consumer:[
+    {label:"Yield Purchase",  data:{amount:85,toCountry:"US",toCurrency:"USDC",beneficiary:"Self — Spending Card",urgency:"standard",intentSource:"defi_agent"}},
+    {label:"Over Limit",      data:{amount:750,toCountry:"US",toCurrency:"USDC",beneficiary:"Online Store",urgency:"standard",intentSource:"defi_agent"}},
+  ],
+};
 
 function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
   const v=VERTICALS[vertical];
   const [form,setForm]=useState({...v.defaults});
   useEffect(()=>setForm({...VERTICALS[vertical].defaults}),[vertical]);
   const u=(k,val)=>setForm(f=>({...f,[k]:val}));
-  const s={width:"100%",padding:"9px 11px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--mono)",fontSize:12,outline:"none",boxSizing:"border-box"};
+  const s={width:"100%",padding:"8px 10px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--mono)",fontSize:12,outline:"none",boxSizing:"border-box"};
   const isCross=form.fromCountry!==form.toCountry;
   const fx=FX[form.toCurrency]||1;
   const converted=form.currency!==form.toCurrency?Math.round(form.amount*fx*100)/100:null;
+  const presets=PRESETS[vertical]||[];
 
-  return <div style={{display:"flex",flexDirection:"column",gap:12,padding:"14px 16px",overflowY:"auto",flex:1}}>
-    <div style={{padding:"10px 12px",borderRadius:3,background:v.accent+"08",border:`1px solid ${v.accent}20`}}>
-      <div style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:700,color:v.accent,marginBottom:3}}>{v.icon} {v.label}</div>
-      <div style={{fontSize:11,color:"var(--muted)"}}>{v.desc}</div>
+  return <div style={{display:"flex",flexDirection:"column",gap:10,padding:"12px 14px",overflowY:"auto",flex:1}}>
+    <div style={{padding:"9px 11px",borderRadius:3,background:v.accent+"08",border:`1px solid ${v.accent}20`}}>
+      <div style={{fontFamily:"var(--sans)",fontSize:12,fontWeight:700,color:v.accent,marginBottom:2}}>{v.icon} {v.label}</div>
+      <div style={{fontSize:10,color:"var(--muted)"}}>{v.desc}</div>
     </div>
+
+    {presets.length>0&&<div>
+      <div className="lbl" style={{marginBottom:5}}>Quick Scenarios</div>
+      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+        {presets.map((p,i)=><button key={i} onClick={()=>setForm(f=>({...f,...p.data}))} style={{
+          padding:"4px 9px",borderRadius:3,border:"1px solid var(--border)",background:"var(--card)",
+          fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",cursor:"pointer",
+          transition:"all .15s",whiteSpace:"nowrap"
+        }}
+        onMouseOver={e=>{e.currentTarget.style.borderColor=v.accent;e.currentTarget.style.color=v.accent}}
+        onMouseOut={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted)"}}
+        >{p.label}</button>)}
+      </div>
+    </div>}
 
     <Inp label="Intent Source">
       <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
         {INTENT_SOURCES.map(src=><button key={src.id} onClick={()=>u("intentSource",src.id)} style={{
-          flex:"1 0 0",minWidth:60,padding:"5px 4px",borderRadius:3,cursor:"pointer",
+          flex:"1 0 0",minWidth:55,padding:"5px 3px",borderRadius:3,cursor:"pointer",
           border:`1px solid ${form.intentSource===src.id?src.color:"var(--border)"}`,
           background:form.intentSource===src.id?src.color+"12":"var(--card)",
-          fontFamily:"var(--mono)",fontSize:9,fontWeight:600,
+          fontFamily:"var(--mono)",fontSize:8,fontWeight:600,
           color:form.intentSource===src.id?src.color:"var(--muted)"
         }}>{src.name}</button>)}
       </div>
@@ -475,17 +742,14 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
       <Inp label="Amount"><input type="number" value={form.amount} onChange={e=>u("amount",Number(e.target.value))} style={s}/></Inp>
       <Inp label="Currency"><select value={form.currency} onChange={e=>u("currency",e.target.value)} style={s}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
     </div>
-
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
       <Inp label="From"><select value={form.fromCountry} onChange={e=>u("fromCountry",e.target.value)} style={s}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
       <Inp label="To"><select value={form.toCountry} onChange={e=>u("toCountry",e.target.value)} style={s}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
       <Inp label="To Ccy"><select value={form.toCurrency} onChange={e=>u("toCurrency",e.target.value)} style={s}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
     </div>
-
-    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"7px 10px",borderRadius:3,background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",fontSize:11,color:"#00d4ff",fontFamily:"var(--mono)"}}>
+    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"6px 10px",borderRadius:3,background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",fontSize:11,color:"#00d4ff",fontFamily:"var(--mono)"}}>
       FX: {fmtAmt(form.amount)} {form.currency} → {Number(converted).toLocaleString()} {form.toCurrency} @ {fx}
     </div>}
-
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       <Inp label="Beneficiary"><input value={form.beneficiary} onChange={e=>u("beneficiary",e.target.value)} style={s}/></Inp>
       <Inp label="Urgency"><select value={form.urgency} onChange={e=>u("urgency",e.target.value)} style={s}>
@@ -494,12 +758,11 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
         <option value="critical">Critical</option>
       </select></Inp>
     </div>
-
     <Inp label="Purpose"><input value={form.purpose} onChange={e=>u("purpose",e.target.value)} style={s}/></Inp>
 
     <button onClick={()=>onSubmit({...form,id:genId(),timestamp:new Date().toISOString(),vertical})}
       disabled={isProcessing||killActive}
-      style={{padding:"13px",borderRadius:3,border:"none",cursor:isProcessing||killActive?"not-allowed":"pointer",
+      style={{padding:"12px",borderRadius:3,border:"none",cursor:isProcessing||killActive?"not-allowed":"pointer",
         background:killActive?"rgba(255,69,96,.15)":isProcessing?"var(--border)":`linear-gradient(135deg,${v.accent},${v.accent}bb)`,
         color:killActive?"#ff4560":isProcessing?"var(--muted)":"#000",
         fontFamily:"var(--sans)",fontSize:12,fontWeight:700,letterSpacing:".06em",transition:"all .2s"
@@ -509,7 +772,7 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
   </div>;
 }
 
-// ─── Agent Detail ───────────────────────────────────────────────────────────
+// ─── Agent Detail ──────────────────────────────────────────────────────────────────
 
 function AgentDetail({agentId,results}){
   const agent=AGENTS.find(a=>a.id===agentId);
@@ -517,13 +780,18 @@ function AgentDetail({agentId,results}){
   if(!result) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:11}}>Click an agent above to inspect its decision output</div>;
   return <div style={{padding:"14px 16px",overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:12}}>
     <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <span style={{fontSize:18,color:agent.color}}>{agent.icon}</span>
+      <span style={{fontSize:16,color:agent.color}}>{agent.icon}</span>
       <div>
-        <div style={{fontFamily:"var(--sans)",fontSize:14,fontWeight:700,color:agent.color}}>{agent.name}</div>
+        <div style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:700,color:agent.color}}>{agent.name}</div>
         <div style={{fontSize:10,color:"var(--muted)"}}>{agent.role}</div>
       </div>
     </div>
     {result.summary&&<div style={{padding:"10px 12px",borderRadius:3,background:agent.color+"08",border:`1px solid ${agent.color}20`,fontSize:12,color:"#cbd5e1",lineHeight:1.6}}>{result.summary}</div>}
+    {result.sdnHit&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(167,139,250,.08)",border:"1px solid rgba(167,139,250,.3)",fontSize:11,lineHeight:1.5}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:".08em",marginBottom:4}}>⬡ OFAC SDN MATCH</div>
+      <div style={{color:"var(--text)"}}>Matched entity: <strong style={{color:"#ff4560"}}>{result.sdnHit.entity}</strong></div>
+      <div style={{color:"var(--muted)",marginTop:2,fontSize:10}}>Source: {result.sdnHit.source}</div>
+    </div>}
     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
       {result.complianceScore!==undefined&&<Badge label="Compliance" value={result.complianceScore+"%"} color={result.complianceScore>80?"#00e5a0":"#ffb84d"}/>}
       {result.riskScore!==undefined&&<Badge label="Risk Score" value={result.riskScore+"/100"} color={result.riskScore<40?"#00e5a0":result.riskScore<70?"#ffb84d":"#ff4560"}/>}
@@ -533,47 +801,45 @@ function AgentDetail({agentId,results}){
       {result.provider&&<Badge label="Provider" value={result.provider} color="#a78bfa"/>}
     </div>
     {result.checks&&<div>
-      <div className="lbl" style={{marginBottom:6}}>Compliance Checks</div>
-      {result.checks.map((c,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:4,padding:"6px 8px",borderRadius:2,background:"var(--card)",fontSize:11}}>
+      <div className="lbl" style={{marginBottom:5}}>Compliance Checks</div>
+      {result.checks.map((c,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:3,padding:"6px 8px",borderRadius:2,background:"var(--card)",fontSize:11,border:c.live&&c.status==="pass"?"1px solid rgba(0,229,160,.08)":c.live&&c.status==="fail"?"1px solid rgba(255,69,96,.15)":"1px solid transparent"}}>
         <span className="tag" style={{flexShrink:0,background:c.status==="pass"?"rgba(0,229,160,.12)":c.status==="fail"?"rgba(255,69,96,.12)":"rgba(255,184,77,.12)",color:c.status==="pass"?"#00e5a0":c.status==="fail"?"#ff4560":"#ffb84d"}}>{c.status.toUpperCase()}</span>
+        {c.live&&<span className="tag" style={{flexShrink:0,background:"rgba(0,212,255,.1)",color:"#00d4ff"}}>LIVE</span>}
         <span style={{color:"#94a3b8"}}><strong style={{color:"#cbd5e1"}}>{c.name}: </strong>{c.detail}</span>
       </div>)}
     </div>}
     {result.recommendedRail&&<div>
-      <div className="lbl" style={{marginBottom:6}}>Rail Selection</div>
-      <div style={{padding:"10px 12px",borderRadius:3,background:"rgba(0,229,160,.06)",border:"1px solid rgba(0,229,160,.2)",marginBottom:6}}>
-        <div style={{fontSize:12,fontWeight:600,color:"#00e5a0",marginBottom:3}}>✓ {result.recommendedRail.name}</div>
+      <div className="lbl" style={{marginBottom:5}}>Rail Selection</div>
+      <div style={{padding:"9px 11px",borderRadius:3,background:"rgba(0,229,160,.06)",border:"1px solid rgba(0,229,160,.2)",marginBottom:5}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#00e5a0",marginBottom:2}}>✓ {result.recommendedRail.name}</div>
         <div style={{fontSize:11,color:"var(--muted)"}}>{result.recommendedRail.reason}</div>
       </div>
-      {result.alternativeRails?.map((r,i)=><div key={i} style={{padding:"7px 10px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",marginBottom:4,fontSize:11,color:"var(--muted)"}}>
+      {result.alternativeRails?.map((r,i)=><div key={i} style={{padding:"6px 9px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",marginBottom:3,fontSize:11,color:"var(--muted)"}}>
         Alt {i+1}: <span style={{color:"#38bdf8"}}>{r.name}</span> — {r.reason}
       </div>)}
     </div>}
-    {result.fxOptimization?.applicable&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
+    {result.fxOptimization?.applicable&&<div style={{padding:"9px 11px",borderRadius:3,background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
       <span style={{color:"#00d4ff",fontWeight:600}}>FX Optimization: </span>{result.fxOptimization.strategy}
     </div>}
     {result.decisionChain&&<div>
-      <div className="lbl" style={{marginBottom:6}}>Full Decision Chain</div>
-      {result.decisionChain.map((d,i)=><div key={i} style={{display:"flex",gap:7,fontSize:11,marginBottom:3,padding:"5px 8px",borderRadius:2,background:"var(--card)"}}>
+      <div className="lbl" style={{marginBottom:5}}>Decision Chain</div>
+      {result.decisionChain.map((d,i)=><div key={i} style={{display:"flex",gap:7,fontSize:11,marginBottom:2,padding:"5px 7px",borderRadius:2,background:"var(--card)"}}>
         <span style={{fontFamily:"var(--mono)",fontSize:8,color:"#38bdf8",fontWeight:600,whiteSpace:"nowrap"}}>[{d.reasonCode}]</span>
         <span style={{color:"#94a3b8",flex:1}}><strong style={{color:"#cbd5e1"}}>{d.agent}:</strong> {d.decision}</span>
         <span style={{fontSize:9,color:"var(--dim)",whiteSpace:"nowrap"}}>{d.confidence}%</span>
       </div>)}
     </div>}
-    {result.recommendations&&<div>
-      <div className="lbl" style={{marginBottom:6}}>Audit Recommendations</div>
-      {result.recommendations.map((r,i)=><div key={i} style={{fontSize:11,color:"var(--muted)",padding:"5px 0",borderBottom:"1px solid var(--border)"}}>→ {r}</div>)}
-    </div>}
-    <details style={{marginTop:4}}>
-      <summary style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--dim)",cursor:"pointer",listStyle:"none"}}>▸ Raw JSON output</summary>
-      <pre style={{marginTop:6,padding:"10px",borderRadius:3,background:"#050709",fontSize:9,color:"var(--muted)",fontFamily:"var(--mono)",lineHeight:1.4,border:"1px solid var(--border)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:250,overflow:"auto"}}>
+    {result.sanctionsSource&&<div style={{fontSize:10,color:"var(--dim)",padding:"5px 0",borderTop:"1px solid var(--border)"}}>Sanctions data: {result.sanctionsSource}</div>}
+    <details style={{marginTop:2}}>
+      <summary style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--dim)",cursor:"pointer",listStyle:"none"}}>▸ Raw JSON</summary>
+      <pre style={{marginTop:5,padding:"9px",borderRadius:3,background:"#050709",fontSize:9,color:"var(--muted)",fontFamily:"var(--mono)",lineHeight:1.4,border:"1px solid var(--border)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:220,overflow:"auto"}}>
         {JSON.stringify(result,null,2)}
       </pre>
     </details>
   </div>;
 }
 
-// ─── Audit Trail ────────────────────────────────────────────────────────────
+// ─── Audit Trail ───────────────────────────────────────────────────────────────────
 
 function AuditTrail({entries}){
   const ref=useRef();
@@ -582,10 +848,10 @@ function AuditTrail({entries}){
     {entries.length===0&&<div style={{color:"var(--dim)",fontSize:11,textAlign:"center",padding:24}}>Audit trail populates as agents process...</div>}
     {entries.map((e,i)=>{
       const ag=AGENTS.find(a=>a.id===e.agent);
-      return <div key={i} style={{padding:"6px 8px",borderRadius:2,background:"var(--card)",borderLeft:`3px solid ${ag?ag.color:"var(--border)"}`,animation:"fadeUp .2s ease"}}>
+      return <div key={i} style={{padding:"5px 8px",borderRadius:2,background:"var(--card)",borderLeft:`3px solid ${ag?ag.color:"var(--border)"}`,animation:"fadeUp .2s ease"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:1}}>
           <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{e.agent}</span>
-          <span style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--dim)"}}>{e.time}</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)"}}>{e.time}</span>
         </div>
         <div style={{fontSize:11,color:"#94a3b8",lineHeight:1.4}}>{e.message}</div>
         {e.status&&<span className="tag" style={{display:"inline-block",marginTop:2,background:e.status==="pass"?"rgba(0,229,160,.1)":e.status==="fail"?"rgba(255,69,96,.1)":"rgba(255,184,77,.1)",color:e.status==="pass"?"#00e5a0":e.status==="fail"?"#ff4560":"#ffb84d"}}>{e.status.toUpperCase()}</span>}
@@ -594,13 +860,14 @@ function AuditTrail({entries}){
   </div>;
 }
 
-// ─── Analytics ──────────────────────────────────────────────────────────────
+// ─── Analytics ─────────────────────────────────────────────────────────────────────
 
 function Analytics({payments,vertical}){
   const v=VERTICALS[vertical];
   const vp=payments.filter(p=>p.vertical===vertical);
   const settled=vp.filter(p=>p.finalStatus==="settled");
   const rejected=vp.filter(p=>p.finalStatus==="rejected");
+  const sdnBlocked=vp.filter(p=>p.sdnBlocked);
   const total=vp.reduce((s,p)=>s+(p.payment?.amount||0),0);
   const avgRisk=settled.length?Math.round(settled.reduce((s,p)=>s+(p.results?.control?.riskScore||0),0)/settled.length):0;
   const byRail={};
@@ -610,35 +877,35 @@ function Analytics({payments,vertical}){
       <Badge label="Total Processed" value={vp.length} color={v.accent}/>
       <Badge label="Volume" value={total>1e6?`$${(total/1e6).toFixed(1)}M`:`$${total.toLocaleString()}`} color={v.accent}/>
       <Badge label="Settled" value={`${settled.length} (${vp.length?Math.round(settled.length/vp.length*100):0}%)`} color="#00e5a0"/>
-      <Badge label="Rejected" value={`${rejected.length} (${vp.length?Math.round(rejected.length/vp.length*100):0}%)`} color="#ff4560"/>
-      <Badge label="Avg Risk Score" value={avgRisk||"—"} color={avgRisk<40?"#00e5a0":avgRisk<70?"#ffb84d":"#ff4560"}/>
-      <Badge label="Escalations" value={vp.filter(p=>p.wasEscalated).length} color="#ffb84d"/>
+      <Badge label="Blocked" value={`${rejected.length} (${vp.length?Math.round(rejected.length/vp.length*100):0}%)`} color="#ff4560"/>
+      <Badge label="SDN Hits" value={sdnBlocked.length} color="#a78bfa"/>
+      <Badge label="Avg Risk" value={avgRisk||"—"} color={avgRisk<40?"#00e5a0":avgRisk<70?"#ffb84d":"#ff4560"}/>
     </div>
     {Object.keys(byRail).length>0&&<div>
-      <div className="lbl" style={{marginBottom:8}}>Rail Distribution</div>
+      <div className="lbl" style={{marginBottom:6}}>Rail Distribution</div>
       {Object.entries(byRail).map(([name,count])=><div key={name} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid var(--border)",fontSize:11,color:"var(--muted)"}}>
         <span style={{color:"#38bdf8"}}>{name}</span>
         <span>{count} tx ({Math.round(count/settled.length*100)}%)</span>
       </div>)}
     </div>}
-    {vp.length===0&&<div style={{textAlign:"center",color:"var(--dim)",fontSize:11,padding:16}}>Submit transactions to see analytics</div>}
+    {vp.length===0&&<div style={{textAlign:"center",color:"var(--dim)",fontSize:11,padding:14}}>Submit transactions to see analytics</div>}
   </div>;
 }
 
-// ─── Competitive Landscape ──────────────────────────────────────────────────
+// ─── Landscape ─────────────────────────────────────────────────────────────────────
 
 function Landscape(){
   return <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
     <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>
       <span style={{color:"#06d6a0",fontWeight:700}}>$50M+ raised</span> in agentic payment infrastructure in 6 months. Every funded company solves execution, identity, or checkout. <span style={{color:"#06d6a0",fontWeight:600}}>Nobody is building the governance layer. That's Revvyn.</span>
     </div>
-    {COMPS.map(c=><div key={c.name} style={{padding:"12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)"}}>
+    {COMPS.map(c=><div key={c.name} style={{padding:"11px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
         <span style={{fontFamily:"var(--sans)",fontSize:12,fontWeight:700}}>{c.name}</span>
         <span style={{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:"#06d6a0"}}>{c.raised}</span>
       </div>
-      <div style={{fontSize:9,color:"var(--dim)",marginBottom:3,letterSpacing:".06em"}}>{c.lead}</div>
-      <div style={{fontSize:11,color:"#94a3b8",marginBottom:4}}>{c.what}</div>
+      <div style={{fontSize:9,color:"var(--dim)",marginBottom:2,letterSpacing:".06em"}}>{c.lead}</div>
+      <div style={{fontSize:11,color:"#94a3b8",marginBottom:3}}>{c.what}</div>
       <div style={{fontSize:11,color:"#ff4560",fontFamily:"var(--mono)"}}>Gap: {c.gap}</div>
     </div>)}
     <div style={{padding:"14px",borderRadius:3,background:"linear-gradient(135deg,rgba(6,214,160,.06),rgba(167,139,250,.04))",border:"1.5px solid rgba(6,214,160,.25)"}}>
@@ -651,137 +918,39 @@ function Landscape(){
   </div>;
 }
 
-// ─── HITL Modal ─────────────────────────────────────────────────────────────
+// ─── HITL Modal ────────────────────────────────────────────────────────────────────
 
 function HITLModal({payment,reason,checks,onApprove,onReject}){
   return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
-    <div style={{background:"var(--surface)",border:"1px solid rgba(255,184,77,.4)",borderRadius:4,padding:28,maxWidth:480,width:"100%",boxShadow:"0 0 60px rgba(255,184,77,.15)",animation:"fadeUp .3s ease"}}>
-      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
-        <div style={{width:36,height:36,borderRadius:6,background:"rgba(255,184,77,.12)",border:"1px solid rgba(255,184,77,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>⚠</div>
+    <div style={{background:"var(--surface)",border:"1px solid rgba(255,184,77,.4)",borderRadius:4,padding:24,maxWidth:440,width:"100%",boxShadow:"0 0 60px rgba(255,184,77,.12)",animation:"fadeUp .3s ease"}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+        <div style={{width:34,height:34,borderRadius:6,background:"rgba(255,184,77,.12)",border:"1px solid rgba(255,184,77,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>⚠</div>
         <div>
-          <div style={{fontFamily:"var(--sans)",fontSize:14,fontWeight:700,color:"#ffb84d",textTransform:"uppercase",letterSpacing:".06em"}}>Human Review Required</div>
+          <div style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:700,color:"#ffb84d",textTransform:"uppercase",letterSpacing:".06em"}}>Human Review Required</div>
           <div style={{fontSize:11,color:"var(--muted)"}}>Pipeline paused — awaiting decision</div>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,padding:"12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",marginBottom:12,fontSize:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,padding:"10px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",marginBottom:10,fontSize:12}}>
         <div><span style={{color:"var(--muted)"}}>ID: </span><span style={{fontFamily:"var(--mono)",fontWeight:600}}>{payment.id}</span></div>
         <div><span style={{color:"var(--muted)"}}>Amount: </span><span style={{fontFamily:"var(--mono)"}}>{payment.currency} {fmtAmt(payment.amount)}</span></div>
         <div><span style={{color:"var(--muted)"}}>To: </span>{payment.beneficiary}</div>
         <div><span style={{color:"var(--muted)"}}>Route: </span>{payment.fromCountry} → {payment.toCountry}</div>
       </div>
-      <div style={{padding:"10px 12px",borderRadius:3,background:"rgba(255,184,77,.06)",border:"1px solid rgba(255,184,77,.2)",fontSize:11,color:"var(--text)",lineHeight:1.5,marginBottom:12}}>{reason}</div>
-      {checks.length>0&&<div style={{marginBottom:16}}>
-        {checks.map((c,i)=><div key={i} style={{fontSize:11,color:"var(--muted)",display:"flex",gap:7,padding:"4px 0"}}>
-          <span style={{color:"#00e5a0"}}>✓</span>
-          <span><strong style={{color:"#cbd5e1"}}>{c.label}:</strong> {c.detail}</span>
-        </div>)}
-      </div>}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-        <button onClick={onReject} style={{padding:"12px",borderRadius:3,border:"1px solid rgba(255,69,96,.4)",background:"rgba(255,69,96,.08)",color:"#ff4560",fontFamily:"var(--sans)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".06em"}}>✗ Reject</button>
-        <button onClick={onApprove} style={{padding:"12px",borderRadius:3,border:"none",background:"linear-gradient(135deg,#00e5a0,#06d6a0)",color:"#000",fontFamily:"var(--sans)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".06em"}}>✓ Approve</button>
+      <div style={{padding:"8px 10px",borderRadius:3,background:"rgba(255,184,77,.06)",border:"1px solid rgba(255,184,77,.2)",fontSize:11,color:"var(--text)",lineHeight:1.5,marginBottom:10}}>{reason}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <button onClick={onReject} style={{padding:"11px",borderRadius:3,border:"1px solid rgba(255,69,96,.4)",background:"rgba(255,69,96,.08)",color:"#ff4560",fontFamily:"var(--sans)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".06em"}}>✗ Reject</button>
+        <button onClick={onApprove} style={{padding:"11px",borderRadius:3,border:"none",background:"linear-gradient(135deg,#00e5a0,#06d6a0)",color:"#000",fontFamily:"var(--sans)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".06em"}}>✓ Approve</button>
       </div>
     </div>
   </div>;
 }
 
-// ─── Stack Diagram ───────────────────────────────────────────────────────────
-
-function StackDiagram({selectedRail,intentSource,vertical}){
-  const v=VERTICALS[vertical];
-  return <div style={{padding:"10px 16px 6px",flexShrink:0,display:"flex",flexDirection:"column",gap:4}}>
-    <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--dim)",letterSpacing:"1px",marginBottom:4}}>ARCHITECTURE STACK</div>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:50,fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)",textAlign:"right",flexShrink:0}}>INTENT</div>
-      <div style={{flex:1,display:"flex",gap:2}}>
-        {INTENT_SOURCES.map(s=><div key={s.id} style={{flex:1,padding:"3px 2px",borderRadius:2,textAlign:"center",background:intentSource===s.id?s.color+"14":"var(--card)",border:`1px solid ${intentSource===s.id?s.color:"var(--border)"}`}}>
-          <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:600,color:intentSource===s.id?s.color:"var(--dim)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{s.name}</div>
-        </div>)}
-      </div>
-    </div>
-    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:9,color:v.accent,paddingLeft:56}}>↓</div>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:50,fontFamily:"var(--mono)",fontSize:8,color:v.accent,textAlign:"right",fontWeight:700,flexShrink:0}}>REVVYN</div>
-      <div style={{flex:1,padding:"6px 10px",borderRadius:3,background:`linear-gradient(135deg,${v.accent}08,rgba(167,139,250,.05))`,border:`1.5px solid ${v.accent}30`,textAlign:"center"}}>
-        <div style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:700,color:v.accent,letterSpacing:".5px"}}>GOVERNANCE · CONTROL · EXECUTION</div>
-      </div>
-    </div>
-    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:9,color:"#38bdf8",paddingLeft:56}}>↓</div>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:50,fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)",textAlign:"right",flexShrink:0}}>RAILS</div>
-      <div style={{flex:1,display:"flex",gap:2,flexWrap:"wrap"}}>
-        {RAILS.map(r=><div key={r.id} style={{flex:"1 0 0",minWidth:40,padding:"3px 2px",borderRadius:2,textAlign:"center",background:selectedRail===r.id?"rgba(0,229,160,.1)":"var(--card)",border:`1px solid ${selectedRail===r.id?"#00e5a0":"var(--border)"}`}}>
-          <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:600,color:selectedRail===r.id?"#00e5a0":"#64748b",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{r.provider}</div>
-        </div>)}
-      </div>
-    </div>
-  </div>;
-}
-
-// ─── Metrics Bar ────────────────────────────────────────────────────────────
-
-function MetricsBar({payments}){
-  const total=payments.length;
-  const settled=payments.filter(p=>p.finalStatus==="settled").length;
-  const rejected=payments.filter(p=>p.finalStatus==="rejected").length;
-  const escalated=payments.filter(p=>p.wasEscalated).length;
-  const items=[
-    {label:"Total",value:total,color:"#00d4ff"},
-    {label:"Settled",value:settled,color:"#00e5a0"},
-    {label:"Blocked",value:rejected,color:"#ff4560"},
-    {label:"Escalated",value:escalated,color:"#ffb84d"},
-  ];
-  return <div style={{display:"flex",borderBottom:"1px solid var(--border)",background:"var(--card)",flexShrink:0}}>
-    {items.map(m=><div key={m.label} style={{flex:1,padding:"10px 14px",borderRight:"1px solid var(--border)"}}>
-      <div style={{fontFamily:"var(--sans)",fontSize:20,fontWeight:800,color:m.color,lineHeight:1}}>{m.value}</div>
-      <div style={{fontSize:9,color:"var(--muted)",marginTop:3,letterSpacing:".08em",textTransform:"uppercase"}}>{m.label}</div>
-    </div>)}
-  </div>;
-}
-
-// ─── Hero ────────────────────────────────────────────────────────────────────
-
-function Hero({onEnter,onAutoDemo}){
-  return <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 24px",position:"relative",overflow:"hidden",background:"var(--bg)"}}>
-    <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(74,158,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(74,158,255,.025) 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
-    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% -20%,rgba(6,214,160,.08) 0%,transparent 60%)"}}/>
-    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 50% 40% at 80% 80%,rgba(167,139,250,.05) 0%,transparent 50%)"}}/>
-    <div style={{textAlign:"center",maxWidth:720,position:"relative",zIndex:1}}>
-      <div style={{display:"inline-flex",alignItems:"center",gap:14,marginBottom:28,animation:"fadeUp .6s ease-out"}}>
-        <div style={{width:52,height:52,borderRadius:12,background:"linear-gradient(135deg,#06d6a0,#06d6a088)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:800,fontSize:24,color:"#000",animation:"glow 3s ease-in-out infinite"}}>R</div>
-        <span style={{fontFamily:"var(--sans)",fontWeight:800,fontSize:28,letterSpacing:"-.5px"}}>Revvyn</span>
-      </div>
-      <h1 style={{fontFamily:"var(--sans)",fontSize:"clamp(26px,5vw,50px)",fontWeight:800,lineHeight:1.1,marginBottom:18,animation:"fadeUp .6s ease-out .1s both"}}>
-        The Governance Layer for{" "}
-        <span style={{background:"linear-gradient(135deg,#06d6a0,#38bdf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Agentic Commerce</span>
-      </h1>
-      <p style={{fontSize:"clamp(14px,2vw,18px)",color:"#94a3b8",lineHeight:1.6,maxWidth:520,margin:"0 auto 16px",animation:"fadeUp .6s ease-out .2s both"}}>
-        When an AI agent wants to spend money, Revvyn decides if it's allowed to.
-      </p>
-      <div style={{display:"inline-block",padding:"9px 18px",borderRadius:3,background:"rgba(6,214,160,.06)",border:"1px solid rgba(6,214,160,.2)",marginBottom:32,animation:"fadeUp .6s ease-out .25s both"}}>
-        <span style={{fontFamily:"var(--mono)",fontSize:"clamp(11px,1.5vw,13px)",color:"#06d6a0",fontWeight:600}}>$50M+ raised in agentic payments infra. $0 in governance.</span>
-      </div>
-      <div style={{display:"flex",justifyContent:"center",gap:"clamp(24px,5vw,56px)",marginBottom:36,animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}}>
-        {[{n:"5",l:"Verticals",c:"#06d6a0"},{n:"9",l:"Payment Rails",c:"#38bdf8"},{n:"5",l:"AI Agents",c:"#a78bfa"}].map(s=>(
-          <div key={s.l} style={{textAlign:"center"}}>
-            <div style={{fontFamily:"var(--sans)",fontSize:"clamp(30px,4vw,42px)",fontWeight:800,color:s.c}}>{s.n}</div>
-            <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",letterSpacing:"1px",textTransform:"uppercase"}}>{s.l}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap",animation:"fadeUp .6s ease-out .4s both"}}>
-        <button onClick={onAutoDemo} style={{padding:"14px 32px",borderRadius:3,border:"none",background:"linear-gradient(135deg,#06d6a0,#06d6a0bb)",color:"#000",fontFamily:"var(--sans)",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".06em",boxShadow:"0 4px 24px rgba(6,214,160,.25)"}}>▶ Watch Live Demo</button>
-        <button onClick={onEnter} style={{padding:"14px 32px",borderRadius:3,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"var(--sans)",fontSize:13,fontWeight:600,cursor:"pointer",letterSpacing:".06em"}}>Explore Sandbox</button>
-      </div>
-    </div>
-  </div>;
-}
-
-// ─── Tab bar ─────────────────────────────────────────────────────────────────
+// ─── Tab Bar ───────────────────────────────────────────────────────────────────────
 
 function TabBar({tabs,active,onChange,accent}){
-  return <div style={{display:"flex",gap:1,borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
+  return <div style={{display:"flex",gap:0,borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
     {tabs.map(t=><button key={t.id} onClick={()=>onChange(t.id)} style={{
-      padding:"10px 16px",border:"none",background:"transparent",
+      padding:"9px 14px",border:"none",background:"transparent",
       fontFamily:"var(--mono)",fontSize:10,fontWeight:600,letterSpacing:".08em",
       color:active===t.id?accent:"var(--muted)",cursor:"pointer",whiteSpace:"nowrap",
       borderBottom:`2px solid ${active===t.id?accent:"transparent"}`,transition:"all .15s"
@@ -789,7 +958,44 @@ function TabBar({tabs,active,onChange,accent}){
   </div>;
 }
 
-// ─── Main App ─────────────────────────────────────────────────────────────────
+// ─── Hero ──────────────────────────────────────────────────────────────────────────
+
+function Hero({onEnter,onAutoDemo}){
+  return <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 24px",position:"relative",overflow:"hidden",background:"var(--bg)"}}>
+    <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(74,158,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(74,158,255,.025) 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
+    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% -20%,rgba(6,214,160,.08) 0%,transparent 60%)"}}/>
+    <div style={{textAlign:"center",maxWidth:680,position:"relative",zIndex:1}}>
+      <div style={{display:"inline-flex",alignItems:"center",gap:14,marginBottom:28,animation:"fadeUp .6s ease-out"}}>
+        <div style={{width:52,height:52,borderRadius:12,background:"linear-gradient(135deg,#06d6a0,#06d6a088)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:800,fontSize:24,color:"#000",animation:"glow 3s ease-in-out infinite"}}>R</div>
+        <span style={{fontFamily:"var(--sans)",fontWeight:800,fontSize:26,letterSpacing:"-.5px"}}>Revvyn</span>
+      </div>
+      <h1 style={{fontFamily:"var(--sans)",fontSize:"clamp(24px,5vw,48px)",fontWeight:800,lineHeight:1.1,marginBottom:16,animation:"fadeUp .6s ease-out .1s both"}}>
+        The Governance Layer for{" "}
+        <span style={{background:"linear-gradient(135deg,#06d6a0,#38bdf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Agentic Commerce</span>
+      </h1>
+      <p style={{fontSize:"clamp(13px,2vw,17px)",color:"#94a3b8",lineHeight:1.6,maxWidth:500,margin:"0 auto 14px",animation:"fadeUp .6s ease-out .2s both"}}>
+        When an AI agent wants to spend money, Revvyn decides if it's allowed to.
+      </p>
+      <div style={{display:"inline-block",padding:"8px 16px",borderRadius:3,background:"rgba(6,214,160,.06)",border:"1px solid rgba(6,214,160,.2)",marginBottom:28,animation:"fadeUp .6s ease-out .25s both"}}>
+        <span style={{fontFamily:"var(--mono)",fontSize:12,color:"#06d6a0",fontWeight:600}}>$50M+ raised in agentic payments infra. $0 in governance.</span>
+      </div>
+      <div style={{display:"flex",justifyContent:"center",gap:"clamp(20px,5vw,52px)",marginBottom:32,animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}}>
+        {[{n:"5",l:"Verticals",c:"#06d6a0"},{n:"9",l:"Payment Rails",c:"#38bdf8"},{n:"5",l:"AI Agents",c:"#a78bfa"}].map(s=>(
+          <div key={s.l} style={{textAlign:"center"}}>
+            <div style={{fontFamily:"var(--sans)",fontSize:"clamp(28px,4vw,40px)",fontWeight:800,color:s.c}}>{s.n}</div>
+            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",letterSpacing:"1px",textTransform:"uppercase"}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",animation:"fadeUp .6s ease-out .4s both"}}>
+        <button onClick={onAutoDemo} style={{padding:"13px 28px",borderRadius:3,border:"none",background:"linear-gradient(135deg,#06d6a0,#06d6a0bb)",color:"#000",fontFamily:"var(--sans)",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".06em",boxShadow:"0 4px 24px rgba(6,214,160,.25)"}}>▶ Watch Live Demo</button>
+        <button onClick={onEnter} style={{padding:"13px 28px",borderRadius:3,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"var(--sans)",fontSize:13,fontWeight:600,cursor:"pointer",letterSpacing:".06em"}}>Explore Sandbox</button>
+      </div>
+    </div>
+  </div>;
+}
+
+// ─── App ───────────────────────────────────────────────────────────────────────────
 
 function App(){
   const [showHero,setShowHero]=useState(true);
@@ -808,8 +1014,17 @@ function App(){
   const [rightTab,setRightTab]=useState("pipeline");
   const [hitl,setHitl]=useState(null);
   const [intentSource,setIntentSource]=useState("human");
+  const [sanctionsState,setSanctionsState]=useState({status:"loading",count:0,source:"Loading..."});
   const escRef=useRef(null);
   const v=VERTICALS[vertical];
+
+  // Load live sanctions data on mount
+  useEffect(()=>{
+    loadSanctionsData(state=>{
+      setSanctionsState(state);
+      SANCTIONS_STATE=state;
+    });
+  },[]);
 
   useEffect(()=>{setPolicies(VERTICALS[vertical].policies)},[vertical]);
 
@@ -818,15 +1033,16 @@ function App(){
   },[]);
 
   const processPayment=useCallback(async(payment)=>{
-    if(killActive||isProcessing)return;
+    if(killActive||isProcessing) return;
     setIsProcessing(true);
     setAgentStatuses({});setAgentResults({});setSelectedAgent(null);setAuditEntries([]);setSelectedRail(null);setTxState("Created");
     setIntentSource(payment.intentSource||"human");
     setRightTab("pipeline");
-    const rec={id:payment.id,payment,finalStatus:"processing",results:{},vertical,wasEscalated:false};
+    const rec={id:payment.id,payment,finalStatus:"processing",results:{},vertical,wasEscalated:false,sdnBlocked:false};
     setPayments(p=>[rec,...p]);
 
     const pol=policies;
+    const sdn=SANCTIONS_STATE;
     let aborted=false;
     const allResults={};
 
@@ -841,19 +1057,21 @@ function App(){
       if(agent.id==="control")    setTxState("Risk Assessed");
       if(agent.id==="execution")  setTxState("Routed");
 
-      await new Promise(r=>setTimeout(r,700+Math.random()*800));
+      await new Promise(r=>setTimeout(r,600+Math.random()*700));
 
-      const result=simulate(agent.id,payment,vertical,pol);
+      const result=simulate(agent.id,payment,vertical,pol,sdn);
       allResults[agent.id]=result;
       setAgentResults(p=>({...p,[agent.id]:result}));
 
       if(agent.id==="governance"){
         if(result.approved===false){
           setAgentStatuses(p=>({...p,[agent.id]:"failed"}));
-          addAudit(agent.id,"REJECTED — "+result.summary,"fail");
+          const isSdnHit=!!result.sdnHit;
+          addAudit(agent.id,`REJECTED — ${result.summary}`,"fail");
           result.checks?.filter(c=>c.status==="fail").forEach(c=>addAudit(agent.id,`✗ ${c.name}: ${c.detail}`,"fail"));
+          if(isSdnHit) addAudit(agent.id,`⬡ LIVE OFAC MATCH: "${result.sdnHit.entity}" · ${result.sdnHit.source}`,"fail");
           aborted=true;
-          setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",results:allResults}:x));
+          setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",sdnBlocked:isSdnHit,results:allResults}:x));
           setTxState(null);
           continue;
         }
@@ -874,7 +1092,7 @@ function App(){
           addAudit(agent.id,"APPROVED by human reviewer — continuing pipeline","pass");
           setTxState("Approved");
         }
-        result.checks?.forEach(c=>addAudit(agent.id,`${c.name}: ${c.detail}`,c.status));
+        result.checks?.forEach(c=>addAudit(agent.id,`${c.live?"[LIVE] ":""}${c.name}: ${c.detail}`,c.status));
       }
 
       if(agent.id==="control"&&result.recommendedRail){
@@ -890,7 +1108,7 @@ function App(){
       if(agent.id==="audit"){
         setTxState("Reconciled");
         result.decisionChain?.forEach(d=>addAudit(agent.id,`[${d.reasonCode}] ${d.agent}: ${d.decision}`,null));
-        addAudit(agent.id,`Tags: ${result.regulatoryTags?.join(" · ")}`,null);
+        addAudit(agent.id,`SDN data: ${result.sanctionsSource||"reference list"}`,null);
       }
 
       setAgentStatuses(p=>({...p,[agent.id]:"complete"}));
@@ -920,18 +1138,17 @@ function App(){
     <StyleInjector/>
     <style>{`
       input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:3px;cursor:pointer;border:none;padding:0}
-      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent,#06d6a0);cursor:pointer}
-      details summary{outline:none;user-select:none}
+      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent,#06d6a0);cursor:pointer}
+      details summary{outline:none;user-select:none;list-style:none}
     `}</style>
-    <Header vertical={vertical} killActive={killActive} onKillToggle={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed — transactions enabled":"⬛ KILL SWITCH ACTIVATED — all transactions halted",killActive?"pass":"fail")}} onHero={()=>setShowHero(true)}/>
+    <Header vertical={vertical} killActive={killActive} onKillToggle={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed":"⬛ KILL SWITCH — all transactions halted",killActive?"pass":"fail")}} onHero={()=>setShowHero(true)} sanctionsState={sanctionsState}/>
     <VerticalTabs active={vertical} onChange={v=>{setVertical(v);setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null)}}/>
-    <AgentPipeline statuses={agentStatuses} selected={selectedAgent} onSelect={id=>{setSelectedAgent(id);setRightTab("pipeline")}} accent={v.accent}/>
+    <AgentPipeline statuses={agentStatuses} selected={selectedAgent} onSelect={id=>{setSelectedAgent(id);setRightTab("pipeline")}}/>
     {txState&&<LifecycleBar current={txState}/>}
     <StackDiagram selectedRail={selectedRail} intentSource={intentSource} vertical={vertical}/>
     <MetricsBar payments={payments}/>
 
     <div style={{flex:1,display:"flex",overflow:"hidden",minHeight:0}}>
-      {/* Left */}
       <div style={{flex:"0 0 400px",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TabBar tabs={leftTabs} active={leftTab} onChange={setLeftTab} accent={v.accent}/>
         <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
@@ -941,7 +1158,6 @@ function App(){
           {leftTab==="analytics"&&<div style={{flex:1,overflowY:"auto"}}><Analytics payments={payments} vertical={vertical}/></div>}
         </div>
       </div>
-      {/* Right */}
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0}}>
         <TabBar tabs={rightTabs} active={rightTab} onChange={setRightTab} accent={v.accent}/>
         <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
