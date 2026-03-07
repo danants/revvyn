@@ -48,23 +48,23 @@ const VERTICALS={
   treasury:{id:"treasury",label:"Enterprise Treasury",icon:"◈",accent:"#06d6a0",
     desc:"Cross-border vendor payments, FX optimization, multi-bank routing",
     defaults:{amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"erp"},
-    policies:{maxSingle:500000,maxDaily:2000000,requireApproval:100000,dualApproval:250000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
+    policies:{maxSingle:500000,maxDaily:2000000,requireApproval:100000,dualApproval:250000,agentHitlThreshold:50000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
   marketplace:{id:"marketplace",label:"Marketplace",icon:"◇",accent:"#38bdf8",
     desc:"Seller payouts, split settlements, multi-currency disbursements",
     defaults:{amount:3200,currency:"USD",fromCountry:"US",toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",purpose:"Weekly payout",urgency:"standard",intentSource:"human"},
-    policies:{maxSingle:50000,maxDaily:500000,requireApproval:25000,dualApproval:50000,sanctions:["KP","IR","SY"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
+    policies:{maxSingle:50000,maxDaily:500000,requireApproval:25000,dualApproval:50000,agentHitlThreshold:10000,sanctions:["KP","IR","SY"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
   ai_commerce:{id:"ai_commerce",label:"AI-to-AI Commerce",icon:"◎",accent:"#a78bfa",
     desc:"Autonomous agent transactions, programmatic spend governance",
     defaults:{amount:890,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",purpose:"Autonomous procurement — cloud compute",urgency:"urgent",intentSource:"openai"},
-    policies:{maxSingle:10000,maxDaily:100000,requireApproval:5000,dualApproval:10000,sanctions:["KP","IR","SY","CU"],kycRequired:false,verifiableIntent:true,hitl:true,killswitch:true}},
+    policies:{maxSingle:10000,maxDaily:100000,requireApproval:5000,dualApproval:10000,agentHitlThreshold:2000,sanctions:["KP","IR","SY","CU"],kycRequired:false,verifiableIntent:true,hitl:true,killswitch:true}},
   enterprise:{id:"enterprise",label:"Enterprise Direct",icon:"◐",accent:"#fbbf24",
     desc:"Complex multi-entity payments, ERP integration, global compliance",
     defaults:{amount:1200000,currency:"USD",fromCountry:"US",toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",purpose:"Strategic supplier — Q1 manufacturing",urgency:"standard",intentSource:"erp"},
-    policies:{maxSingle:5000000,maxDaily:20000000,requireApproval:500000,dualApproval:1000000,sanctions:["KP","IR","SY","CU","RU","BY"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
+    policies:{maxSingle:5000000,maxDaily:20000000,requireApproval:500000,dualApproval:1000000,agentHitlThreshold:250000,sanctions:["KP","IR","SY","CU","RU","BY"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
   consumer:{id:"consumer",label:"Consumer AI Finance",icon:"◍",accent:"#f472b6",
     desc:"Personal AI agents — yield-only spending, DeFi governance",
     defaults:{amount:85,currency:"USDC",fromCountry:"US",toCountry:"US",toCurrency:"USDC",beneficiary:"Self — Spending Card",purpose:"Yield-funded purchase",urgency:"standard",intentSource:"defi_agent"},
-    policies:{maxSingle:500,maxDaily:2000,requireApproval:200,dualApproval:500,sanctions:["KP","IR","SY"],kycRequired:false,verifiableIntent:false,hitl:true,killswitch:true}},
+    policies:{maxSingle:500,maxDaily:2000,requireApproval:200,dualApproval:500,agentHitlThreshold:100,sanctions:["KP","IR","SY"],kycRequired:false,verifiableIntent:false,hitl:true,killswitch:true}},
 };
 
 const RAILS=[
@@ -411,8 +411,12 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
   const sdnCheck=sdnCheckOfac.match?{...sdnCheckOfac,list:"OFAC SDN"}:sdnCheckEu.match?{...sdnCheckEu,list:"EU Consolidated"}:sdnCheckUn.match?{...sdnCheckUn,list:"UN Security Council"}:{match:false,matched:null,list:null};
   const isSanctioned=isCountrySanctioned||sdnCheck.match;
 
+  const AI_SOURCES=new Set(["google_ucp","openai","custom_agent","defi_agent","erp"]);
+  const isAgentInitiated=AI_SOURCES.has(payment.intentSource);
+  const agentThreshold=policies.agentHitlThreshold||0;
   const overMax=payment.amount>policies.maxSingle;
   const needsDual=payment.amount>=policies.dualApproval&&!overMax;
+  const needsAgentHitl=isAgentInitiated&&agentThreshold>0&&payment.amount>=agentThreshold&&!overMax&&!needsDual;
   const isCross=payment.fromCountry!==payment.toCountry;
   const isCrossCcy=payment.currency!==payment.toCurrency;
   const isHV=payment.amount>100000;
@@ -491,13 +495,19 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
     if(policies.kycRequired) checks.push({name:"KYC/AML Verification",status:"pass",detail:`Enhanced due diligence complete. Identity verified via ${vert==="consumer"?"DeFi wallet attestation":"corporate registry"}. Risk: standard.`});
     if(vert==="consumer") checks.push({name:"Principal Protection",status:"pass",detail:`$${payment.amount} funded from accrued DeFi yield ($${Math.round(payment.amount*1.8)} available). Principal untouched.`});
     if(policies.verifiableIntent&&payment.intentSource!=="human") checks.push({name:"Verifiable Intent",status:"pass",detail:`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} signal validated. Intent matches authorised scope.`});
+    if(isAgentInitiated) checks.push({name:"Agent Intent Classification",status:needsAgentHitl?"warning":"pass",detail:needsAgentHitl?`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} initiated — amount $${payment.amount.toLocaleString()} exceeds agent HITL threshold of $${agentThreshold.toLocaleString()}. Human review required.`:`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} initiated — amount $${payment.amount.toLocaleString()} within autonomous execution threshold of $${agentThreshold.toLocaleString()}. No human review required.`});
+    const escalationRequired=(needsDual||needsAgentHitl)&&policies.hitl;
+    const escalationReason=needsDual
+      ?`${payment.currency} ${fmtAmt(payment.amount)} meets dual approval threshold (${fmtAmt(policies.dualApproval)}). Human authorisation required.`
+      :needsAgentHitl
+      ?`Agent-initiated payment (${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||payment.intentSource}) of ${fmtAmt(payment.amount)} exceeds agent autonomous limit of ${fmtAmt(agentThreshold)}. Policy requires human sign-off on all AI-initiated payments above this threshold.`
+      :null;
     return {
       approved:true,checks,
       complianceScore:isCross?87:94,
-      escalationRequired:needsDual&&policies.hitl,
-      escalationReason:needsDual?`${payment.currency} ${fmtAmt(payment.amount)} meets dual approval threshold (${fmtAmt(policies.dualApproval)}). Human authorisation required.`:null,
+      escalationRequired,escalationReason,
       regulatoryFrameworks:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]),
-      summary:`APPROVED — All ${checks.length} compliance checks passed.${needsDual?" Dual approval escalation triggered.":""} Compliance score: ${isCross?87:94}%. SDN source: ${sourceLabel}.`
+      summary:`APPROVED — All ${checks.length} compliance checks passed.${escalationRequired?" Escalation triggered: "+(needsDual?"dual approval":"agent HITL policy."):""} Compliance score: ${isCross?87:94}%. SDN source: ${sourceLabel}.`
     };
   }
 
@@ -786,6 +796,7 @@ function PolicyPanel({vertical,policies,onChange}){
     {key:"killswitch",      label:"Kill Switch Active",     sub:"Instant halt capability"},
   ];
   const upd=(k,val)=>onChange({...policies,[k]:val});
+  const agentMax=vertical==="consumer"?1000:vertical==="ai_commerce"?10000:vertical==="marketplace"?50000:5000000;
   return <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
     <div style={{fontSize:11,color:"var(--muted)"}}>Active governance rules for <span style={{color:v.accent,fontWeight:600}}>{v.label}</span></div>
     {sliders.map(s=><div key={s.key}>
@@ -796,6 +807,35 @@ function PolicyPanel({vertical,policies,onChange}){
       <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]} onChange={e=>upd(s.key,Number(e.target.value))}
         style={{width:"100%",height:3,accentColor:v.accent,cursor:"pointer",background:"var(--border)",border:"none",padding:0,appearance:"none",WebkitAppearance:"none",borderRadius:2}}/>
     </div>)}
+
+    {/* Agent vs Human HITL thresholds */}
+    <div style={{padding:"12px",borderRadius:3,background:"rgba(167,139,250,.06)",border:"1px solid rgba(167,139,250,.2)"}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8}}>◎ Intent-Based Escalation</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+        <div style={{padding:"8px 10px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div style={{fontSize:8,color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:3}}>Human Initiated</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:13,fontWeight:700,color:"#f472b6"}}>${Number(policies.dualApproval).toLocaleString()}</div>
+          <div style={{fontSize:8,color:"var(--dim)",marginTop:2}}>HITL threshold</div>
+        </div>
+        <div style={{padding:"8px 10px",borderRadius:2,background:"var(--card)",border:"1px solid rgba(167,139,250,.3)"}}>
+          <div style={{fontSize:8,color:"#a78bfa",letterSpacing:".08em",textTransform:"uppercase",marginBottom:3}}>AI Agent Initiated</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:13,fontWeight:700,color:"#a78bfa"}}>${Number(policies.agentHitlThreshold||0).toLocaleString()}</div>
+          <div style={{fontSize:8,color:"var(--dim)",marginTop:2}}>HITL threshold</div>
+        </div>
+      </div>
+      <div style={{marginBottom:6}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+          <label className="lbl" style={{margin:0,color:"#a78bfa"}}>Agent Autonomous Limit</label>
+          <span style={{fontFamily:"var(--mono)",fontSize:10,color:"#a78bfa",fontWeight:600}}>${Number(policies.agentHitlThreshold||0).toLocaleString()}</span>
+        </div>
+        <input type="range" min={0} max={agentMax} step={vertical==="consumer"?10:vertical==="ai_commerce"?500:25000} value={policies.agentHitlThreshold||0} onChange={e=>upd("agentHitlThreshold",Number(e.target.value))}
+          style={{width:"100%",height:3,accentColor:"#a78bfa",cursor:"pointer",background:"var(--border)",border:"none",padding:0,appearance:"none",WebkitAppearance:"none",borderRadius:2}}/>
+      </div>
+      <div style={{fontSize:10,color:"var(--dim)",lineHeight:1.5}}>
+        AI-initiated payments (Google UCP, OpenAI, ERP, DeFi) above this threshold pause for human approval — regardless of the human dual-approval limit.
+      </div>
+    </div>
+
     <div style={{borderTop:"1px solid var(--border)",paddingTop:14,display:"flex",flexDirection:"column",gap:0}}>
       {toggles.map(t=><div key={t.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,.03)"}}>
         <div>
@@ -835,9 +875,10 @@ const PRESETS={
     {label:"Over Limit",      data:{amount:55000,toCountry:"NG",toCurrency:"NGN",beneficiary:"Lagos Trader Co",urgency:"standard",intentSource:"human"}},
   ],
   ai_commerce:[
-    {label:"Agent Procurement",data:{amount:890,toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",urgency:"urgent",intentSource:"openai"}},
-    {label:"SDN Entity Hit",  data:{amount:2000,toCountry:"AE",toCurrency:"USD",beneficiary:"Wagner Group",urgency:"urgent",intentSource:"custom_agent"}},
-    {label:"Over Limit",      data:{amount:15000,toCountry:"US",toCurrency:"USD",beneficiary:"Cloud Compute LLC",urgency:"critical",intentSource:"google_ucp"}},
+    {label:"Agent Procurement",   data:{amount:890,toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",urgency:"urgent",intentSource:"openai"}},
+    {label:"Agent HITL Escalation",data:{amount:3500,toCountry:"SG",toCurrency:"USD",beneficiary:"Compute-Broker-9z",urgency:"urgent",intentSource:"google_ucp"}},
+    {label:"SDN Entity Hit",      data:{amount:2000,toCountry:"AE",toCurrency:"USD",beneficiary:"Wagner Group",urgency:"urgent",intentSource:"custom_agent"}},
+    {label:"Over Limit",          data:{amount:15000,toCountry:"US",toCurrency:"USD",beneficiary:"Cloud Compute LLC",urgency:"critical",intentSource:"google_ucp"}},
   ],
   enterprise:[
     {label:"Standard",        data:{amount:1200000,toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",urgency:"standard",intentSource:"erp"}},
@@ -1156,9 +1197,9 @@ const DEMO_SCENES=[
   {scene:1,total:6,title:"Live Sanctions — SDN Entity Block",desc:"Beneficiary 'Bank Melli Iran' triggers a live OFAC SDN match. Transaction blocked before it reaches the rails.",color:"#ff4560"},
   {scene:2,total:6,title:"Sanctioned Country Block",desc:"Destination country Iran (IR) hits comprehensive country-level sanctions. Governance layer rejects instantly.",color:"#ff4560"},
   {scene:3,total:6,title:"Kill Switch",desc:"Global halt activated. All payment processing suspended across every agent and vertical in real time.",color:"#ffb84d"},
-  {scene:4,total:6,title:"Human-in-the-Loop Escalation",desc:"$1.5M enterprise payment crosses dual-approval threshold. Pipeline pauses — awaiting human decision.",color:"#ffb84d"},
-  {scene:5,total:6,title:"Live FX + Full Settlement",desc:"Clean cross-border payment with real ECB exchange rates. All 5 agents complete. Audit trail generated.",color:"#06d6a0"},
-  {scene:6,total:6,title:"AI-to-AI Commerce",desc:"Autonomous agent procurement governed end-to-end. Verifiable Intent validated. Sub-minute settlement.",color:"#a78bfa"},
+  {scene:4,total:6,title:"Agent HITL — Google UCP Intercepted",desc:"Google UCP agent tries to spend $3,500. Exceeds the AI agent autonomous limit of $2,000. Pipeline pauses — a human must decide.",color:"#a78bfa"},
+  {scene:5,total:6,title:"Live FX + Full Settlement",desc:"Clean cross-border payment with real ECB exchange rates. All 5 agents complete. Full audit trail generated.",color:"#06d6a0"},
+  {scene:6,total:6,title:"Human vs Agent — Different Rules",desc:"ERP agent initiates $250K. Clears human dual-approval limit but hits the agent autonomous threshold. Policy, not amount, governs.",color:"#fbbf24"},
 ];
 
 function DemoNarrator({scene,onSkip}){
@@ -1266,8 +1307,7 @@ function App(){
           continue;
         }
         if(result.escalationRequired&&pol.hitl){
-          addAudit(agent.id,"ESCALATION: "+result.escalationReason,"warning");
-          setHitl({payment,reason:result.escalationReason,checks:result.checks?.filter(c=>c.status==="pass").slice(0,3).map(c=>({label:c.name,detail:c.detail.slice(0,60)+"..."}))||[]});
+          addAudit(agent.id,"ESCALATION: "+result.escalationReason,"warning");          setHitl({payment,reason:result.escalationReason,checks:result.checks?.filter(c=>c.status==="pass").slice(0,3).map(c=>({label:c.name,detail:c.detail.slice(0,60)+"..."}))||[]});
           const approved=await new Promise(res=>{escRef.current=res});
           setHitl(null);
           setPayments(p=>p.map(x=>x.id===payment.id?{...x,wasEscalated:true}:x));
@@ -1386,27 +1426,27 @@ function App(){
     addAudit("orchestrator","System resumed — kill switch deactivated","pass");
     await sleep(800);
 
-    // ── Scene 4: Human-in-the-Loop ───────────────────────────────────────────────
+    // ── Scene 4: Agent HITL — Google UCP intercepted ────────────────────────────
     if(aborted()) return;
     setDemoScene(DEMO_SCENES[3]);
-    switchTo("enterprise");
-    await sleep(800);
-    // Submit high-value payment that will trigger HITL (above dualApproval threshold)
-    const enterprisePol={...VERTICALS.enterprise.policies,dualApproval:1000000,hitl:true};
-    const hitlPayment={
-      id:genId(),timestamp:new Date().toISOString(),vertical:"enterprise",
-      amount:1500000,currency:"USD",fromCountry:"US",toCountry:"JP",toCurrency:"JPY",
-      beneficiary:"Toyota Motor Corp",purpose:"Strategic supplier — Q1 manufacturing",urgency:"standard",intentSource:"erp"
-    };
-    // Start processing but don't await — we'll auto-approve HITL after delay
-    processPayment(hitlPayment,"enterprise",enterprisePol);
-    // Wait for HITL modal to appear then auto-approve
-    await sleep(4000);
-    if(!aborted()&&escRef.current){
-      escRef.current(true); // auto-approve
-    }
-    await sleep(8000); // wait for rest of pipeline
+    switchTo("ai_commerce");
+    setLeftTab("policy"); // show the policy panel so viewer sees the thresholds
     await sleep(1500);
+    setLeftTab("payment");
+    await sleep(500);
+    // Google UCP agent at $3,500 — above the $2,000 agent threshold, triggers HITL
+    const agentHitlPol={...VERTICALS.ai_commerce.policies,agentHitlThreshold:2000,hitl:true};
+    const agentHitlPayment={
+      id:genId(),timestamp:new Date().toISOString(),vertical:"ai_commerce",
+      amount:3500,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",
+      beneficiary:"Compute-Broker-9z",purpose:"Autonomous procurement — GPU burst capacity",urgency:"urgent",intentSource:"google_ucp"
+    };
+    processPayment(agentHitlPayment,"ai_commerce",agentHitlPol);
+    // Wait for HITL modal then auto-approve
+    await sleep(4500);
+    if(!aborted()&&escRef.current) escRef.current(true);
+    await sleep(7000);
+    await sleep(1000);
 
     // ── Scene 5: Live FX + Full Settlement ──────────────────────────────────────
     if(aborted()) return;
@@ -1417,24 +1457,32 @@ function App(){
     await submit({
       id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
       amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",
-      beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"erp"
+      beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"human"
     },"treasury",VERTICALS.treasury.policies);
     setRightTab("audit");
     await sleep(3000);
 
-    // ── Scene 6: AI-to-AI Commerce ───────────────────────────────────────────────
+    // ── Scene 6: Human vs Agent — Same Amount, Different Rules ──────────────────
     if(aborted()) return;
     setDemoScene(DEMO_SCENES[5]);
-    switchTo("ai_commerce");
-    setRightTab("pipeline");
-    await sleep(800);
-    await submit({
-      id:genId(),timestamp:new Date().toISOString(),vertical:"ai_commerce",
-      amount:890,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",
-      beneficiary:"Agent-API-7x9k2",purpose:"Autonomous procurement — cloud compute",urgency:"urgent",intentSource:"openai"
-    },"ai_commerce",VERTICALS.ai_commerce.policies);
+    switchTo("treasury");
+    setLeftTab("policy"); // show the policy panel — viewer sees human vs agent thresholds side by side
+    await sleep(2000);
+    setLeftTab("payment");
+    await sleep(500);
+    // Same $250K but ERP-initiated — hits agent threshold (50K), not human dual-approval (250K)
+    const agentTreasuryPol={...VERTICALS.treasury.policies,agentHitlThreshold:50000,dualApproval:500000,hitl:true};
+    const agentTreasuryPayment={
+      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
+      amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",
+      beneficiary:"Siemens AG",purpose:"ERP-initiated vendor payment",urgency:"standard",intentSource:"erp"
+    };
+    processPayment(agentTreasuryPayment,"treasury",agentTreasuryPol);
+    await sleep(4500);
+    if(!aborted()&&escRef.current) escRef.current(true);
+    await sleep(7000);
     setLeftTab("analytics");
-    await sleep(3000);
+    await sleep(2000);
 
     // End
     if(!aborted()) setDemoScene(null);
