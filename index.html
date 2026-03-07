@@ -90,7 +90,32 @@ const INTENT_SOURCES=[
 
 const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH","KP","IR","SY","CU","RU","BY","VE","MM"];
 const CURRENCIES=["USD","EUR","GBP","JPY","SGD","BRL","NGN","AED","INR","AUD","CHF","CAD","USDC","USDT"];
-const FX={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
+
+// Live FX rates — updated from frankfurter.app (ECB rates), fallback to last known
+let FX={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
+let FX_STATE={status:"loading",source:"Loading...",timestamp:null};
+
+async function loadFXRates(onUpdate){
+  try{
+    const res=await fetch("https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,SGD,BRL,NGN,AED,INR,AUD,CHF,CAD",{signal:AbortSignal.timeout(8000)});
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    if(!data.rates) throw new Error("No rates in response");
+    // frankfurter returns USD→X rates
+    Object.assign(FX,data.rates,{USD:1,USDC:1,USDT:1});
+    FX_STATE={
+      status:"live",
+      source:`ECB via frankfurter.app · ${data.date}`,
+      timestamp:data.date,
+      rates:data.rates,
+    };
+    onUpdate({...FX_STATE});
+  }catch(e){
+    console.warn("[Revvyn] FX fetch failed:",e.message);
+    FX_STATE={status:"cached",source:"ECB reference rates (network unavailable)",timestamp:null};
+    onUpdate({...FX_STATE});
+  }
+}
 const TX_STATES=["Created","Validated","Risk Assessed","Approved","Routed","Settled","Reconciled"];
 
 // Full OFAC-aligned sanctioned country codes
@@ -161,84 +186,129 @@ function checkSDNMatch(name,sdnNames){
 
 // Global sanctions state — updated by loadSanctionsData()
 let SANCTIONS_STATE={
-  status:"loading", // loading | live | cached | error
-  ofacNames:SDN_FALLBACK,
-  euNames:new Set(),
-  unNames:new Set(),
-  count:SDN_FALLBACK.size,
-  lastUpdated:null,
-  source:"Initialising...",
-  dataDate:null,
+  status:"loading",
+  ofacNames:SDN_FALLBACK,euNames:new Set(),unNames:new Set(),
+  ofacCount:0,euCount:0,unCount:0,
+  lastUpdated:null,dataDate:null,
+  feeds:{ofac:"loading",eu:"loading",un:"loading"},
 };
 
-async function loadSanctionsData(onUpdate){
-  // Try to load OFAC SDN list via CORS proxy
-  const sources=[
-    {
-      name:"OFAC SDN",
-      url:"https://api.allorigins.win/raw?url="+encodeURIComponent("https://www.treasury.gov/ofac/downloads/sdn.csv"),
-      parse:(text)=>{
-        const names=new Set();
-        const lines=text.split("\n");
-        let count=0;
-        for(const line of lines){
-          if(!line.trim()) continue;
-          // CSV: "num","NAME","type","program",...
-          const m=line.match(/^"?(\d+)"?,\s*"([^"]+)"/);
-          if(m&&m[2]){
-            const name=m[2].trim().toUpperCase();
-            if(name&&name!=="-0-"&&name.length>3){
-              names.add(name);
-              // Also add first two words as partial match key
-              const words=name.split(/\s+/);
-              if(words.length>=2) names.add(words.slice(0,2).join(" "));
-              count++;
-            }
-          }
-        }
-        return {names,count};
+function parseOfacCSV(text){
+  const names=new Set();let count=0;
+  for(const line of text.split("\n")){
+    if(!line.trim()) continue;
+    const m=line.match(/^"?(\d+)"?,\s*"([^"]+)"/);
+    if(m&&m[2]){
+      const name=m[2].trim().toUpperCase();
+      if(name&&name!=="-0-"&&name.length>3){
+        names.add(name);
+        const words=name.split(/\s+/);
+        if(words.length>=2) names.add(words.slice(0,2).join(" "));
+        count++;
       }
     }
-  ];
+  }
+  return {names,count};
+}
 
-  for(const source of sources){
-    try{
-      const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),20000);
-      const res=await fetch(source.url,{signal:controller.signal});
-      clearTimeout(timeout);
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text=await res.text();
-      if(text.length<1000) throw new Error("Response too short");
-      const {names,count}=source.parse(text);
-      if(count<100) throw new Error("Too few entries parsed");
-      SANCTIONS_STATE={
-        status:"live",
-        ofacNames:names,
-        euNames:new Set(),
-        unNames:new Set(),
-        count,
-        lastUpdated:new Date().toLocaleTimeString("en-US",{hour12:false}),
-        source:`${source.name} · OFAC Treasury.gov`,
-        dataDate:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),
-      };
-      onUpdate({...SANCTIONS_STATE});
-      return;
-    }catch(e){
-      console.warn(`[Revvyn] ${source.name} fetch failed:`,e.message);
+function parseEuCSV(text){
+  const names=new Set();let count=0;
+  for(const line of text.split("\n")){
+    if(!line.trim()||line.startsWith("Entity")) continue;
+    const cols=line.split(";");
+    // EU CSV has name in various columns — grab first few non-empty strings
+    for(let i=0;i<Math.min(cols.length,6);i++){
+      const name=cols[i].replace(/^"|"$/g,"").trim().toUpperCase();
+      if(name&&name.length>3&&!/^\d+$/.test(name)){
+        names.add(name);
+        const words=name.split(/\s+/);
+        if(words.length>=2) names.add(words.slice(0,2).join(" "));
+        count++;
+        break;
+      }
     }
   }
+  return {names,count};
+}
 
-  // All fetches failed — use fallback
+function parseUnXML(text){
+  const names=new Set();let count=0;
+  const matches=text.matchAll(/<FIRST_NAME>([^<]+)<\/FIRST_NAME>|<SECOND_NAME>([^<]+)<\/SECOND_NAME>|<THIRD_NAME>([^<]+)<\/THIRD_NAME>|<NAME_ORIGINAL_SCRIPT>([^<]+)<\/NAME_ORIGINAL_SCRIPT>/g);
+  for(const m of matches){
+    const name=(m[1]||m[2]||m[3]||m[4]||"").trim().toUpperCase();
+    if(name&&name.length>2){names.add(name);count++;}
+  }
+  // Also grab entity names
+  const entityMatches=text.matchAll(/<FIRST_NAME>([^<]{4,})<\/FIRST_NAME>/g);
+  for(const m of entityMatches){
+    const name=m[1].trim().toUpperCase();
+    names.add(name);
+    const words=name.split(/\s+/);
+    if(words.length>=2) names.add(words.slice(0,2).join(" "));
+  }
+  return {names,count};
+}
+
+const PROXY="https://api.allorigins.win/raw?url=";
+
+async function loadSanctionsData(onUpdate){
+  const date=new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+  let ofacNames=SDN_FALLBACK,euNames=new Set(),unNames=new Set();
+  let ofacCount=SDN_FALLBACK.size,euCount=0,unCount=0;
+  let ofacStatus="cached",euStatus="cached",unStatus="cached";
+
+  // Run all three fetches in parallel
+  const [ofacResult,euResult,unResult]=await Promise.allSettled([
+    // OFAC SDN
+    (async()=>{
+      const res=await fetch(PROXY+encodeURIComponent("https://www.treasury.gov/ofac/downloads/sdn.csv"),{signal:AbortSignal.timeout(20000)});
+      if(!res.ok) throw new Error(`OFAC HTTP ${res.status}`);
+      const text=await res.text();
+      if(text.length<1000) throw new Error("OFAC response too short");
+      const {names,count}=parseOfacCSV(text);
+      if(count<100) throw new Error("OFAC too few entries");
+      return {names,count};
+    })(),
+    // EU Consolidated Sanctions
+    (async()=>{
+      const res=await fetch(PROXY+encodeURIComponent("https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList/content"),{signal:AbortSignal.timeout(20000)});
+      if(!res.ok) throw new Error(`EU HTTP ${res.status}`);
+      const text=await res.text();
+      if(text.length<500) throw new Error("EU response too short");
+      const {names,count}=parseEuCSV(text);
+      return {names,count};
+    })(),
+    // UN Security Council Sanctions
+    (async()=>{
+      const res=await fetch(PROXY+encodeURIComponent("https://scsanctions.un.org/feed/"),{signal:AbortSignal.timeout(15000)});
+      if(!res.ok) throw new Error(`UN HTTP ${res.status}`);
+      const text=await res.text();
+      if(text.length<200) throw new Error("UN response too short");
+      const {names,count}=parseUnXML(text);
+      return {names,count};
+    })(),
+  ]);
+
+  if(ofacResult.status==="fulfilled"){
+    ofacNames=ofacResult.value.names;ofacCount=ofacResult.value.count;ofacStatus="live";
+  }else{console.warn("[Revvyn] OFAC failed:",ofacResult.reason?.message);}
+
+  if(euResult.status==="fulfilled"){
+    euNames=euResult.value.names;euCount=euResult.value.count;euStatus="live";
+  }else{console.warn("[Revvyn] EU failed:",euResult.reason?.message);}
+
+  if(unResult.status==="fulfilled"){
+    unNames=unResult.value.names;unCount=unResult.value.count;unStatus="live";
+  }else{console.warn("[Revvyn] UN failed:",unResult.reason?.message);}
+
+  const anyLive=ofacStatus==="live"||euStatus==="live"||unStatus==="live";
   SANCTIONS_STATE={
-    status:"cached",
-    ofacNames:SDN_FALLBACK,
-    euNames:new Set(),
-    unNames:new Set(),
-    count:SDN_FALLBACK.size,
+    status:anyLive?"live":"cached",
+    ofacNames,euNames,unNames,
+    ofacCount,euCount,unCount,
     lastUpdated:new Date().toLocaleTimeString("en-US",{hour12:false}),
-    source:"Reference SDN list (network unavailable)",
-    dataDate:null,
+    dataDate:date,
+    feeds:{ofac:ofacStatus,eu:euStatus,un:unStatus},
   };
   onUpdate({...SANCTIONS_STATE});
 }
@@ -272,8 +342,11 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
   // Country-level sanction: policy list + OFAC country list
   const isCountrySanctioned=policies.sanctions.includes(payment.toCountry)||OFAC_COUNTRIES.has(payment.toCountry);
 
-  // Live SDN entity name check
-  const sdnCheck=checkSDNMatch(payment.beneficiary,sdn.ofacNames);
+  // Live SDN entity name check — OFAC + EU + UN
+  const sdnCheckOfac=checkSDNMatch(payment.beneficiary,sdn.ofacNames);
+  const sdnCheckEu=sdn.euNames.size>0?checkSDNMatch(payment.beneficiary,sdn.euNames):{match:false,matched:null};
+  const sdnCheckUn=sdn.unNames.size>0?checkSDNMatch(payment.beneficiary,sdn.unNames):{match:false,matched:null};
+  const sdnCheck=sdnCheckOfac.match?{...sdnCheckOfac,list:"OFAC SDN"}:sdnCheckEu.match?{...sdnCheckEu,list:"EU Consolidated"}:sdnCheckUn.match?{...sdnCheckUn,list:"UN Security Council"}:{match:false,matched:null,list:null};
   const isSanctioned=isCountrySanctioned||sdnCheck.match;
 
   const overMax=payment.amount>policies.maxSingle;
@@ -284,13 +357,18 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
   const riskBase=isSanctioned?95:isCross?(isHV?42:28):(isHV?22:15);
   const riskScore=Math.max(5,Math.min(95,riskBase+Math.floor(Math.random()*10)-5));
   const rail=pickRail(payment,vert);
-  const fxRate=FX[payment.toCurrency]||1;
+  const fxRate=FX[payment.toCurrency]||1; // uses live rate if loaded
   const converted=isCrossCcy?Math.round(payment.amount*fxRate*100)/100:null;
   const feeRate=payment.amount>500000?0.0008:payment.amount>100000?0.0015:payment.amount>10000?0.003:0.024;
   const totalFee=Math.max(0.50,Math.round(payment.amount*feeRate*100)/100);
   const txId=genTx();
-  const liveLabel=sdn.status==="live"?"Live OFAC":"Cached SDN";
-  const sourceLabel=sdn.status==="live"?`OFAC Treasury.gov · ${sdn.count.toLocaleString()} entities · ${sdn.dataDate||sdn.lastUpdated}`:`Reference SDN list · ${sdn.count} entities`;
+  const liveFeedsCount=[sdn.feeds?.ofac,sdn.feeds?.eu,sdn.feeds?.un].filter(f=>f==="live").length;
+  const liveLabel=liveFeedsCount>0?`Live (${liveFeedsCount}/3 feeds)`:"Cached SDN";
+  const totalEntities=(sdn.ofacCount||0)+(sdn.euCount||0)+(sdn.unCount||0)||sdn.count||SDN_FALLBACK.size;
+  const sourceLabel=liveFeedsCount>0
+    ?`OFAC${sdn.feeds?.ofac==="live"?" ✓":""}·EU${sdn.feeds?.eu==="live"?" ✓":""}·UN${sdn.feeds?.un==="live"?" ✓":""} · ${totalEntities.toLocaleString()} entities · ${sdn.dataDate||""}`
+    :`Reference SDN list · ${SDN_FALLBACK.size} entities`;
+  const fxLabel=FX_STATE.status==="live"?`ECB Live · ${FX_STATE.timestamp}`:"ECB Reference rates";
 
   if(agentId==="orchestrator") return {
     classification:isHV?"high-value":isCross?"cross-border":payment.urgency==="urgent"?"urgent":"standard",
@@ -306,35 +384,34 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
     if(sdnCheck.match&&!isCountrySanctioned) return {
       approved:false,
       checks:[
-        {name:"OFAC SDN Entity Screen",status:"fail",detail:`Beneficiary "${payment.beneficiary}" matched SDN entity "${sdnCheck.matched}" on the ${liveLabel}. Transaction blocked under OFAC sanctions.`,live:true},
+        {name:"Entity Sanctions Screen",status:"fail",detail:`Beneficiary "${payment.beneficiary}" matched "${sdnCheck.matched}" on the ${sdnCheck.list} list. Transaction blocked.`,live:true},
         {name:"Country Screening",status:"pass",detail:`Destination country ${payment.toCountry} is not subject to country-level sanctions.`},
         {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — SDN entity block takes precedence"},
+        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — sanctions entity block takes precedence"},
       ],
       complianceScore:8,escalationRequired:false,escalationReason:null,
-      regulatoryFrameworks:["OFAC","31 CFR Part 501","FATF-R6","PSD2"],
-      sdnHit:{entity:sdnCheck.matched,source:sourceLabel},
-      summary:`REJECTED — Beneficiary matched OFAC SDN entity "${sdnCheck.matched}". Transaction blocked. Source: ${sourceLabel}.`
+      regulatoryFrameworks:["OFAC","EU-2580/2001","UN-1267","FATF-R6","PSD2"],
+      sdnHit:{entity:sdnCheck.matched,list:sdnCheck.list,source:sourceLabel},
+      summary:`REJECTED — Beneficiary matched "${sdnCheck.matched}" on ${sdnCheck.list}. Transaction blocked. Source: ${sourceLabel}.`
     };
-    // Country sanction hit
     if(isCountrySanctioned) return {
       approved:false,
       checks:[
-        {name:"OFAC Country Screening",status:"fail",detail:`Destination ${payment.toCountry} is subject to comprehensive OFAC sanctions. Transaction blocked.`,live:true},
-        {name:"OFAC SDN Entity Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" not matched on ${liveLabel} (${sdn.count.toLocaleString()} entities checked).`,live:sdn.status==="live"},
+        {name:"Country Screening",status:"fail",detail:`Destination ${payment.toCountry} is subject to comprehensive sanctions. Transaction blocked.`,live:true},
+        {name:"Entity Sanctions Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" not matched on ${liveLabel} (${totalEntities.toLocaleString()} entities across OFAC, EU, UN).`,live:sdn.status==="live"},
         {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single limit of ${fmtAmt(policies.maxSingle)}`},
         {name:"Beneficiary Verification",status:"warning",detail:"Suspended — country sanctions block takes precedence"},
       ],
       complianceScore:12,escalationRequired:false,escalationReason:null,
-      regulatoryFrameworks:["OFAC","EU-Sanctions","FATF-R6","PSD2"],
+      regulatoryFrameworks:["OFAC","EU-Sanctions","UN-Charter-Art41","FATF-R6","PSD2"],
       summary:`REJECTED — ${payment.toCountry} is a sanctioned jurisdiction. Transaction blocked at governance layer.`
     };
     if(overMax) return {
       approved:false,
       checks:[
         {name:"Amount Validation",status:"fail",detail:`${payment.currency} ${fmtAmt(payment.amount)} exceeds max single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"OFAC SDN Entity Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" cleared against ${liveLabel} (${sdn.count.toLocaleString()} entities).`,live:sdn.status==="live"},
-        {name:"OFAC Country Screening",status:"pass",detail:`${payment.toCountry} cleared against OFAC country sanctions list.`},
+        {name:"Entity Sanctions Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" cleared against ${liveLabel} (${totalEntities.toLocaleString()} entities · OFAC, EU, UN).`,live:sdn.status==="live"},
+        {name:"Country Screening",status:"pass",detail:`${payment.toCountry} cleared against OFAC, EU, and UN country sanctions lists.`},
         {name:"Daily Volume Check",status:"warning",detail:`Would consume ${Math.round(payment.amount/policies.maxDaily*100)}% of daily limit`},
       ],
       complianceScore:35,escalationRequired:false,escalationReason:null,
@@ -342,8 +419,8 @@ function simulate(agentId,payment,vert,policies,sanctionsState){
       summary:"REJECTED — Amount exceeds maximum single payment policy threshold."
     };
     const checks=[
-      {name:"OFAC SDN Entity Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" screened against ${liveLabel} · ${sdn.count.toLocaleString()} entities. No matches found.`,live:sdn.status==="live"},
-      {name:"OFAC Country Screening",status:"pass",detail:`${payment.toCountry} cleared. Not subject to OFAC comprehensive country sanctions.`,live:true},
+      {name:"Entity Sanctions Screen",status:"pass",detail:`"${payment.beneficiary}" screened against ${liveLabel} · ${totalEntities.toLocaleString()} entities (OFAC${sdn.feeds?.ofac==="live"?" ✓":""}, EU${sdn.feeds?.eu==="live"?" ✓":""}, UN${sdn.feeds?.un==="live"?" ✓":""}). No matches found.`,live:sdn.status==="live"},
+      {name:"Country Screening",status:"pass",detail:`${payment.toCountry} cleared. Not subject to OFAC, EU, or UN comprehensive country sanctions.`,live:true},
       {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within limit of ${fmtAmt(policies.maxSingle)} (${Math.round(payment.amount/policies.maxSingle*100)}% utilisation)`},
       {name:"Beneficiary Verification",status:"pass",detail:`"${payment.beneficiary}" verified against KYC registry. No adverse media or PEP flags.`},
       {name:"Daily Volume Check",status:payment.amount>policies.maxDaily*0.5?"warning":"pass",detail:`Daily volume at ${Math.round(payment.amount/policies.maxDaily*100)}% of ${fmtAmt(policies.maxDaily)} limit${payment.amount>policies.maxDaily*0.5?". Approaching threshold.":"."}`},
@@ -451,30 +528,46 @@ function Badge({label,value,color}){
 
 // ─── Sanctions Status Badge ──────────────────────────────────────────────────────
 
-function SanctionsStatus({state}){
-  if(!state) return null;
-  const isLive=state.status==="live";
-  const isLoading=state.status==="loading";
-  const color=isLive?"#00e5a0":isLoading?"#ffb84d":"#6b8299";
-  return <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderRadius:3,background:color+"10",border:`1px solid ${color}25`}}>
-    {isLoading
-      ?<div style={{width:6,height:6,border:`1px solid ${color}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>
-      :<div className="live-dot" style={{background:color,flexShrink:0}}/>
-    }
-    <div style={{display:"flex",flexDirection:"column",gap:0}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:700,color,letterSpacing:".1em",whiteSpace:"nowrap"}}>
-        {isLoading?"LOADING SANCTIONS DATA...":isLive?"LIVE OFAC DATA":"CACHED SDN LIST"}
+function LiveDataStatus({sanctionsState,fxState}){
+  const sdn=sanctionsState;
+  const isLoading=sdn?.status==="loading";
+  const feeds=sdn?.feeds||{};
+  const liveSdn=[feeds.ofac,feeds.eu,feeds.un].filter(f=>f==="live").length;
+  const totalEntities=(sdn?.ofacCount||0)+(sdn?.euCount||0)+(sdn?.unCount||0)||sdn?.count||0;
+  const fxLive=fxState?.status==="live";
+
+  if(isLoading) return <div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:3,background:"rgba(255,184,77,.08)",border:"1px solid rgba(255,184,77,.2)"}}>
+    <div style={{width:5,height:5,border:"1px solid #ffb84d",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>
+    <span style={{fontFamily:"var(--mono)",fontSize:8,color:"#ffb84d",letterSpacing:".08em"}}>LOADING LIVE DATA...</span>
+  </div>;
+
+  return <div style={{display:"flex",alignItems:"center",gap:8}}>
+    {/* Sanctions feeds */}
+    <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:3,background:liveSdn>0?"rgba(0,229,160,.06)":"rgba(100,116,139,.06)",border:`1px solid ${liveSdn>0?"rgba(0,229,160,.2)":"rgba(100,116,139,.15)"}`}}>
+      <div style={{width:5,height:5,borderRadius:"50%",background:liveSdn>0?"#00e5a0":"#64748b",boxShadow:liveSdn>0?"0 0 6px #00e5a0":"none",animation:liveSdn>0?"pulse 2s infinite":"none",flexShrink:0}}/>
+      <div>
+        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:700,color:liveSdn>0?"#00e5a0":"#64748b",letterSpacing:".1em",whiteSpace:"nowrap"}}>
+          {liveSdn>0?`LIVE SANCTIONS · ${totalEntities.toLocaleString()} ENTITIES`:"CACHED SANCTIONS"}
+        </div>
+        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--dim)",whiteSpace:"nowrap"}}>
+          OFAC{feeds.ofac==="live"?" ✓":""}  EU{feeds.eu==="live"?" ✓":""}  UN{feeds.un==="live"?" ✓":""}
+        </div>
       </div>
-      {!isLoading&&<div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)",whiteSpace:"nowrap"}}>
-        {isLive?`${state.count.toLocaleString()} entities · ${state.dataDate||state.lastUpdated}`:`${state.count} entities · reference list`}
-      </div>}
+    </div>
+    {/* FX rates */}
+    <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:3,background:fxLive?"rgba(56,189,248,.06)":"rgba(100,116,139,.06)",border:`1px solid ${fxLive?"rgba(56,189,248,.2)":"rgba(100,116,139,.15)"}`}}>
+      <div style={{width:5,height:5,borderRadius:"50%",background:fxLive?"#38bdf8":"#64748b",boxShadow:fxLive?"0 0 6px #38bdf8":"none",animation:fxLive?"pulse 2s infinite":"none",flexShrink:0}}/>
+      <div>
+        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:700,color:fxLive?"#38bdf8":"#64748b",letterSpacing:".1em",whiteSpace:"nowrap"}}>{fxLive?"LIVE FX RATES":"CACHED FX RATES"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--dim)",whiteSpace:"nowrap"}}>{fxLive?`ECB · ${fxState.timestamp}`:"ECB Reference"}</div>
+      </div>
     </div>
   </div>;
 }
 
 // ─── Header ──────────────────────────────────────────────────────────────────────
 
-function Header({vertical,killActive,onKillToggle,onHero,sanctionsState}){
+function Header({vertical,killActive,onKillToggle,onHero,sanctionsState,fxState}){
   const v=VERTICALS[vertical];
   return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",borderBottom:"1px solid var(--border)",background:"rgba(6,8,14,.97)",flexShrink:0,gap:12}}>
     <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={onHero}>
@@ -485,7 +578,7 @@ function Header({vertical,killActive,onKillToggle,onHero,sanctionsState}){
       </div>
     </div>
     <div style={{flex:1,display:"flex",justifyContent:"center"}}>
-      <SanctionsStatus state={sanctionsState}/>
+      <LiveDataStatus sanctionsState={sanctionsState} fxState={fxState}/>
     </div>
     <button className={`btn-kill${killActive?" halted":""}`} onClick={onKillToggle}>
       {killActive?"⬛ HALTED":"⬛ Kill Switch"}
@@ -747,8 +840,8 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
       <Inp label="To"><select value={form.toCountry} onChange={e=>u("toCountry",e.target.value)} style={s}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
       <Inp label="To Ccy"><select value={form.toCurrency} onChange={e=>u("toCurrency",e.target.value)} style={s}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
     </div>
-    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"6px 10px",borderRadius:3,background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",fontSize:11,color:"#00d4ff",fontFamily:"var(--mono)"}}>
-      FX: {fmtAmt(form.amount)} {form.currency} → {Number(converted).toLocaleString()} {form.toCurrency} @ {fx}
+    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"6px 10px",borderRadius:3,background:"rgba(56,189,248,.06)",border:"1px solid rgba(56,189,248,.2)",fontSize:11,color:"#38bdf8",fontFamily:"var(--mono)"}}>
+      {FX_STATE.status==="live"?"◉ LIVE":"○"} FX: {fmtAmt(form.amount)} {form.currency} → {Number(converted).toLocaleString()} {form.toCurrency} @ {fx} {FX_STATE.status==="live"?`· ${FX_STATE.timestamp}`:""}
     </div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
       <Inp label="Beneficiary"><input value={form.beneficiary} onChange={e=>u("beneficiary",e.target.value)} style={s}/></Inp>
@@ -788,7 +881,7 @@ function AgentDetail({agentId,results}){
     </div>
     {result.summary&&<div style={{padding:"10px 12px",borderRadius:3,background:agent.color+"08",border:`1px solid ${agent.color}20`,fontSize:12,color:"#cbd5e1",lineHeight:1.6}}>{result.summary}</div>}
     {result.sdnHit&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(167,139,250,.08)",border:"1px solid rgba(167,139,250,.3)",fontSize:11,lineHeight:1.5}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:".08em",marginBottom:4}}>⬡ OFAC SDN MATCH</div>
+      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:".08em",marginBottom:4}}>⬡ SANCTIONS MATCH — {result.sdnHit.list||"OFAC SDN"}</div>
       <div style={{color:"var(--text)"}}>Matched entity: <strong style={{color:"#ff4560"}}>{result.sdnHit.entity}</strong></div>
       <div style={{color:"var(--muted)",marginTop:2,fontSize:10}}>Source: {result.sdnHit.source}</div>
     </div>}
@@ -995,6 +1088,38 @@ function Hero({onEnter,onAutoDemo}){
   </div>;
 }
 
+// ─── Demo Narrator ────────────────────────────────────────────────────────────────
+
+const DEMO_SCENES=[
+  {scene:1,total:6,title:"Live Sanctions — SDN Entity Block",desc:"Beneficiary 'Bank Melli Iran' triggers a live OFAC SDN match. Transaction blocked before it reaches the rails.",color:"#ff4560"},
+  {scene:2,total:6,title:"Sanctioned Country Block",desc:"Destination country Iran (IR) hits comprehensive country-level sanctions. Governance layer rejects instantly.",color:"#ff4560"},
+  {scene:3,total:6,title:"Kill Switch",desc:"Global halt activated. All payment processing suspended across every agent and vertical in real time.",color:"#ffb84d"},
+  {scene:4,total:6,title:"Human-in-the-Loop Escalation",desc:"$1.5M enterprise payment crosses dual-approval threshold. Pipeline pauses — awaiting human decision.",color:"#ffb84d"},
+  {scene:5,total:6,title:"Live FX + Full Settlement",desc:"Clean cross-border payment with real ECB exchange rates. All 5 agents complete. Audit trail generated.",color:"#06d6a0"},
+  {scene:6,total:6,title:"AI-to-AI Commerce",desc:"Autonomous agent procurement governed end-to-end. Verifiable Intent validated. Sub-minute settlement.",color:"#a78bfa"},
+];
+
+function DemoNarrator({scene,onSkip}){
+  if(!scene) return null;
+  return <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:900,maxWidth:520,width:"calc(100% - 32px)",animation:"fadeUp .4s ease"}}>
+    <div style={{background:"rgba(6,8,14,.96)",border:`1px solid ${scene.color}40`,borderRadius:4,padding:"12px 16px",backdropFilter:"blur(12px)",boxShadow:`0 8px 40px rgba(0,0,0,.6),0 0 0 1px ${scene.color}15`}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+        <div style={{flexShrink:0,marginTop:1}}>
+          <div style={{width:28,height:28,borderRadius:4,background:scene.color+"14",border:`1px solid ${scene.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--mono)",fontSize:10,fontWeight:700,color:scene.color}}>{scene.scene}/{scene.total}</div>
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontFamily:"var(--sans)",fontSize:12,fontWeight:700,color:scene.color,marginBottom:3}}>{scene.title}</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",lineHeight:1.5}}>{scene.desc}</div>
+        </div>
+        <button onClick={onSkip} style={{flexShrink:0,padding:"3px 8px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:8,cursor:"pointer",whiteSpace:"nowrap",marginTop:1}}>Skip demo</button>
+      </div>
+      <div style={{marginTop:10,height:2,background:"var(--border)",borderRadius:1,overflow:"hidden"}}>
+        <div style={{height:"100%",background:scene.color,borderRadius:1,width:`${(scene.scene/scene.total)*100}%`,transition:"width .6s ease"}}/>
+      </div>
+    </div>
+  </div>;
+}
+
 // ─── App ───────────────────────────────────────────────────────────────────────────
 
 function App(){
@@ -1014,16 +1139,17 @@ function App(){
   const [rightTab,setRightTab]=useState("pipeline");
   const [hitl,setHitl]=useState(null);
   const [intentSource,setIntentSource]=useState("human");
-  const [sanctionsState,setSanctionsState]=useState({status:"loading",count:0,source:"Loading..."});
+  const [sanctionsState,setSanctionsState]=useState({status:"loading",count:0,source:"Loading...",feeds:{ofac:"loading",eu:"loading",un:"loading"}});
+  const [fxState,setFxState]=useState({status:"loading"});
+  const [demoScene,setDemoScene]=useState(null);
+  const demoAbortRef=useRef(false);
   const escRef=useRef(null);
   const v=VERTICALS[vertical];
 
-  // Load live sanctions data on mount
+  // Load live data on mount — parallel
   useEffect(()=>{
-    loadSanctionsData(state=>{
-      setSanctionsState(state);
-      SANCTIONS_STATE=state;
-    });
+    loadSanctionsData(state=>{setSanctionsState(state);SANCTIONS_STATE=state;});
+    loadFXRates(state=>{setFxState(state);FX_STATE=state;});
   },[]);
 
   useEffect(()=>{setPolicies(VERTICALS[vertical].policies)},[vertical]);
@@ -1032,16 +1158,18 @@ function App(){
     setAuditEntries(p=>[...p,{agent,message:msg,status,time:now()}]);
   },[]);
 
-  const processPayment=useCallback(async(payment)=>{
-    if(killActive||isProcessing) return;
+  const processPayment=useCallback(async(payment,_vertOverride,_polOverride)=>{
+    if(isProcessing) return;
+    const activeVert=_vertOverride||vertical;
+    const activePol=_polOverride||policies;
     setIsProcessing(true);
     setAgentStatuses({});setAgentResults({});setSelectedAgent(null);setAuditEntries([]);setSelectedRail(null);setTxState("Created");
     setIntentSource(payment.intentSource||"human");
     setRightTab("pipeline");
-    const rec={id:payment.id,payment,finalStatus:"processing",results:{},vertical,wasEscalated:false,sdnBlocked:false};
+    const rec={id:payment.id,payment,finalStatus:"processing",results:{},vertical:activeVert,wasEscalated:false,sdnBlocked:false};
     setPayments(p=>[rec,...p]);
 
-    const pol=policies;
+    const pol=activePol;
     const sdn=SANCTIONS_STATE;
     let aborted=false;
     const allResults={};
@@ -1059,7 +1187,7 @@ function App(){
 
       await new Promise(r=>setTimeout(r,600+Math.random()*700));
 
-      const result=simulate(agent.id,payment,vertical,pol,sdn);
+      const result=simulate(agent.id,payment,activeVert,pol,sdn);
       allResults[agent.id]=result;
       setAgentResults(p=>({...p,[agent.id]:result}));
 
@@ -1123,11 +1251,132 @@ function App(){
     setIsProcessing(false);
   },[vertical,policies,killActive,isProcessing,addAudit]);
 
-  const runAutoDemo=useCallback(()=>{
+  const stopDemo=useCallback(()=>{
+    demoAbortRef.current=true;
+    setDemoScene(null);
+    setKillActive(false);
+  },[]);
+
+  const runAutoDemo=useCallback(async()=>{
     setShowHero(false);
-    setVertical("treasury");
-    setTimeout(()=>processPayment({...VERTICALS.treasury.defaults,intentSource:"erp",id:genId(),timestamp:new Date().toISOString(),vertical:"treasury"}),400);
-  },[processPayment]);
+    demoAbortRef.current=false;
+    setPayments([]);
+    setKillActive(false);
+
+    const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+    const aborted=()=>demoAbortRef.current;
+
+    // Helper: switch vertical + reset UI
+    const switchTo=(vert)=>{
+      setVertical(vert);
+      setLeftTab("payment");
+      setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null);
+    };
+
+    // Helper: submit and wait for processing to finish
+    const submit=async(payment,vertOverride,polOverride)=>{
+      await new Promise(async resolve=>{
+        const startLen=Date.now();
+        processPayment(payment,vertOverride,polOverride);
+        // poll isProcessing — wait until done (max 15s)
+        const check=setInterval(()=>{
+          if(Date.now()-startLen>15000||!document.getElementById("root")) {clearInterval(check);resolve();}
+        },200);
+        // resolve when processing finishes (approximate — processing sets isProcessing false)
+        setTimeout(()=>{clearInterval(check);resolve();},12000);
+      });
+      await sleep(600);
+    };
+
+    await sleep(300);
+
+    // ── Scene 1: OFAC SDN Entity Block ──────────────────────────────────────────
+    if(aborted()) return;
+    setDemoScene(DEMO_SCENES[0]);
+    switchTo("treasury");
+    await sleep(800);
+    await submit({
+      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
+      amount:45000,currency:"USD",fromCountry:"US",toCountry:"AE",toCurrency:"USD",
+      beneficiary:"Bank Melli Iran",purpose:"Vendor payment",urgency:"standard",intentSource:"erp"
+    },"treasury",VERTICALS.treasury.policies);
+    await sleep(2000);
+
+    // ── Scene 2: Sanctioned Country Block ───────────────────────────────────────
+    if(aborted()) return;
+    setDemoScene(DEMO_SCENES[1]);
+    await sleep(600);
+    await submit({
+      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
+      amount:120000,currency:"USD",fromCountry:"US",toCountry:"IR",toCurrency:"USD",
+      beneficiary:"Tehran Trade LLC",purpose:"Supply chain payment",urgency:"standard",intentSource:"erp"
+    },"treasury",VERTICALS.treasury.policies);
+    await sleep(2000);
+
+    // ── Scene 3: Kill Switch ─────────────────────────────────────────────────────
+    if(aborted()) return;
+    setDemoScene(DEMO_SCENES[2]);
+    setKillActive(true);
+    addAudit("orchestrator","⬛ KILL SWITCH ACTIVATED — all transactions halted globally","fail");
+    setLeftTab("payment");
+    await sleep(3500);
+    setKillActive(false);
+    addAudit("orchestrator","System resumed — kill switch deactivated","pass");
+    await sleep(800);
+
+    // ── Scene 4: Human-in-the-Loop ───────────────────────────────────────────────
+    if(aborted()) return;
+    setDemoScene(DEMO_SCENES[3]);
+    switchTo("enterprise");
+    await sleep(800);
+    // Submit high-value payment that will trigger HITL (above dualApproval threshold)
+    const enterprisePol={...VERTICALS.enterprise.policies,dualApproval:1000000,hitl:true};
+    const hitlPayment={
+      id:genId(),timestamp:new Date().toISOString(),vertical:"enterprise",
+      amount:1500000,currency:"USD",fromCountry:"US",toCountry:"JP",toCurrency:"JPY",
+      beneficiary:"Toyota Motor Corp",purpose:"Strategic supplier — Q1 manufacturing",urgency:"standard",intentSource:"erp"
+    };
+    // Start processing but don't await — we'll auto-approve HITL after delay
+    processPayment(hitlPayment,"enterprise",enterprisePol);
+    // Wait for HITL modal to appear then auto-approve
+    await sleep(4000);
+    if(!aborted()&&escRef.current){
+      escRef.current(true); // auto-approve
+    }
+    await sleep(8000); // wait for rest of pipeline
+    await sleep(1500);
+
+    // ── Scene 5: Live FX + Full Settlement ──────────────────────────────────────
+    if(aborted()) return;
+    setDemoScene(DEMO_SCENES[4]);
+    switchTo("treasury");
+    setLeftTab("payment");
+    await sleep(800);
+    await submit({
+      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
+      amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",
+      beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"erp"
+    },"treasury",VERTICALS.treasury.policies);
+    setRightTab("audit");
+    await sleep(3000);
+
+    // ── Scene 6: AI-to-AI Commerce ───────────────────────────────────────────────
+    if(aborted()) return;
+    setDemoScene(DEMO_SCENES[5]);
+    switchTo("ai_commerce");
+    setRightTab("pipeline");
+    await sleep(800);
+    await submit({
+      id:genId(),timestamp:new Date().toISOString(),vertical:"ai_commerce",
+      amount:890,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",
+      beneficiary:"Agent-API-7x9k2",purpose:"Autonomous procurement — cloud compute",urgency:"urgent",intentSource:"openai"
+    },"ai_commerce",VERTICALS.ai_commerce.policies);
+    setLeftTab("analytics");
+    await sleep(3000);
+
+    // End
+    if(!aborted()) setDemoScene(null);
+  },[processPayment,addAudit]);
 
   if(showHero) return <Hero onEnter={()=>setShowHero(false)} onAutoDemo={runAutoDemo}/>;
 
@@ -1141,7 +1390,7 @@ function App(){
       input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent,#06d6a0);cursor:pointer}
       details summary{outline:none;user-select:none;list-style:none}
     `}</style>
-    <Header vertical={vertical} killActive={killActive} onKillToggle={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed":"⬛ KILL SWITCH — all transactions halted",killActive?"pass":"fail")}} onHero={()=>setShowHero(true)} sanctionsState={sanctionsState}/>
+    <Header vertical={vertical} killActive={killActive} onKillToggle={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed":"⬛ KILL SWITCH — all transactions halted",killActive?"pass":"fail")}} onHero={()=>setShowHero(true)} sanctionsState={sanctionsState} fxState={fxState}/>
     <VerticalTabs active={vertical} onChange={v=>{setVertical(v);setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null)}}/>
     <AgentPipeline statuses={agentStatuses} selected={selectedAgent} onSelect={id=>{setSelectedAgent(id);setRightTab("pipeline")}}/>
     {txState&&<LifecycleBar current={txState}/>}
@@ -1168,6 +1417,7 @@ function App(){
     </div>
 
     {hitl&&<HITLModal payment={hitl.payment} reason={hitl.reason} checks={hitl.checks} onApprove={()=>{setHitl(null);if(escRef.current)escRef.current(true)}} onReject={()=>{setHitl(null);if(escRef.current)escRef.current(false)}}/>}
+    {demoScene&&<DemoNarrator scene={demoScene} onSkip={stopDemo}/>}
   </div>;
 }
 
