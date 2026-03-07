@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revvyn — Governance Sandbox</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0d1420;
+    --card: #111827;
+    --border: #1e2d45;
+    --border-bright: #2a4070;
+    --blue: #4a9eff;
+    --cyan: #00d4ff;
+    --green: #00e5a0;
+    --red: #ff4560;
+    --amber: #ffb84d;
+    --purple: #a78bfa;
+    --text: #e2eaf5;
+    --muted: #6b8299;
+    --dim: #3a5068;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(74,158,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,158,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Header */
+  header {
+    position: relative;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    background: rgba(8,12,20,0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    color: var(--cyan);
+  }
+
+  .logo span {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 12px;
+    margin-left: 12px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .header-badge {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--amber);
+    border: 1px solid rgba(255,184,77,0.3);
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+  /* Layout */
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 24px;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .panel-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .panel-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  .panel-body {
+    padding: 20px;
+  }
+
+  /* Form elements */
+  .field {
+    margin-bottom: 18px;
+  }
+
+  label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+  }
+
+  input:focus, select:focus {
+    border-color: var(--blue);
+  }
+
+  input[type="range"] {
+    padding: 0;
+    height: 4px;
+    cursor: pointer;
+    background: var(--border);
+    border: none;
+    border-radius: 2px;
+    accent-color: var(--cyan);
+  }
+
+  .range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .range-val {
+    font-size: 13px;
+    color: var(--cyan);
+    min-width: 70px;
+    text-align: right;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toggle-row:last-child { border-bottom: none; }
+
+  .toggle-label {
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .toggle-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 3px;
+    top: 3px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: rgba(0,212,255,0.3); }
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(16px);
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+
+  /* Section divider */
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin: 20px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Right side */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Transaction builder */
+  .tx-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .tx-grid .field { margin-bottom: 0; }
+
+  /* Submit button */
+  .btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--cyan);
+    border-radius: 3px;
+    color: var(--cyan);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--cyan);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn-primary:hover::before { opacity: 0.08; }
+  .btn-primary:hover { box-shadow: 0 0 20px rgba(0,212,255,0.2); }
+
+  .btn-primary:disabled {
+    border-color: var(--dim);
+    color: var(--dim);
+    cursor: not-allowed;
+  }
+
+  .btn-primary:disabled::before { display: none; }
+
+  /* Agent flow */
+  .agent-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .agent-step {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 0;
+    opacity: 0.3;
+    transition: opacity 0.3s;
+  }
+
+  .agent-step.active { opacity: 1; }
+  .agent-step.done { opacity: 0.85; }
+
+  .agent-spine {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+  }
+
+  .agent-node {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--card);
+    transition: all 0.3s;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .agent-step.active .agent-node {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 16px rgba(0,212,255,0.4);
+    animation: pulse-node 1.5s ease-in-out infinite;
+  }
+
+  .agent-step.done .agent-node {
+    border-color: var(--green);
+    color: var(--green);
+    background: rgba(0,229,160,0.1);
+  }
+
+  .agent-step.blocked .agent-node {
+    border-color: var(--red);
+    color: var(--red);
+    background: rgba(255,69,96,0.1);
+  }
+
+  .agent-step.escalated .agent-node {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: rgba(255,184,77,0.1);
+  }
+
+  @keyframes pulse-node {
+    0%, 100% { box-shadow: 0 0 16px rgba(0,212,255,0.4); }
+    50% { box-shadow: 0 0 28px rgba(0,212,255,0.7); }
+  }
+
+  .agent-line {
+    width: 2px;
+    flex: 1;
+    min-height: 20px;
+    background: var(--border);
+    margin: 0 auto;
+    transition: background 0.3s;
+  }
+
+  .agent-step.done .agent-line { background: var(--green); }
+  .agent-step.blocked .agent-line { background: var(--red); }
+
+  .agent-content {
+    padding: 4px 0 24px 16px;
+  }
+
+  .agent-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .agent-status-badge {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .badge-processing { background: rgba(0,212,255,0.15); color: var(--cyan); }
+  .badge-approved { background: rgba(0,229,160,0.15); color: var(--green); }
+  .badge-blocked { background: rgba(255,69,96,0.15); color: var(--red); }
+  .badge-escalated { background: rgba(255,184,77,0.15); color: var(--amber); }
+  .badge-waiting { background: rgba(107,130,153,0.15); color: var(--muted); }
+
+  .agent-log {
+    font-size: 11.5px;
+    color: var(--muted);
+    line-height: 1.7;
+    font-style: italic;
+    min-height: 20px;
+  }
+
+  .agent-log .highlight { color: var(--text); font-style: normal; }
+  .agent-log .red { color: var(--red); font-style: normal; }
+  .agent-log .green { color: var(--green); font-style: normal; }
+  .agent-log .amber { color: var(--amber); font-style: normal; }
+  .agent-log .cyan { color: var(--cyan); font-style: normal; }
+
+  /* Audit trail */
+  .audit-trail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  .audit-trail::-webkit-scrollbar { width: 4px; }
+  .audit-trail::-webkit-scrollbar-track { background: transparent; }
+  .audit-trail::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .audit-entry {
+    display: grid;
+    grid-template-columns: 80px 90px 1fr;
+    gap: 12px;
+    font-size: 11px;
+    padding: 7px 10px;
+    background: var(--card);
+    border-radius: 2px;
+    border-left: 2px solid transparent;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .audit-entry.approved { border-left-color: var(--green); }
+  .audit-entry.blocked { border-left-color: var(--red); }
+  .audit-entry.escalated { border-left-color: var(--amber); }
+  .audit-entry.info { border-left-color: var(--blue); }
+
+  .audit-time { color: var(--dim); }
+  .audit-agent { color: var(--blue); }
+  .audit-msg { color: var(--text); }
+
+  /* Result banner */
+  .result-banner {
+    padding: 16px 20px;
+    border-radius: 3px;
+    display: none;
+    align-items: center;
+    gap: 14px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .result-banner.show { display: flex; }
+  .result-banner.approved { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.3); }
+  .result-banner.blocked { background: rgba(255,69,96,0.08); border: 1px solid rgba(255,69,96,0.3); }
+  .result-banner.escalated { background: rgba(255,184,77,0.08); border: 1px solid rgba(255,184,77,0.3); }
+
+  .result-icon { font-size: 24px; }
+  .result-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .result-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .approved .result-title { color: var(--green); }
+  .blocked .result-title { color: var(--red); }
+  .escalated .result-title { color: var(--amber); }
+
+  /* Metrics row */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+
+  .metric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 14px 16px;
+  }
+
+  .metric-val {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--cyan);
+    letter-spacing: -0.5px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Tooltip */
+  .info-icon {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid var(--dim);
+    text-align: center;
+    line-height: 13px;
+    font-size: 9px;
+    color: var(--dim);
+    cursor: help;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  /* Scrollable panel body */
+  .panel-body-scroll {
+    padding: 20px;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+  }
+
+  .panel-body-scroll::-webkit-scrollbar { width: 4px; }
+  .panel-body-scroll::-webkit-scrollbar-track { background: transparent; }
+  .panel-body-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--dim);
+    font-size: 12px;
+    line-height: 1.8;
+  }
+
+  .empty-state .icon { font-size: 28px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* Kill switch */
+  .killswitch-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255,69,96,0.08);
+    border: 1px solid rgba(255,69,96,0.3);
+    border-radius: 3px;
+    color: var(--red);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .killswitch-btn:hover {
+    background: rgba(255,69,96,0.15);
+    box-shadow: 0 0 16px rgba(255,69,96,0.2);
+  }
+
+  /* Preset buttons */
+  .preset-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .preset-btn {
+    padding: 6px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  select option { background: var(--card); }
+
+  /* Separator */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; padding: 16px; }
+    .metrics { grid-template-columns: repeat(2,1fr); }
+    .tx-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Revvyn <span>Governance Sandbox v1.0</span></div>
+  <div class="header-badge">Design Partner Preview</div>
+</header>
+
+<div class="app">
+
+  <!-- LEFT: Policy Config -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dot"></div>
+        <h2>Governance Policy</h2>
+      </div>
+      <div class="panel-body-scroll">
+
+        <div class="section-label">Spend Controls</div>
+
+        <div class="field">
+          <label>Transaction Limit (single payment)</label>
+          <div class="range-row">
+            <input type="range" id="txLimit" min="100" max="100000" step="100" value="10000" oninput="updateRange('txLimit','txLimitVal', '$', '')">
+            <span class="range-val" id="txLimitVal">$10,000</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Daily Spend Limit</label>
+          <div class="range-row">
+            <input type="range" id="dailyLimit" min="1000" max="500000" step="1000" value="50000" oninput="updateRange('dailyLimit','dailyLimitVal', '$', '')">
+            <span class="range-val" id="dailyLimitVal">$50,000</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Yield-Only Budget Enforcement</label>
+          <div class="range-row">
+            <input type="range" id="yieldPct" min="0" max="100" step="5" value="0" oninput="updateRange('yieldPct','yieldPctVal', '', '%')">
+            <span class="range-val" id="yieldPctVal">Off</span>
+          </div>
+        </div>
+
+        <div class="section-label">Compliance Rules</div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Sanctions Screening</div>
+            <div class="toggle-sub">OFAC, EU, UN watchlists</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="sanctions" checked><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">KYC/AML Verification</div>
+            <div class="toggle-sub">Counterparty identity check</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="kyc" checked><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Human-in-the-Loop Escalation</div>
+            <div class="toggle-sub">Flag high-risk for approval</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="hitl" checked><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Verifiable Intent Required</div>
+            <div class="toggle-sub">Mastercard / ERC-8004 / Visa TAP</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="verifiable" checked><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Kill Switch Active</div>
+            <div class="toggle-sub">Instant halt capability</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="killswitch" checked><span class="toggle-slider"></span></label>
+        </div>
+
+        <div class="section-label">Rail Preference</div>
+
+        <div class="field">
+          <label>Primary Settlement Rail</label>
+          <select id="railPref">
+            <option value="auto">Auto-optimize (recommended)</option>
+            <option value="stablecoin">Stablecoin (USDC/FDUSD)</option>
+            <option value="card">Card Network (Visa/Mastercard)</option>
+            <option value="swift">SWIFT / SEPA</option>
+            <option value="defi">DeFi Protocol</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Approved Counterparty Types</label>
+          <select id="counterpartyType">
+            <option value="all">All verified counterparties</option>
+            <option value="enterprise">Enterprise only</option>
+            <option value="whitelist">Whitelist only</option>
+          </select>
+        </div>
+
+        <button class="killswitch-btn" onclick="triggerKillSwitch()">⬛ Emergency Kill Switch</button>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right-col">
+
+    <!-- Metrics -->
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-val" id="metricTotal">0</div>
+        <div class="metric-label">Transactions Run</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="metricApproved" style="color:var(--green)">0</div>
+        <div class="metric-label">Approved</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="metricBlocked" style="color:var(--red)">0</div>
+        <div class="metric-label">Blocked</div>
+      </div>
+      <div class="metric">
+        <div class="metric-val" id="metricEscalated" style="color:var(--amber)">0</div>
+        <div class="metric-label">Escalated</div>
+      </div>
+    </div>
+
+    <!-- Transaction Builder -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dot" style="background:var(--blue);box-shadow:0 0 8px var(--blue)"></div>
+        <h2>Transaction Input</h2>
+      </div>
+      <div class="panel-body">
+
+        <div class="section-label" style="margin-top:0">Quick Scenarios</div>
+        <div class="preset-row">
+          <button class="preset-btn" onclick="loadPreset('normal')">✓ Standard B2B</button>
+          <button class="preset-btn" onclick="loadPreset('overlimit')">⚠ Over Limit</button>
+          <button class="preset-btn" onclick="loadPreset('sanctions')">✗ Sanctions Hit</button>
+          <button class="preset-btn" onclick="loadPreset('highvalue')">↑ High Value</button>
+          <button class="preset-btn" onclick="loadPreset('agent')">⟳ Agent-to-Agent</button>
+        </div>
+
+        <div class="tx-grid">
+          <div class="field">
+            <label>Amount (USD)</label>
+            <input type="number" id="txAmount" value="4500" min="1">
+          </div>
+          <div class="field">
+            <label>Currency / Rail</label>
+            <select id="txCurrency">
+              <option value="USDC">USDC (Stablecoin)</option>
+              <option value="FDUSD">FDUSD (First Digital)</option>
+              <option value="USD">USD (Card/ACH)</option>
+              <option value="EUR">EUR (SEPA)</option>
+              <option value="GBP">GBP (Faster Payments)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Counterparty</label>
+            <input type="text" id="txCounterparty" value="Acme Logistics Ltd">
+          </div>
+          <div class="field">
+            <label>Counterparty Type</label>
+            <select id="txCounterpartyType">
+              <option value="verified">Verified Enterprise</option>
+              <option value="new">New Counterparty</option>
+              <option value="flagged">Flagged Entity</option>
+              <option value="agent">AI Agent</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Purpose / Category</label>
+            <select id="txPurpose">
+              <option value="vendor">Vendor Payment</option>
+              <option value="payroll">Payroll</option>
+              <option value="compute">Compute / API Access</option>
+              <option value="data">Data Purchase</option>
+              <option value="treasury">Treasury Transfer</option>
+              <option value="settlement">Agent Settlement</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Initiated By</label>
+            <select id="txInitiator">
+              <option value="agent">AI Agent (autonomous)</option>
+              <option value="human">Human (manual)</option>
+              <option value="scheduled">Scheduled Rule</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Verifiable Intent Signal</label>
+          <select id="txIntent">
+            <option value="mastercard">Mastercard Verifiable Intent ✓</option>
+            <option value="erc8004">ERC-8004 ✓</option>
+            <option value="visatap">Visa TAP ✓</option>
+            <option value="none">None (unverified)</option>
+          </select>
+        </div>
+
+        <button class="btn-primary" id="submitBtn" onclick="runTransaction()">
+          ▶ &nbsp; Execute Transaction
+        </button>
+      </div>
+    </div>
+
+    <!-- Agent Flow -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dot" style="background:var(--purple);box-shadow:0 0 8px var(--purple)"></div>
+        <h2>Agent Pipeline</h2>
+      </div>
+      <div class="panel-body">
+
+        <div id="resultBanner" class="result-banner">
+          <div class="result-icon" id="resultIcon"></div>
+          <div>
+            <div class="result-title" id="resultTitle"></div>
+            <div class="result-sub" id="resultSub"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px" class="agent-flow" id="agentFlow">
+
+          <div class="agent-step" id="step-orchestrator">
+            <div class="agent-spine">
+              <div class="agent-node">01</div>
+              <div class="agent-line"></div>
+            </div>
+            <div class="agent-content">
+              <div class="agent-name">
+                Orchestrator
+                <span class="agent-status-badge badge-waiting" id="badge-orchestrator">Waiting</span>
+              </div>
+              <div class="agent-log" id="log-orchestrator">Awaiting transaction input...</div>
+            </div>
+          </div>
+
+          <div class="agent-step" id="step-governance">
+            <div class="agent-spine">
+              <div class="agent-node">02</div>
+              <div class="agent-line"></div>
+            </div>
+            <div class="agent-content">
+              <div class="agent-name">
+                Governance
+                <span class="agent-status-badge badge-waiting" id="badge-governance">Waiting</span>
+              </div>
+              <div class="agent-log" id="log-governance">Policy enforcement on standby...</div>
+            </div>
+          </div>
+
+          <div class="agent-step" id="step-control">
+            <div class="agent-spine">
+              <div class="agent-node">03</div>
+              <div class="agent-line"></div>
+            </div>
+            <div class="agent-content">
+              <div class="agent-name">
+                Control
+                <span class="agent-status-badge badge-waiting" id="badge-control">Waiting</span>
+              </div>
+              <div class="agent-log" id="log-control">Risk scoring engine idle...</div>
+            </div>
+          </div>
+
+          <div class="agent-step" id="step-execution">
+            <div class="agent-spine">
+              <div class="agent-node">04</div>
+              <div class="agent-line"></div>
+            </div>
+            <div class="agent-content">
+              <div class="agent-name">
+                Execution
+                <span class="agent-status-badge badge-waiting" id="badge-execution">Waiting</span>
+              </div>
+              <div class="agent-log" id="log-execution">Rail selection pending...</div>
+            </div>
+          </div>
+
+          <div class="agent-step" id="step-audit">
+            <div class="agent-spine">
+              <div class="agent-node">05</div>
+              <div class="agent-line" style="display:none"></div>
+            </div>
+            <div class="agent-content">
+              <div class="agent-name">
+                Audit
+                <span class="agent-status-badge badge-waiting" id="badge-audit">Waiting</span>
+              </div>
+              <div class="agent-log" id="log-audit">Audit trail inactive...</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Audit Trail -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-dot" style="background:var(--amber);box-shadow:0 0 8px var(--amber)"></div>
+        <h2>Audit Trail</h2>
+      </div>
+      <div class="panel-body">
+        <div class="audit-trail" id="auditTrail">
+          <div class="empty-state">
+            <div class="icon">◎</div>
+            Run a transaction to generate the audit trail.<br>
+            Every agent decision is logged with reason codes<br>and regulatory tags.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────
+let metrics = { total: 0, approved: 0, blocked: 0, escalated: 0 };
+let running = false;
+let killSwitchActive = false;
+let auditLog = [];
+let txTime = null;
+
+// ─── Helpers ─────────────────────────────────────────
+function updateRange(id, valId, prefix, suffix) {
+  const val = parseInt(document.getElementById(id).value);
+  const el = document.getElementById(valId);
+  if (id === 'yieldPct') {
+    el.textContent = val === 0 ? 'Off' : val + '%';
+  } else {
+    el.textContent = prefix + val.toLocaleString() + suffix;
+  }
+}
+
+function getPolicy() {
+  return {
+    txLimit: parseInt(document.getElementById('txLimit').value),
+    dailyLimit: parseInt(document.getElementById('dailyLimit').value),
+    yieldPct: parseInt(document.getElementById('yieldPct').value),
+    sanctions: document.getElementById('sanctions').checked,
+    kyc: document.getElementById('kyc').checked,
+    hitl: document.getElementById('hitl').checked,
+    verifiable: document.getElementById('verifiable').checked,
+    killswitch: document.getElementById('killswitch').checked,
+    railPref: document.getElementById('railPref').value,
+    counterpartyType: document.getElementById('counterpartyType').value,
+  };
+}
+
+function getTx() {
+  return {
+    amount: parseFloat(document.getElementById('txAmount').value),
+    currency: document.getElementById('txCurrency').value,
+    counterparty: document.getElementById('txCounterparty').value,
+    counterpartyType: document.getElementById('txCounterpartyType').value,
+    purpose: document.getElementById('txPurpose').value,
+    initiator: document.getElementById('txInitiator').value,
+    intent: document.getElementById('txIntent').value,
+  };
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function fmt(amount, currency) {
+  return '$' + amount.toLocaleString() + ' ' + currency;
+}
+
+function timestamp() {
+  const now = new Date();
+  return now.toTimeString().slice(0,8);
+}
+
+function addAudit(agent, message, type = 'info') {
+  const trail = document.getElementById('auditTrail');
+  if (trail.querySelector('.empty-state')) trail.innerHTML = '';
+  const entry = document.createElement('div');
+  entry.className = `audit-entry ${type}`;
+  entry.innerHTML = `
+    <span class="audit-time">${timestamp()}</span>
+    <span class="audit-agent">[${agent}]</span>
+    <span class="audit-msg">${message}</span>
+  `;
+  trail.appendChild(entry);
+  trail.scrollTop = trail.scrollHeight;
+}
+
+function setAgent(id, state, badge, badgeClass, log) {
+  const step = document.getElementById('step-' + id);
+  step.className = 'agent-step ' + state;
+  const b = document.getElementById('badge-' + id);
+  b.textContent = badge;
+  b.className = 'agent-status-badge ' + badgeClass;
+  document.getElementById('log-' + id).innerHTML = log;
+}
+
+function resetAgents() {
+  const agents = ['orchestrator','governance','control','execution','audit'];
+  agents.forEach(a => {
+    setAgent(a, '', 'Waiting', 'badge-waiting', getDefaultLog(a));
+  });
+  document.getElementById('resultBanner').className = 'result-banner';
+}
+
+function getDefaultLog(a) {
+  const defaults = {
+    orchestrator: 'Awaiting transaction input...',
+    governance: 'Policy enforcement on standby...',
+    control: 'Risk scoring engine idle...',
+    execution: 'Rail selection pending...',
+    audit: 'Audit trail inactive...',
+  };
+  return defaults[a];
+}
+
+function showResult(type, title, sub) {
+  const el = document.getElementById('resultBanner');
+  el.className = 'result-banner show ' + type;
+  const icons = { approved: '✓', blocked: '✗', escalated: '⚠' };
+  document.getElementById('resultIcon').textContent = icons[type];
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultSub').textContent = sub;
+}
+
+function updateMetrics() {
+  document.getElementById('metricTotal').textContent = metrics.total;
+  document.getElementById('metricApproved').textContent = metrics.approved;
+  document.getElementById('metricBlocked').textContent = metrics.blocked;
+  document.getElementById('metricEscalated').textContent = metrics.escalated;
+}
+
+// ─── Presets ─────────────────────────────────────────
+function loadPreset(type) {
+  const presets = {
+    normal: { amount: 4500, currency: 'USDC', counterparty: 'Acme Logistics Ltd', counterpartyType: 'verified', purpose: 'vendor', initiator: 'agent', intent: 'mastercard' },
+    overlimit: { amount: 85000, currency: 'USD', counterparty: 'Summit Capital Partners', counterpartyType: 'verified', purpose: 'treasury', initiator: 'agent', intent: 'mastercard' },
+    sanctions: { amount: 12000, currency: 'USDC', counterparty: 'Meridian Trade Co.', counterpartyType: 'flagged', purpose: 'vendor', initiator: 'agent', intent: 'erc8004' },
+    highvalue: { amount: 38000, currency: 'EUR', counterparty: 'Deutsche Infrastruktur GmbH', counterpartyType: 'new', purpose: 'treasury', initiator: 'agent', intent: 'visatap' },
+    agent: { amount: 0.31, currency: 'USDC', counterparty: 'ComputeNode-7a3f', counterpartyType: 'agent', purpose: 'compute', initiator: 'agent', intent: 'erc8004' },
+  };
+  const p = presets[type];
+  document.getElementById('txAmount').value = p.amount;
+  document.getElementById('txCurrency').value = p.currency;
+  document.getElementById('txCounterparty').value = p.counterparty;
+  document.getElementById('txCounterpartyType').value = p.counterpartyType;
+  document.getElementById('txPurpose').value = p.purpose;
+  document.getElementById('txInitiator').value = p.initiator;
+  document.getElementById('txIntent').value = p.intent;
+}
+
+// ─── Kill Switch ──────────────────────────────────────
+function triggerKillSwitch() {
+  killSwitchActive = true;
+  addAudit('SYSTEM', '🔴 KILL SWITCH ACTIVATED — all agent transactions halted', 'blocked');
+  alert('Kill switch activated. All autonomous transactions are now halted. Human review required to resume.');
+}
+
+// ─── Main Transaction Flow ────────────────────────────
+async function runTransaction() {
+  if (running) return;
+  if (killSwitchActive) {
+    alert('Kill switch is active. Reset to resume transactions.');
+    return;
+  }
+
+  running = true;
+  document.getElementById('submitBtn').disabled = true;
+  resetAgents();
+  document.getElementById('auditTrail').innerHTML = '';
+
+  const policy = getPolicy();
+  const tx = getTx();
+  txTime = Date.now();
+  metrics.total++;
+
+  let finalResult = 'approved';
+  let blockReason = '';
+  let escalateReason = '';
+
+  // ── Agent 1: Orchestrator ────────────────────────
+  setAgent('orchestrator', 'active', 'Processing', 'badge-processing',
+    `Classifying intent from <span class="highlight">${tx.initiator}</span>. Parsing transaction context...`);
+  addAudit('ORCHESTRATOR', `Intent received: ${fmt(tx.amount, tx.currency)} → ${tx.counterparty}`, 'info');
+  await sleep(900);
+
+  const intentLabels = { mastercard: 'Mastercard Verifiable Intent', erc8004: 'ERC-8004', visatap: 'Visa TAP', none: 'None' };
+
+  if (policy.verifiable && tx.intent === 'none') {
+    setAgent('orchestrator', 'blocked', 'Blocked', 'badge-blocked',
+      `<span class="red">✗ No verifiable intent signal detected.</span> Policy requires Mastercard Verifiable Intent, ERC-8004, or Visa TAP. Transaction rejected at intake.`);
+    addAudit('ORCHESTRATOR', 'BLOCKED — Verifiable intent required but not provided', 'blocked');
+    finalResult = 'blocked';
+    blockReason = 'No verifiable intent signal. Policy requires Mastercard Verifiable Intent, ERC-8004, or Visa TAP.';
+    metrics.blocked++;
+    updateMetrics();
+    showResult('blocked', 'Transaction Blocked', blockReason);
+    await finishAudit(tx, policy, 'BLOCKED', blockReason);
+    running = false;
+    document.getElementById('submitBtn').disabled = false;
+    return;
+  }
+
+  setAgent('orchestrator', 'done', 'Approved', 'badge-approved',
+    `Intent classified: <span class="highlight">${tx.purpose}</span> via <span class="cyan">${tx.initiator}</span>. Signal: <span class="green">${intentLabels[tx.intent]}</span>. Routing to Governance.`);
+  addAudit('ORCHESTRATOR', `Intent validated: ${intentLabels[tx.intent]} — routing to Governance`, 'approved');
+
+  // ── Agent 2: Governance ──────────────────────────
+  await sleep(300);
+  setAgent('governance', 'active', 'Processing', 'badge-processing',
+    `Enforcing policy. Checking spend limits, sanctions, counterparty rules...`);
+  await sleep(1100);
+
+  // Sanctions check
+  if (policy.sanctions && tx.counterpartyType === 'flagged') {
+    setAgent('governance', 'blocked', 'Blocked', 'badge-blocked',
+      `<span class="red">✗ Sanctions match detected.</span> Counterparty <span class="highlight">${tx.counterparty}</span> appears on OFAC watchlist. Transaction halted.`);
+    addAudit('GOVERNANCE', `BLOCKED — Sanctions hit: ${tx.counterparty} (OFAC match)`, 'blocked');
+    finalResult = 'blocked';
+    blockReason = `Counterparty "${tx.counterparty}" flagged on OFAC/EU sanctions watchlist. Human review required.`;
+    metrics.blocked++;
+    updateMetrics();
+    showResult('blocked', 'Transaction Blocked — Sanctions Hit', blockReason);
+    await finishAudit(tx, policy, 'BLOCKED', blockReason);
+    running = false;
+    document.getElementById('submitBtn').disabled = false;
+    return;
+  }
+
+  // Spend limit check
+  if (tx.amount > policy.txLimit) {
+    if (policy.hitl) {
+      setAgent('governance', 'escalated', 'Escalated', 'badge-escalated',
+        `<span class="amber">⚠ Spend limit exceeded.</span> <span class="highlight">${fmt(tx.amount, tx.currency)}</span> exceeds policy limit of <span class="highlight">$${policy.txLimit.toLocaleString()}</span>. Escalating for human approval.`);
+      addAudit('GOVERNANCE', `ESCALATED — Amount $${tx.amount.toLocaleString()} exceeds limit $${policy.txLimit.toLocaleString()}`, 'escalated');
+      finalResult = 'escalated';
+      escalateReason = `Transaction amount ${fmt(tx.amount, tx.currency)} exceeds single-payment limit of $${policy.txLimit.toLocaleString()}. Pending human approval.`;
+      metrics.escalated++;
+      updateMetrics();
+      showResult('escalated', 'Escalated for Human Review', escalateReason);
+      await finishAudit(tx, policy, 'ESCALATED', escalateReason);
+      running = false;
+      document.getElementById('submitBtn').disabled = false;
+      return;
+    } else {
+      setAgent('governance', 'blocked', 'Blocked', 'badge-blocked',
+        `<span class="red">✗ Spend limit exceeded.</span> <span class="highlight">${fmt(tx.amount, tx.currency)}</span> exceeds policy limit. No escalation path configured.`);
+      addAudit('GOVERNANCE', `BLOCKED — Spend limit exceeded, no HITL configured`, 'blocked');
+      finalResult = 'blocked';
+      blockReason = `Amount exceeds transaction limit. Enable human-in-the-loop to allow escalation instead of hard block.`;
+      metrics.blocked++;
+      updateMetrics();
+      showResult('blocked', 'Transaction Blocked — Limit Exceeded', blockReason);
+      await finishAudit(tx, policy, 'BLOCKED', blockReason);
+      running = false;
+      document.getElementById('submitBtn').disabled = false;
+      return;
+    }
+  }
+
+  // New counterparty check
+  if (policy.kyc && tx.counterpartyType === 'new') {
+    if (policy.hitl && tx.amount > 5000) {
+      setAgent('governance', 'escalated', 'Escalated', 'badge-escalated',
+        `<span class="amber">⚠ New counterparty with elevated amount.</span> KYC verification pending for <span class="highlight">${tx.counterparty}</span>. Escalating for review.`);
+      addAudit('GOVERNANCE', `ESCALATED — New counterparty KYC pending: ${tx.counterparty}`, 'escalated');
+      finalResult = 'escalated';
+      escalateReason = `New counterparty "${tx.counterparty}" requires KYC verification before payment above $5,000.`;
+      metrics.escalated++;
+      updateMetrics();
+      showResult('escalated', 'Escalated — KYC Required', escalateReason);
+      await finishAudit(tx, policy, 'ESCALATED', escalateReason);
+      running = false;
+      document.getElementById('submitBtn').disabled = false;
+      return;
+    }
+  }
+
+  addAudit('GOVERNANCE', `Policy checks passed — spend limits, sanctions, counterparty rules all clear`, 'approved');
+  setAgent('governance', 'done', 'Approved', 'badge-approved',
+    `<span class="green">✓ All policy checks passed.</span> Spend limits confirmed. Sanctions clear. Counterparty <span class="highlight">${tx.counterparty}</span> verified. Routing to Control.`);
+
+  // ── Agent 3: Control ─────────────────────────────
+  await sleep(300);
+  setAgent('control', 'active', 'Processing', 'badge-processing',
+    `Running risk scoring. Analysing transaction patterns, FX rates, fraud indicators...`);
+  await sleep(1200);
+
+  const riskScore = tx.counterpartyType === 'agent' ? 12 :
+                    tx.amount > 20000 ? 45 :
+                    tx.purpose === 'treasury' ? 38 : 22;
+
+  const railMap = {
+    'auto': tx.currency === 'USDC' || tx.currency === 'FDUSD' ? 'Stablecoin (0.001% fee, <30s)' :
+            tx.currency === 'EUR' ? 'SEPA Instant (€0.20 flat, 10s)' :
+            tx.currency === 'GBP' ? 'Faster Payments (£0.10 flat, 5s)' : 'Card Network (0.3% + $0.10)',
+    'stablecoin': 'Stablecoin (0.001% fee, <30s)',
+    'card': 'Card Network (0.3% + $0.10)',
+    'swift': 'SWIFT gpi (0.1% + $15, 4h)',
+    'defi': 'DeFi Protocol (0.05% + gas)',
+  };
+
+  const selectedRail = railMap[policy.railPref];
+
+  setAgent('control', 'done', 'Approved', 'badge-approved',
+    `Risk score: <span class="green">${riskScore}/100</span> — <span class="highlight">Low risk</span>. Rail selected: <span class="cyan">${selectedRail}</span>. No fraud indicators detected.`);
+  addAudit('CONTROL', `Risk score: ${riskScore}/100 — Rail optimised: ${selectedRail}`, 'approved');
+
+  // ── Agent 4: Execution ───────────────────────────
+  await sleep(300);
+  setAgent('execution', 'active', 'Processing', 'badge-processing',
+    `Formatting for ${selectedRail}. Calculating fees. Submitting to rail...`);
+  addAudit('EXECUTION', `Submitting to ${selectedRail}...`, 'info');
+  await sleep(1400);
+
+  const fee = tx.currency === 'USDC' || tx.currency === 'FDUSD' ?
+    (tx.amount * 0.00001).toFixed(4) :
+    tx.currency === 'EUR' ? '0.20' :
+    tx.currency === 'GBP' ? '0.10' :
+    (tx.amount * 0.003 + 0.10).toFixed(2);
+
+  const txId = 'RVN-' + Math.random().toString(36).slice(2,10).toUpperCase();
+
+  setAgent('execution', 'done', 'Settled', 'badge-approved',
+    `<span class="green">✓ Settled.</span> TX: <span class="highlight">${txId}</span>. Fee: <span class="cyan">$${fee}</span>. Confirmation received from rail provider.`);
+  addAudit('EXECUTION', `Settled — TX ID: ${txId} | Fee: $${fee} | Rail: ${selectedRail}`, 'approved');
+
+  // ── Agent 5: Audit ───────────────────────────────
+  await sleep(300);
+  setAgent('audit', 'active', 'Processing', 'badge-processing',
+    `Reconstructing decision chain. Applying regulatory tags...`);
+  await sleep(800);
+
+  const elapsed = ((Date.now() - txTime) / 1000).toFixed(1);
+  const tags = ['FATF-COMPLIANT', 'PSD2', tx.currency === 'USDC' ? 'MiCA' : 'ISO-20022'].join(' · ');
+
+  setAgent('audit', 'done', 'Complete', 'badge-approved',
+    `Full decision chain recorded. Tags: <span class="cyan">${tags}</span>. Processing time: <span class="highlight">${elapsed}s</span>. 7-year retention active.`);
+  addAudit('AUDIT', `Decision chain complete | Tags: ${tags} | ${elapsed}s | TX: ${txId}`, 'approved');
+
+  metrics.approved++;
+  updateMetrics();
+  showResult('approved', 'Transaction Approved & Settled', `${fmt(tx.amount, tx.currency)} → ${tx.counterparty} | ${txId} | ${elapsed}s`);
+
+  running = false;
+  document.getElementById('submitBtn').disabled = false;
+}
+
+async function finishAudit(tx, policy, outcome, reason) {
+  await sleep(400);
+  const elapsed = ((Date.now() - txTime) / 1000).toFixed(1);
+  setAgent('audit', 'active', 'Processing', 'badge-processing', 'Recording decision chain...');
+  await sleep(700);
+  const tags = outcome === 'BLOCKED' ? 'FATF-COMPLIANT · BLOCKED-RECORD' : 'FATF-COMPLIANT · ESCALATED-RECORD';
+  setAgent('audit', 'done', 'Complete', 'badge-approved',
+    `Decision chain recorded. Outcome: <span class="red">${outcome}</span>. Reason code logged. Tags: <span class="cyan">${tags}</span>. ${elapsed}s.`);
+  addAudit('AUDIT', `${outcome} — ${reason.slice(0,60)}... | Tags: ${tags} | ${elapsed}s`, outcome === 'BLOCKED' ? 'blocked' : 'escalated');
+}
+
+// Init
+updateRange('txLimit','txLimitVal','$','');
+updateRange('dailyLimit','dailyLimitVal','$','');
+updateRange('yieldPct','yieldPctVal','','%');
+</script>
+
+</body>
+</html>
