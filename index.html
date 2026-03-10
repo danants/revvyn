@@ -859,94 +859,159 @@ function Analytics({payments,vertical}){
   </div>;
 }
 
-function KYAPanel({kyaRegistry,onClear}){
+function KYAPanel({kyaRegistry,onClear,suspendedAgents,onToggleSuspend}){
   const entries=Object.values(kyaRegistry);
+  // Auto-select first entry; persist selection even when registry updates
   const [selected,setSelected]=useState(null);
-  const sel=selected?kyaRegistry[selected]:null;
-  if(entries.length===0) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:11,lineHeight:1.7}}>
-    <div style={{fontFamily:"var(--sans)",fontSize:16,color:"var(--muted)",marginBottom:8}}>Know Your Agent</div>
-    <div>Agent identities populate as transactions are submitted.</div>
-    <div style={{marginTop:4}}>Each unique intent source generates a KYA record with mandate scope, trust signal history, and risk scoring.</div>
+  const effectiveSel=selected&&kyaRegistry[selected]?selected:entries.length>0?entries[0].intentSource:null;
+  const sel=effectiveSel?kyaRegistry[effectiveSel]:null;
+
+  // Exposure ceiling by intent source type (actuarial risk tier)
+  const EXPOSURE_CEILINGS={
+    google_ucp:{ceiling:25000,tier:"Tier 2 — Qualified Agent"},
+    openai:{ceiling:50000,tier:"Tier 2 — Qualified Agent"},
+    erp:{ceiling:500000,tier:"Tier 1 — Enterprise System"},
+    human:{ceiling:2000000,tier:"Tier 0 — Human Operator"},
+    custom_agent:{ceiling:5000,tier:"Tier 3 — Unverified Agent"},
+    defi_agent:{ceiling:2000,tier:"Tier 3 — Restricted"},
+  };
+
+  if(entries.length===0) return <div style={{padding:40,textAlign:"center",lineHeight:1.8}}>
+    <div className="sans" style={{fontSize:18,fontWeight:700,color:"var(--muted)",marginBottom:10}}>Know Your Agent</div>
+    <div style={{fontSize:13,color:"var(--dim)"}}>Agent identities populate as transactions are submitted.</div>
+    <div style={{fontSize:12,color:"var(--dim)",marginTop:4}}>Each unique intent source generates a persistent KYA record with mandate scope, trust signal history, risk scoring, and exposure ceiling.</div>
   </div>;
+
   const avgRisk=sel&&sel.riskHistory.length?Math.round(sel.riskHistory.reduce((a,b)=>a+b,0)/sel.riskHistory.length):null;
+  const isSuspended=sel&&suspendedAgents?.includes(effectiveSel);
+  const exposure=sel?EXPOSURE_CEILINGS[sel.intentSource]||{ceiling:1000,tier:"Tier 4 — Unknown"}:null;
+  const exposurePct=sel&&exposure?Math.min(100,Math.round((sel.totalVolume/exposure.ceiling)*100)):0;
+
   return <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
-    {/* List */}
-    <div style={{width:160,borderRight:"1px solid var(--border)",overflowY:"auto",flexShrink:0}}>
-      <div style={{padding:"8px 10px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)",letterSpacing:".12em",textTransform:"uppercase"}}>{entries.length} Agents</div>
-        <button onClick={onClear} style={{padding:"2px 5px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:7,cursor:"pointer"}}>Clear</button>
+    {/* Agent list */}
+    <div style={{width:170,borderRight:"1px solid var(--border)",overflowY:"auto",flexShrink:0,background:"var(--surface)"}}>
+      <div style={{padding:"9px 11px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{fontSize:10,fontWeight:600,color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase"}}>{entries.length} Agent{entries.length!==1?"s":""}</div>
+        <button onClick={onClear} style={{padding:"3px 7px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:9,cursor:"pointer"}}>Clear</button>
       </div>
       {entries.map(e=>{
         const src=INTENT_SOURCES.find(s=>s.id===e.intentSource)||{color:"var(--gold)"};
-        const isSel=selected===e.intentSource;
-        return <div key={e.intentSource} onClick={()=>setSelected(e.intentSource)} style={{padding:"9px 10px",borderBottom:"1px solid var(--border)",cursor:"pointer",background:isSel?"rgba(196,154,44,.06)":"transparent",borderLeft:`2px solid ${isSel?src.color:"transparent"}`,transition:"all .15s"}}>
-          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
-            <div style={{width:5,height:5,borderRadius:"50%",background:src.color,flexShrink:0}}/>
-            <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:isSel?src.color:"var(--text)"}}>{e.origin}</span>
+        const isSel=effectiveSel===e.intentSource;
+        const susp=suspendedAgents?.includes(e.intentSource);
+        return <div key={e.intentSource} onClick={()=>setSelected(e.intentSource)} style={{padding:"10px 11px",borderBottom:"1px solid var(--border)",cursor:"pointer",background:isSel?"rgba(196,154,44,.05)":"transparent",borderLeft:`3px solid ${isSel?src.color:susp?"#E05252":"transparent"}`,transition:"all .15s"}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:susp?"#E05252":src.color,flexShrink:0}}/>
+            <span style={{fontSize:11,fontWeight:600,color:isSel?src.color:susp?"#E05252":"var(--text)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.origin}</span>
           </div>
-          <div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)"}}>{e.agentId}</div>
-          <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
-            <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)"}}>{e.txCount} tx</span>
-            <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--gold)"}}>{e.agentProofScore}/100</span>
+          <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--dim)",marginBottom:3}}>{e.agentId}</div>
+          <div style={{display:"flex",justifyContent:"space-between"}}>
+            <span style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)"}}>{e.txCount} tx</span>
+            <span style={{fontFamily:"var(--mono)",fontSize:9,color:e.agentProofScore>70?"#3DB88A":e.agentProofScore>50?"#D4914A":"#E05252"}}>{e.agentProofScore}/100</span>
           </div>
+          {susp&&<div style={{marginTop:4,padding:"2px 5px",borderRadius:2,background:"rgba(224,82,82,.08)",border:"1px solid rgba(224,82,82,.2)",fontSize:8,color:"#E05252",fontFamily:"var(--mono)",letterSpacing:".06em"}}>SUSPENDED</div>}
         </div>;
       })}
     </div>
-    {/* Detail */}
-    <div style={{flex:1,overflowY:"auto",padding:"13px 15px",display:"flex",flexDirection:"column",gap:11}}>
-      {!sel&&<div style={{color:"var(--dim)",fontSize:11,textAlign:"center",padding:20}}>Select an agent to view identity record</div>}
+
+    {/* Detail panel */}
+    <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
+      {!sel&&<div style={{color:"var(--dim)",fontSize:13,textAlign:"center",padding:24}}>Select an agent to view identity record</div>}
       {sel&&<>
-        <div style={{display:"flex",alignItems:"center",gap:9}}>
-          <div style={{width:36,height:36,borderRadius:4,background:"rgba(196,154,44,.08)",border:"1px solid rgba(196,154,44,.2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <div style={{width:12,height:12,borderRadius:"50%",background:INTENT_SOURCES.find(s=>s.id===sel.intentSource)?.color||"var(--gold)"}}/>
+        {/* Header */}
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:38,height:38,borderRadius:4,background:isSuspended?"rgba(224,82,82,.08)":"rgba(196,154,44,.08)",border:`1px solid ${isSuspended?"rgba(224,82,82,.25)":"rgba(196,154,44,.2)"}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <div style={{width:14,height:14,borderRadius:"50%",background:isSuspended?"#E05252":INTENT_SOURCES.find(s=>s.id===sel.intentSource)?.color||"var(--gold)"}}/>
+            </div>
+            <div>
+              <div className="sans" style={{fontSize:16,fontWeight:700,color:isSuspended?"#E05252":"var(--text)"}}>{sel.origin}</div>
+              <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)"}}>{sel.agentId}</div>
+            </div>
           </div>
-          <div>
-            <div className="sans" style={{fontSize:16,fontWeight:700,color:"var(--text)"}}>{sel.origin}</div>
-            <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)"}}>{sel.agentId}</div>
-          </div>
+          {/* Per-agent suspension toggle */}
+          <button onClick={()=>onToggleSuspend(effectiveSel)} style={{
+            padding:"7px 12px",borderRadius:2,cursor:"pointer",fontFamily:"var(--mono)",fontSize:9,fontWeight:600,letterSpacing:".08em",textTransform:"uppercase",flexShrink:0,
+            border:isSuspended?"1px solid rgba(61,184,138,.3)":"1px solid rgba(224,82,82,.3)",
+            background:isSuspended?"rgba(61,184,138,.06)":"rgba(224,82,82,.06)",
+            color:isSuspended?"#3DB88A":"#E05252",
+          }}>{isSuspended?"▶ Reinstate":"■ Suspend"}</button>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+
+        {isSuspended&&<div style={{padding:"8px 11px",borderRadius:2,background:"rgba(224,82,82,.05)",border:"1px solid rgba(224,82,82,.2)",fontSize:11,color:"#E05252",lineHeight:1.5}}>
+          <strong>Agent suspended.</strong> All payments from {sel.origin} are blocked. Global kill switch remains independent.
+        </div>}
+
+        {/* Metrics */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
           <Badge label="Transactions" value={sel.txCount} color="var(--gold)"/>
           <Badge label="AgentProof Score" value={`${sel.agentProofScore}/100`} color={sel.agentProofScore>70?"#3DB88A":sel.agentProofScore>50?"#D4914A":"#E05252"}/>
           <Badge label="Total Volume" value={`$${sel.totalVolume.toLocaleString()}`} color="#4A9EFF"/>
           {avgRisk!==null&&<Badge label="Avg Risk Score" value={`${avgRisk}/100`} color={avgRisk<40?"#3DB88A":avgRisk<70?"#D4914A":"#E05252"}/>}
         </div>
-        <div style={{padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
-          <div className="lbl" style={{marginBottom:4}}>Mandate Scope</div>
-          <div style={{fontSize:12,color:"#94A3B8",lineHeight:1.5}}>{sel.mandateScope}</div>
+
+        {/* Exposure ceiling — actuarial */}
+        {exposure&&<div style={{padding:"11px 13px",borderRadius:2,background:"rgba(212,145,74,.05)",border:"1px solid rgba(212,145,74,.18)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div className="lbl" style={{margin:0}}>◈ Exposure Ceiling</div>
+            <span style={{fontFamily:"var(--mono)",fontSize:9,color:"#D4914A",fontWeight:600}}>{exposure.tier}</span>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:6}}>
+            <div>
+              <div style={{fontFamily:"var(--mono)",fontSize:20,fontWeight:600,color:exposurePct>80?"#E05252":exposurePct>60?"#D4914A":"var(--text)",lineHeight:1}}>${sel.totalVolume.toLocaleString()}</div>
+              <div style={{fontSize:10,color:"var(--muted)",marginTop:2}}>of ${exposure.ceiling.toLocaleString()} max exposure</div>
+            </div>
+            <div style={{fontFamily:"var(--mono)",fontSize:16,fontWeight:600,color:exposurePct>80?"#E05252":exposurePct>60?"#D4914A":"#3DB88A"}}>{exposurePct}%</div>
+          </div>
+          <div style={{height:4,borderRadius:2,background:"var(--border)",overflow:"hidden"}}>
+            <div style={{height:"100%",width:`${exposurePct}%`,borderRadius:2,background:exposurePct>80?"#E05252":exposurePct>60?"#D4914A":"#3DB88A",transition:"width .4s ease"}}/>
+          </div>
+          <div style={{fontSize:10,color:"var(--muted)",marginTop:6,lineHeight:1.5}}>Dollar-denominated actuarial ceiling. Revvyn enforces hard stop when agent approaches maximum authorised exposure for its risk tier.</div>
+        </div>}
+
+        {/* Mandate scope */}
+        <div style={{padding:"10px 12px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div className="lbl" style={{marginBottom:5}}>Mandate Scope</div>
+          <div style={{fontSize:12,color:"var(--text)",lineHeight:1.6,opacity:.85}}>{sel.mandateScope}</div>
         </div>
-        <div style={{padding:"9px 11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.14)"}}>
-          <div className="lbl" style={{marginBottom:6}}>◈ Trust Signal History</div>
+
+        {/* Trust signals */}
+        <div style={{padding:"10px 12px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.14)"}}>
+          <div className="lbl" style={{marginBottom:7}}>◈ Trust Signal Status</div>
           {TRUST_SIGNALS.map(ts=>{
             const active=sel.trustSignals[ts.id];
-            return <div key={ts.id} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 0",borderBottom:"1px solid var(--border)"}}>
-              <div style={{width:5,height:5,borderRadius:"50%",background:active?ts.color:"var(--dim)",flexShrink:0}}/>
-              <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:active?ts.color:"var(--muted)",minWidth:34}}>{ts.short}</span>
+            return <div key={ts.id} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 0",borderBottom:"1px solid var(--border)"}}>
+              <div style={{width:6,height:6,borderRadius:"50%",background:active?ts.color:"var(--dim)",flexShrink:0}}/>
+              <span style={{fontFamily:"var(--mono)",fontSize:10,fontWeight:600,color:active?ts.color:"var(--muted)",minWidth:38}}>{ts.short}</span>
               <span style={{fontSize:11,color:"var(--muted)",flex:1}}>{ts.label}</span>
-              <span className="tag" style={{background:active?"rgba(61,184,138,.08)":"rgba(100,116,139,.08)",color:active?"#3DB88A":"var(--dim)"}}>{active?"PRESENT":"ABSENT"}</span>
+              <span className="tag" style={{background:active?"rgba(61,184,138,.09)":"rgba(100,116,139,.07)",color:active?"#3DB88A":"var(--dim)",border:`1px solid ${active?"rgba(61,184,138,.2)":"rgba(100,116,139,.12)"}`}}>{active?"PRESENT":"ABSENT"}</span>
             </div>;
           })}
         </div>
+
+        {/* Risk history chart */}
         {sel.riskHistory.length>0&&<div>
-          <div className="lbl" style={{marginBottom:5}}>Risk Score History</div>
-          <div style={{display:"flex",gap:2,alignItems:"flex-end",height:40}}>
+          <div className="lbl" style={{marginBottom:7}}>Risk Score History</div>
+          <div style={{display:"flex",gap:3,alignItems:"flex-end",height:44,padding:"0 2px"}}>
             {sel.riskHistory.map((score,i)=>{
               const color=score<40?"#3DB88A":score<70?"#D4914A":"#E05252";
-              return <div key={i} style={{flex:1,background:color+"30",border:`1px solid ${color}40`,borderRadius:2,height:`${score}%`,minHeight:3,position:"relative"}} title={`${score}/100`}>
-                <div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",fontFamily:"var(--mono)",fontSize:6,color:color,whiteSpace:"nowrap",paddingBottom:1}}>{score}</div>
+              return <div key={i} style={{flex:1,background:color+"25",border:`1px solid ${color}35`,borderRadius:2,height:`${Math.max(8,score)}%`,position:"relative"}} title={`${score}/100`}>
+                <div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",fontFamily:"var(--mono)",fontSize:8,color:color,whiteSpace:"nowrap",paddingBottom:2}}>{score}</div>
               </div>;
             })}
           </div>
         </div>}
-        <div style={{padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
-          <div className="lbl" style={{marginBottom:4}}>Activity</div>
-          <div style={{display:"flex",flexDirection:"column",gap:3}}>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>First seen</span><span style={{fontFamily:"var(--mono)",fontSize:9}}>{new Date(sel.firstSeen).toLocaleString()}</span></div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>Last seen</span><span style={{fontFamily:"var(--mono)",fontSize:9}}>{new Date(sel.lastSeen).toLocaleString()}</span></div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>Blocked count</span><span style={{fontFamily:"var(--mono)",fontSize:9,color:sel.blockedCount>0?"#E05252":"#3DB88A"}}>{sel.blockedCount}</span></div>
+
+        {/* Activity */}
+        <div style={{padding:"10px 12px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div className="lbl" style={{marginBottom:6}}>Activity</div>
+          <div style={{display:"flex",flexDirection:"column",gap:5}}>
+            {[["First seen",new Date(sel.firstSeen).toLocaleString()],["Last seen",new Date(sel.lastSeen).toLocaleString()],["Blocked",sel.blockedCount]].map(([label,val])=><div key={label} style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--muted)"}}>
+              <span>{label}</span><span style={{fontFamily:"var(--mono)",fontSize:10,color:label==="Blocked"&&sel.blockedCount>0?"#E05252":"var(--text)"}}>{val}</span>
+            </div>)}
           </div>
         </div>
-        <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.15)",fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
+
+        <div style={{padding:"9px 11px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.14)",fontSize:11,color:"var(--muted)",lineHeight:1.6}}>
           <span style={{color:"#8B72D4",fontWeight:600}}>KYA principle: </span>KYC was built for humans. KYA is built for agents. AgentProof scores the agent — Revvyn decides whether it's permitted to act.
         </div>
       </>}
@@ -1073,6 +1138,7 @@ function App(){
   const [sanctionsState,setSanctionsState]=useState(SANCTIONS_STATE);
   const [demoScene,setDemoScene]=useState(null);
   const [kyaRegistry,setKyaRegistry]=useState(loadKYA());
+  const [suspendedAgents,setSuspendedAgents]=useState([]);
   const escRef=useRef(null);
   const demoAbortRef=useRef(false);
 
@@ -1104,6 +1170,11 @@ function App(){
     const pol=polOverride||policies;
     const vert=vertOverride||vertical;
     const payment={...paymentData,id:paymentData.id||genId(),timestamp:paymentData.timestamp||new Date().toISOString(),vertical:vert};
+    // Check per-agent suspension
+    if(suspendedAgents.includes(payment.intentSource)){
+      addAudit("orchestrator",`BLOCKED — Agent ${payment.intentSource} is suspended. KYA suspension active.`,"fail");
+      return;
+    }
     setIntentSource(payment.intentSource);
     setIsProcessing(true);
     setAgentStatuses({});setAgentResults({});setSelectedRail(null);setTxState("Created");
@@ -1173,7 +1244,7 @@ function App(){
       updateKYA(payment,false);
     }
     setIsProcessing(false);
-  },[vertical,policies,killActive,isProcessing,addAudit,sanctionsState,updateKYA]);
+  },[vertical,policies,killActive,isProcessing,addAudit,sanctionsState,updateKYA,suspendedAgents]);
 
   const stopDemo=useCallback(()=>{demoAbortRef.current=true;setDemoScene(null);setKillActive(false);},[]);
 
@@ -1237,7 +1308,7 @@ function App(){
           {leftTab==="payment"&&<PaymentForm vertical={vertical} policies={policies} onSubmit={processPayment} isProcessing={isProcessing} killActive={killActive}/>}
           {leftTab==="policy"&&<PolicyPanel vertical={vertical} policies={policies} onChange={setPolicies}/>}
           {leftTab==="analytics"&&<div style={{flex:1,overflowY:"auto"}}><Analytics payments={payments} vertical={vertical}/></div>}
-          {leftTab==="kya"&&<div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}><KYAPanel kyaRegistry={kyaRegistry} onClear={()=>{setKyaRegistry({});saveKYA({});}}/></div>}
+          {leftTab==="kya"&&<div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}><KYAPanel kyaRegistry={kyaRegistry} onClear={()=>{setKyaRegistry({});saveKYA({});}} suspendedAgents={suspendedAgents} onToggleSuspend={id=>setSuspendedAgents(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id])}/></div>}
         </div>
       </div>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0}}>
