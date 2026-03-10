@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,25 +8,51 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
+/* ── Palette ──────────────────────────────────────────────── */
 :root{
-  --bg:#06080e;--surface:#0c1019;--surface2:#111827;--card:#0f1720;
-  --border:#1e2d45;--border2:#2a4070;
-  --text:#e2eaf5;--muted:#6b8299;--dim:#334155;
-  --mono:'DM Mono',monospace;--sans:'Syne',sans-serif;
+  --bg:#070D18;--surface:#0B1220;--surface2:#0F1829;--card:#0D1624;
+  --border:#1A2840;--border2:#243858;
+  --text:#E8EDF5;--muted:#5E7494;--dim:#253548;
+  --gold:#C49A2C;--gold2:#A8821E;--gold-glow:rgba(196,154,44,.15);
+  --serif:'Cormorant Garamond',serif;--mono:'DM Mono',monospace;
+  --red:#E05252;--green:#3DB88A;--blue:#4A9EFF;--amber:#D4914A;--violet:#8B72D4;--rose:#C46E8A;
 }
+html[data-theme="light"]{
+  --bg:#F4EFE3;--surface:#EDE7D8;--surface2:#E6DFCE;--card:#E9E3D2;
+  --border:#C9BFA6;--border2:#B8AE94;
+  --text:#18202E;--muted:#7A6E5A;--dim:#B8AE94;
+  --gold:#9A7818;--gold2:#7D6010;--gold-glow:rgba(154,120,24,.12);
+}
+
+/* ── Reset ──────────────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:4px;height:4px}
+
+/* ── Grain overlay ──────────────────────────────────────────── */
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
+  opacity:.028;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+html[data-theme="light"] body::after{opacity:.04}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-select option{background:var(--surface);color:var(--text)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(0,212,255,.1)}50%{box-shadow:0 0 40px rgba(0,212,255,.3)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes goldGlow{0%,100%{box-shadow:0 0 18px var(--gold-glow)}50%{box-shadow:0 0 36px var(--gold-glow),0 0 60px rgba(196,154,44,.06)}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes borderPulse{0%,100%{border-color:rgba(196,154,44,.3)}50%{border-color:rgba(196,154,44,.7)}}
+
+select option{background:var(--surface);color:var(--text)}
 </style>
 </head>
 <body>
@@ -34,64 +60,76 @@ select option{background:var(--surface);color:var(--text)}
 <script type="text/babel">
 const {useState,useEffect,useRef,useCallback,useMemo}=React;
 
-// ─── Constants ──────────────────────────────────────────────────────────────────
-
+// ─── Agents ───────────────────────────────────────────────────────────────────────
 const AGENTS=[
-  {id:"orchestrator",name:"Orchestrator",icon:"◉",color:"#06d6a0",role:"Intent classification"},
-  {id:"governance",  name:"Governance",  icon:"⬡",color:"#a78bfa",role:"Policy & compliance"},
-  {id:"control",     name:"Control",     icon:"◆",color:"#fbbf24",role:"Risk & rail selection"},
-  {id:"execution",   name:"Execution",   icon:"▸",color:"#38bdf8",role:"Settlement"},
-  {id:"audit",       name:"Audit",       icon:"◫",color:"#f472b6",role:"Explainability"},
+  {id:"orchestrator",name:"Orchestrator",icon:"◉",color:"#C49A2C",role:"Intent classification"},
+  {id:"governance",  name:"Governance",  icon:"⬡",color:"#8B72D4",role:"Policy & compliance"},
+  {id:"control",     name:"Control",     icon:"◆",color:"#4A9EFF",role:"Risk & rail selection"},
+  {id:"execution",   name:"Execution",   icon:"▸",color:"#3DB88A",role:"Settlement"},
+  {id:"audit",       name:"Audit",       icon:"◫",color:"#C46E8A",role:"Explainability"},
 ];
 
+// ─── Verticals ────────────────────────────────────────────────────────────────────
 const VERTICALS={
-  treasury:{id:"treasury",label:"Enterprise Treasury",icon:"◈",accent:"#06d6a0",
-    desc:"Cross-border vendor payments, FX optimization, multi-bank routing",
+  treasury:{id:"treasury",label:"Enterprise Treasury",icon:"◈",accent:"#C49A2C",
+    desc:"Cross-border vendor payments, FX optimisation, multi-bank routing",
     defaults:{amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"erp"},
     policies:{maxSingle:500000,maxDaily:2000000,requireApproval:100000,dualApproval:250000,agentHitlThreshold:50000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
-  marketplace:{id:"marketplace",label:"Marketplace",icon:"◇",accent:"#38bdf8",
+  marketplace:{id:"marketplace",label:"Marketplace",icon:"◇",accent:"#4A9EFF",
     desc:"Seller payouts, split settlements, multi-currency disbursements",
     defaults:{amount:3200,currency:"USD",fromCountry:"US",toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",purpose:"Weekly payout",urgency:"standard",intentSource:"human"},
     policies:{maxSingle:50000,maxDaily:500000,requireApproval:25000,dualApproval:50000,agentHitlThreshold:10000,sanctions:["KP","IR","SY"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
-  ai_commerce:{id:"ai_commerce",label:"AI-to-AI Commerce",icon:"◎",accent:"#a78bfa",
+  ai_commerce:{id:"ai_commerce",label:"AI-to-AI Commerce",icon:"◎",accent:"#8B72D4",
     desc:"Autonomous agent transactions, programmatic spend governance",
     defaults:{amount:890,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",purpose:"Autonomous procurement — cloud compute",urgency:"urgent",intentSource:"openai"},
     policies:{maxSingle:10000,maxDaily:100000,requireApproval:5000,dualApproval:10000,agentHitlThreshold:2000,sanctions:["KP","IR","SY","CU"],kycRequired:false,verifiableIntent:true,hitl:true,killswitch:true}},
-  enterprise:{id:"enterprise",label:"Enterprise Direct",icon:"◐",accent:"#fbbf24",
+  insurance:{id:"insurance",label:"Insurance",icon:"◑",accent:"#D4914A",
+    desc:"Claims payments, compensation decisions, reinsurance settlements",
+    defaults:{amount:47500,currency:"USD",fromCountry:"US",toCountry:"UK",toCurrency:"GBP",beneficiary:"Claimant #CLM-2026-8841",purpose:"Motor claim settlement — total loss",urgency:"standard",intentSource:"erp"},
+    policies:{maxSingle:500000,maxDaily:5000000,requireApproval:25000,dualApproval:100000,agentHitlThreshold:10000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
+  enterprise:{id:"enterprise",label:"Enterprise Direct",icon:"◐",accent:"#3DB88A",
     desc:"Complex multi-entity payments, ERP integration, global compliance",
     defaults:{amount:1200000,currency:"USD",fromCountry:"US",toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",purpose:"Strategic supplier — Q1 manufacturing",urgency:"standard",intentSource:"erp"},
     policies:{maxSingle:5000000,maxDaily:20000000,requireApproval:500000,dualApproval:1000000,agentHitlThreshold:250000,sanctions:["KP","IR","SY","CU","RU","BY"],kycRequired:true,verifiableIntent:true,hitl:true,killswitch:true}},
-  consumer:{id:"consumer",label:"Consumer AI Finance",icon:"◍",accent:"#f472b6",
+  consumer:{id:"consumer",label:"Consumer AI Finance",icon:"◍",accent:"#C46E8A",
     desc:"Personal AI agents — yield-only spending, DeFi governance",
     defaults:{amount:85,currency:"USDC",fromCountry:"US",toCountry:"US",toCurrency:"USDC",beneficiary:"Self — Spending Card",purpose:"Yield-funded purchase",urgency:"standard",intentSource:"defi_agent"},
     policies:{maxSingle:500,maxDaily:2000,requireApproval:200,dualApproval:500,agentHitlThreshold:100,sanctions:["KP","IR","SY"],kycRequired:false,verifiableIntent:false,hitl:true,killswitch:true}},
 };
 
+// ─── Rails ────────────────────────────────────────────────────────────────────────
 const RAILS=[
-  {id:"visa",      name:"Visa Intelligent Commerce",speed:"Instant",cost:"2.4%",  provider:"Visa",      type:"card"},
-  {id:"mastercard",name:"Mastercard Agent Pay",     speed:"Instant",cost:"2.5%",  provider:"Mastercard",type:"card"},
-  {id:"swift",     name:"SWIFT gpi",               speed:"T+2",    cost:"$25–50",provider:"SWIFT",     type:"bank"},
-  {id:"sepa",      name:"SEPA Instant",            speed:"~8s",    cost:"€0.20", provider:"SEPA",      type:"bank"},
-  {id:"wooshpay",  name:"WooshPay API",            speed:"~4 min", cost:"1.2%",  provider:"WooshPay",  type:"api"},
-  {id:"stablecoin",name:"USDC / USDT",             speed:"~2 min", cost:"$0.01", provider:"Circle",    type:"crypto"},
-  {id:"rtp",       name:"RTP / FedNow",            speed:"~3s",    cost:"$0.50", provider:"TCH/Fed",   type:"instant"},
-  {id:"defi",      name:"DeFi / Aave",             speed:"~12s",   cost:"Gas",   provider:"Aave",      type:"defi"},
-  {id:"selfcustody",name:"Self-Custody Card",      speed:"Instant",cost:"$0.02", provider:"Wirex",     type:"self"},
+  {id:"visa",       name:"Visa Intelligent Commerce",speed:"Instant",cost:"2.4%",  provider:"Visa",      type:"card"},
+  {id:"mastercard", name:"Mastercard Agent Pay",     speed:"Instant",cost:"2.5%",  provider:"Mastercard",type:"card"},
+  {id:"swift",      name:"SWIFT gpi",               speed:"T+2",    cost:"$25–50",provider:"SWIFT",     type:"bank"},
+  {id:"sepa",       name:"SEPA Instant",            speed:"~8s",    cost:"€0.20", provider:"SEPA",      type:"bank"},
+  {id:"wooshpay",   name:"WooshPay API",            speed:"~4 min", cost:"1.2%",  provider:"WooshPay",  type:"api"},
+  {id:"stablecoin", name:"USDC / USDT",             speed:"~2 min", cost:"$0.01", provider:"Circle",    type:"crypto"},
+  {id:"rtp",        name:"RTP / FedNow",            speed:"~3s",    cost:"$0.50", provider:"TCH/Fed",   type:"instant"},
+  {id:"defi",       name:"DeFi / Aave",             speed:"~12s",   cost:"Gas",   provider:"Aave",      type:"defi"},
+  {id:"selfcustody",name:"Self-Custody Card",       speed:"Instant",cost:"$0.02", provider:"Wirex",     type:"self"},
 ];
 
 const INTENT_SOURCES=[
-  {id:"google_ucp",  name:"Google UCP",   color:"#4285f4"},
-  {id:"openai",      name:"OpenAI Agent", color:"#10b981"},
-  {id:"erp",         name:"ERP System",   color:"#fbbf24"},
-  {id:"human",       name:"Human User",   color:"#f472b6"},
-  {id:"custom_agent",name:"Custom AI",    color:"#a78bfa"},
-  {id:"defi_agent",  name:"DeFi Agent",   color:"#38bdf8"},
+  {id:"google_ucp",  name:"Google UCP",   color:"#4A9EFF"},
+  {id:"openai",      name:"OpenAI Agent", color:"#3DB88A"},
+  {id:"erp",         name:"ERP System",   color:"#C49A2C"},
+  {id:"human",       name:"Human User",   color:"#C46E8A"},
+  {id:"custom_agent",name:"Custom AI",    color:"#8B72D4"},
+  {id:"defi_agent",  name:"DeFi Agent",   color:"#4A9EFF"},
+];
+
+const TRUST_SIGNALS=[
+  {id:"mvi",   label:"Mastercard Verifiable Intent",short:"MVI",color:"#E05252",desc:"Cryptographic proof of payment authorisation. Proves intent — not permission."},
+  {id:"erc8004",label:"ERC-8004",                  short:"8004",color:"#8B72D4",desc:"On-chain agent reputation standard. Scores the agent — Revvyn enforces the policy."},
+  {id:"visa_tap",label:"Visa TAP",                 short:"TAP", color:"#4A9EFF",desc:"Token Attestation Protocol. Validates payment token — not whether the spend is permitted."},
 ];
 
 const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH","KP","IR","SY","CU","RU","BY","VE","MM"];
 const CURRENCIES=["USD","EUR","GBP","JPY","SGD","BRL","NGN","AED","INR","AUD","CHF","CAD","USDC","USDT"];
+const TX_STATES=["Created","Validated","Risk Assessed","Approved","Routed","Settled","Reconciled"];
+const OFAC_COUNTRIES=new Set(["KP","IR","SY","CU","RU","BY","VE","MM","SD","YE","LY","ZW","SS","CF","ML","NI"]);
 
-// Live FX rates — updated from frankfurter.app (ECB rates), fallback to last known
 let FX={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
 let FX_STATE={status:"loading",source:"Loading...",timestamp:null};
 
@@ -100,630 +138,395 @@ async function loadFXRates(onUpdate){
     const res=await fetch("https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,SGD,BRL,NGN,AED,INR,AUD,CHF,CAD",{signal:AbortSignal.timeout(8000)});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const data=await res.json();
-    if(!data.rates) throw new Error("No rates in response");
-    // frankfurter returns USD→X rates
+    if(!data.rates) throw new Error("No rates");
     Object.assign(FX,data.rates,{USD:1,USDC:1,USDT:1});
-    FX_STATE={
-      status:"live",
-      source:`ECB via frankfurter.app · ${data.date}`,
-      timestamp:data.date,
-      rates:data.rates,
-    };
+    FX_STATE={status:"live",source:`ECB via frankfurter.app · ${data.date}`,timestamp:data.date,rates:data.rates};
     onUpdate({...FX_STATE});
   }catch(e){
-    console.warn("[Revvyn] FX fetch failed:",e.message);
     FX_STATE={status:"cached",source:"ECB reference rates (network unavailable)",timestamp:null};
     onUpdate({...FX_STATE});
   }
 }
-const TX_STATES=["Created","Validated","Risk Assessed","Approved","Routed","Settled","Reconciled"];
 
-// Full OFAC-aligned sanctioned country codes
-const OFAC_COUNTRIES=new Set(["KP","IR","SY","CU","RU","BY","VE","MM","SD","YE","LY","ZW","SS","CF","ML","NI"]);
+// ─── Sanctions ────────────────────────────────────────────────────────────────────
+const SDN_OFAC=new Set(["BANK MELLI IRAN","BANK MELLAT","BANK SADERAT IRAN","BANK SEPAH","MAHAN AIR","IRAN AIR","ISLAMIC REVOLUTIONARY GUARD CORPS","IRGC","WAGNER GROUP","PMC WAGNER","KOREAN RYONBONG GENERAL CORPORATION","SYRIAN ARAB AIRLINES","ROSOBORONEXPORT","ROSTEC","ALMAZ-ANTEY","HEZBOLLAH","HAMAS","AL-QAEDA","ISIS","ISIL","ISLAMIC STATE","PDVSA","GAZPROMBANK","VTB BANK","SBERBANK"]);
+const SDN_EU=new Set(["IGOR SECHIN","SERGEI CHEMEZOV","NIKOLAI PATRUSHEV","ROSSIYA BANK","SOGAZ","BANK ROSSIYA","DONETSK PEOPLES REPUBLIC","LUHANSK PEOPLES REPUBLIC","ORGANIZATION OF AEROSPACE INDUSTRIES"]);
+const SDN_UN=new Set(["TALIBAN","ISLAMIC EMIRATE OF AFGHANISTAN","HAQQANI NETWORK","AL-SHABAAB","HOUTHI","ANSAR ALLAH","ANSARALLAH","IRGC-N"]);
+for(const s of [...SDN_OFAC,...SDN_EU,...SDN_UN]){const w=s.split(/\s+/);if(w.length>=2){SDN_OFAC.add(w.slice(0,2).join(" "));}}
+const SDN_ALL=new Set([...SDN_OFAC,...SDN_EU,...SDN_UN]);
 
-const COMPS=[
-  {name:"Circuit & Chisel",raised:"$19.2M",lead:"Primary VC, ParaFi, Stripe",  what:"ATXP protocol for agent-to-agent payments",   gap:"No policy engine, no compliance, no multi-rail governance"},
-  {name:"Natural",         raised:"$9.8M", lead:"Abstract, Human Capital",      what:"B2B agentic payment automation",               gap:"No governance, no risk scoring, no audit trail"},
-  {name:"Nekuda",          raised:"$5M",   lead:"Madrona, Visa, Amex Ventures", what:"Agent checkout & credential management",       gap:"No policy enforcement, no rail optimization, no DeFi"},
-  {name:"t54 Labs",        raised:"$5M",   lead:"Anagram, Franklin Templeton",  what:"Know Your Agent identity & compliance",        gap:"No payment governance, no rail selection, no policy engine"},
-  {name:"Based",           raised:"$11.5M",lead:"Pantera, Coinbase Ventures",   what:"Consumer agentic commerce on Hyperliquid",    gap:"No enterprise governance, no multi-rail, no compliance"},
-];
+let SANCTIONS_STATE={status:"loading",ofacNames:SDN_OFAC,euNames:SDN_EU,unNames:SDN_UN,ofacCount:SDN_OFAC.size,euCount:SDN_EU.size,unCount:SDN_UN.size,lastUpdated:null,dataDate:null,feeds:{ofac:"cached",eu:"cached",un:"cached"}};
 
-// Demo SDN presets — real entities on the OFAC list
-const SDN_DEMO_ENTITIES=[
-  "Bank Melli Iran",
-  "Bank Mellat",
-  "Mahan Air",
-  "Islamic Revolutionary Guard Corps",
-  "Wagner Group",
-  "Korean Ryonbong General Corporation",
-  "Syrian Arab Airlines",
-  "Rosoboronexport",
-];
-
-function genId(){return "PAY-"+Math.random().toString(36).substr(2,8).toUpperCase()}
-function genTx(){return "RVN-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase()}
-function fmtAmt(n){return "$"+Number(n).toLocaleString()}
-function now(){return new Date().toTimeString().slice(0,8)}
-
-// ─── Live Sanctions Engine ──────────────────────────────────────────────────────
-
-// ─── Sanctions Fallback — real entities from OFAC SDN, EU Consolidated & UN SC lists ──
-
-const SDN_FALLBACK_OFAC=new Set([
-  "BANK MELLI IRAN","BANK MELLAT","BANK SADERAT IRAN","BANK SEPAH","BANK TEJARAT","BANK REFAH KARGARAN",
-  "MAHAN AIR","IRAN AIR","CASPIAN AIR","POUYA AIR","MERAJ AIR",
-  "ISLAMIC REVOLUTIONARY GUARD CORPS","IRGC","IRGC-QF","QUDS FORCE","BASIJ",
-  "WAGNER GROUP","PMC WAGNER","CONCORD MANAGEMENT AND CONSULTING",
-  "KOREAN RYONBONG GENERAL CORPORATION","KOREA MINING DEVELOPMENT TRADING CORPORATION","NAMCHONGANG TRADING","GREEN PINE ASSOCIATED CORPORATION",
-  "SYRIAN ARAB AIRLINES","CHAM WINGS AIRLINES","SYRIAN AIR",
-  "ROSOBORONEXPORT","ROSTEC","ALMAZ-ANTEY","UNITED AIRCRAFT CORPORATION","TACTICAL MISSILES CORPORATION",
-  "HEZBOLLAH","HAMAS","PALESTINIAN ISLAMIC JIHAD","AL-AQSA MARTYRS BRIGADE",
-  "AL-QAEDA","AL QAEDA","ISIS","ISIL","ISLAMIC STATE","JABHAT AL-NUSRA","HAYAT TAHRIR AL-SHAM",
-  "BANCO CENTRAL DE VENEZUELA","PDVSA","PETROLEOS DE VENEZUELA","BANDES",
-  "MYANMAR ECONOMIC CORPORATION","MYANMAR GEMS ENTERPRISE","MEC","MEHL",
-  "TRANSNEFT","GAZPROMBANK","VTB BANK","SBERBANK","NOVATEK","LUKOIL",
-]);
-
-const SDN_FALLBACK_EU=new Set([
-  // EU-specific designations
-  "IGOR SECHIN","SERGEI CHEMEZOV","NIKOLAI PATRUSHEV","ALEXANDER BORTNIKOV",
-  "YEVGENY PRIGOZHIN","DMITRY UTKIN","ANDREI TROSHEV",
-  "ROSSIYA BANK","SOGAZ","BANK ROSSIYA","INVESTCAPITALBANK",
-  "CRIMEA SEAPORT","KERCH FERRY","FEODOSIA ENTERPRISE",
-  "DONETSK PEOPLES REPUBLIC","LUHANSK PEOPLES REPUBLIC",
-  "ENTERPRISE FOR NUCLEAR TECHNOLOGIES","ORGANIZATION OF AEROSPACE INDUSTRIES",
-  "TOSAN ERTEBAT COMPANY","ELECTRONIC COMPONENTS INDUSTRIES",
-  "AL-NUSRAH FRONT","ANSAR AL-DINE","MOVEMENT FOR ONENESS AND JIHAD",
-  "ISLAMIC JIHAD UNION","EAST TURKESTAN ISLAMIC MOVEMENT",
-  "JUND AL-SHAM","ASBAT AL-ANSAR","OSBAT AL-ANSAR",
-]);
-
-const SDN_FALLBACK_UN=new Set([
-  // UN Security Council 1267/1988/1718/2231 Committee designations
-  "TALIBAN","ISLAMIC EMIRATE OF AFGHANISTAN","QUETTA SHURA",
-  "HAQQANI NETWORK","SIRAJUDDIN HAQQANI",
-  "AL-SHABAAB","HARAKAT AL-SHABAAB AL-MUJAHIDEEN",
-  "ANSARUL ISLAM","JAMAAT NUSRAT AL-ISLAM",
-  "KOREA RYONHA MACHINERY JOINT VENTURE CORPORATION",
-  "KOREA KUMRYONG TRADING CORPORATION","PAEKSAN TRADING CORPORATION",
-  "GENERAL BUREAU OF ATOMIC ENERGY","SECOND NATURAL SCIENCE ACADEMY",
-  "COMMITTEE FOR SPACE TECHNOLOGY","RECONNAISSANCE GENERAL BUREAU",
-  "HOUTHI","ANSAR ALLAH","ANSARALLAH","ABDULMALIK AL-HOUTHI",
-  "ISLAMIC REVOLUTIONARY GUARD CORPS NAVY","IRGC-N",
-]);
-
-// Combined fallback across all three lists
-const SDN_FALLBACK=new Set([...SDN_FALLBACK_OFAC,...SDN_FALLBACK_EU,...SDN_FALLBACK_UN]);
-
-// Add two-word prefix keys for partial matching
-for(const name of [...SDN_FALLBACK]){
-  const words=name.split(/\s+/);
-  if(words.length>=2) SDN_FALLBACK.add(words.slice(0,2).join(" "));
+function normName(n){return n.toUpperCase().trim().replace(/[.,\-']/g,"").replace(/\s+/g," ");}
+function checkSDN(name,set){
+  const norm=normName(name);
+  if(set.has(norm)) return {match:true,matched:norm};
+  for(const s of set){if(norm.includes(s)||s.includes(norm)){if(norm.length>4&&s.length>4)return{match:true,matched:s};}}
+  return{match:false,matched:null};
 }
 
-// Normalize name for matching
-function normalizeName(name){
-  return name.toUpperCase().trim()
-    .replace(/[.,\-']/g,"")
-    .replace(/\s+/g," ");
+// ─── Core decision logic ──────────────────────────────────────────────────────────
+function genId(){return "PAY-"+Math.random().toString(36).substr(2,8).toUpperCase();}
+function genTx(){return "RVN-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase();}
+function fmtAmt(n){return "$"+Number(n).toLocaleString();}
+function now(){return new Date().toTimeString().slice(0,8);}
+
+function selectRail(payment,vertical,policies){
+  const {amount,fromCountry,toCountry,currency,toCurrency,urgency}=payment;
+  const isCross=fromCountry!==toCountry;
+  const isCrossCcy=currency!==toCurrency;
+  const isCrypto=["USDC","USDT"].includes(currency)||["USDC","USDT"].includes(toCurrency);
+  const isEU=["DE","FR","NL","BE","ES","IT","AT","PT"].includes(toCountry);
+  const isUrgent=urgency==="urgent"||urgency==="critical";
+  const isHV=amount>100000;
+  const isDefi=vertical==="consumer"||payment.intentSource==="defi_agent";
+
+  if(isDefi) return RAILS.find(r=>r.id==="defi")||RAILS[5];
+  if(isCrypto) return RAILS.find(r=>r.id==="stablecoin")||RAILS[5];
+  if(!isCross&&isUrgent) return RAILS.find(r=>r.id==="rtp")||RAILS[6];
+  if(isEU&&!isHV) return RAILS.find(r=>r.id==="sepa")||RAILS[3];
+  if(isHV&&isCross) return RAILS.find(r=>r.id==="swift")||RAILS[2];
+  if(payment.intentSource==="openai"||payment.intentSource==="google_ucp"||payment.intentSource==="custom_agent") return RAILS.find(r=>r.id==="stablecoin")||RAILS[5];
+  return RAILS.find(r=>r.id==="visa")||RAILS[0];
 }
 
-// Check if a name matches any SDN entry (fuzzy — catches common variants)
-function checkSDNMatch(name,sdnNames){
-  const norm=normalizeName(name);
-  // Exact match
-  if(sdnNames.has(norm)) return {match:true,matched:norm};
-  // Check if any SDN name is contained in the input or vice versa
-  for(const sdn of sdnNames){
-    if(norm.includes(sdn)||sdn.includes(norm)){
-      if(norm.length>4&&sdn.length>4) return {match:true,matched:sdn};
-    }
-  }
-  return {match:false,matched:null};
+function altRails(selected,amount){
+  return RAILS.filter(r=>r.id!==selected.id).slice(0,2).map(r=>({...r,reason:`Alternative: ${r.speed} settlement, ${r.cost} cost`}));
 }
 
-// Global sanctions state — updated by loadSanctionsData()
-let SANCTIONS_STATE={
-  status:"loading",
-  ofacNames:SDN_FALLBACK_OFAC,euNames:SDN_FALLBACK_EU,unNames:SDN_FALLBACK_UN,
-  ofacCount:SDN_FALLBACK_OFAC.size,euCount:SDN_FALLBACK_EU.size,unCount:SDN_FALLBACK_UN.size,
-  lastUpdated:null,dataDate:null,
-  feeds:{ofac:"loading",eu:"loading",un:"loading"},
-};
-
-function parseOfacCSV(text){
-  const names=new Set();let count=0;
-  for(const line of text.split("\n")){
-    if(!line.trim()) continue;
-    const m=line.match(/^"?(\d+)"?,\s*"([^"]+)"/);
-    if(m&&m[2]){
-      const name=m[2].trim().toUpperCase();
-      if(name&&name!=="-0-"&&name.length>3){
-        names.add(name);
-        const words=name.split(/\s+/);
-        if(words.length>=2) names.add(words.slice(0,2).join(" "));
-        count++;
-      }
-    }
-  }
-  return {names,count};
-}
-
-function parseEuCSV(text){
-  const names=new Set();let count=0;
-  for(const line of text.split("\n")){
-    if(!line.trim()||line.startsWith("Entity")) continue;
-    const cols=line.split(";");
-    // EU CSV has name in various columns — grab first few non-empty strings
-    for(let i=0;i<Math.min(cols.length,6);i++){
-      const name=cols[i].replace(/^"|"$/g,"").trim().toUpperCase();
-      if(name&&name.length>3&&!/^\d+$/.test(name)){
-        names.add(name);
-        const words=name.split(/\s+/);
-        if(words.length>=2) names.add(words.slice(0,2).join(" "));
-        count++;
-        break;
-      }
-    }
-  }
-  return {names,count};
-}
-
-function parseUnXML(text){
-  const names=new Set();let count=0;
-  const matches=text.matchAll(/<FIRST_NAME>([^<]+)<\/FIRST_NAME>|<SECOND_NAME>([^<]+)<\/SECOND_NAME>|<THIRD_NAME>([^<]+)<\/THIRD_NAME>|<NAME_ORIGINAL_SCRIPT>([^<]+)<\/NAME_ORIGINAL_SCRIPT>/g);
-  for(const m of matches){
-    const name=(m[1]||m[2]||m[3]||m[4]||"").trim().toUpperCase();
-    if(name&&name.length>2){names.add(name);count++;}
-  }
-  // Also grab entity names
-  const entityMatches=text.matchAll(/<FIRST_NAME>([^<]{4,})<\/FIRST_NAME>/g);
-  for(const m of entityMatches){
-    const name=m[1].trim().toUpperCase();
-    names.add(name);
-    const words=name.split(/\s+/);
-    if(words.length>=2) names.add(words.slice(0,2).join(" "));
-  }
-  return {names,count};
-}
-
-// CORS proxies — tried in order until one works
-const PROXIES=[
-  "https://api.allorigins.win/raw?url=",
-  "https://corsproxy.io/?",
-  "https://api.codetabs.com/v1/proxy?quest=",
-];
-
-async function fetchViaProxy(url,timeout=18000){
-  for(const proxy of PROXIES){
-    try{
-      const res=await fetch(proxy+encodeURIComponent(url),{signal:AbortSignal.timeout(timeout)});
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text=await res.text();
-      if(text.length<200) throw new Error("Response too short");
-      return text;
-    }catch(e){
-      console.warn(`[Revvyn] Proxy ${proxy} failed for ${url.slice(0,40)}:`,e.message);
-    }
-  }
-  throw new Error(`All proxies failed for ${url}`);
-}
-
-async function loadSanctionsData(onUpdate){
-  const date=new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-  let ofacNames=SDN_FALLBACK_OFAC,euNames=SDN_FALLBACK_EU,unNames=SDN_FALLBACK_UN;
-  let ofacCount=SDN_FALLBACK_OFAC.size,euCount=SDN_FALLBACK_EU.size,unCount=SDN_FALLBACK_UN.size;
-  let ofacStatus="cached",euStatus="cached",unStatus="cached";
-
-  // EU has multiple known URL variants
-  const EU_URLS=[
-    "https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList/content",
-    "https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content",
-  ];
-
-  const [ofacResult,euResult,unResult]=await Promise.allSettled([
-    // OFAC SDN
-    (async()=>{
-      const text=await fetchViaProxy("https://www.treasury.gov/ofac/downloads/sdn.csv");
-      const {names,count}=parseOfacCSV(text);
-      if(count<100) throw new Error("Too few OFAC entries: "+count);
-      return {names,count};
-    })(),
-    // EU Consolidated — try multiple URLs
-    (async()=>{
-      let lastErr;
-      for(const url of EU_URLS){
-        try{
-          const text=await fetchViaProxy(url);
-          const {names,count}=parseEuCSV(text);
-          if(count>5) return {names,count};
-        }catch(e){lastErr=e;}
-      }
-      throw lastErr||new Error("EU fetch failed");
-    })(),
-    // UN Security Council
-    (async()=>{
-      const text=await fetchViaProxy("https://scsanctions.un.org/feed/");
-      const {names,count}=parseUnXML(text);
-      if(count<5) throw new Error("Too few UN entries: "+count);
-      return {names,count};
-    })(),
-  ]);
-
-  if(ofacResult.status==="fulfilled"){
-    ofacNames=ofacResult.value.names;ofacCount=ofacResult.value.count;ofacStatus="live";
-  }else{console.warn("[Revvyn] OFAC live fetch failed — using fallback:",ofacResult.reason?.message);}
-
-  if(euResult.status==="fulfilled"){
-    euNames=euResult.value.names;euCount=euResult.value.count;euStatus="live";
-  }else{console.warn("[Revvyn] EU live fetch failed — using fallback:",euResult.reason?.message);}
-
-  if(unResult.status==="fulfilled"){
-    unNames=unResult.value.names;unCount=unResult.value.count;unStatus="live";
-  }else{console.warn("[Revvyn] UN live fetch failed — using fallback:",unResult.reason?.message);}
-
-  const anyLive=ofacStatus==="live"||euStatus==="live"||unStatus==="live";
-  SANCTIONS_STATE={
-    status:anyLive?"live":"cached",
-    ofacNames,euNames,unNames,
-    ofacCount,euCount,unCount,
-    lastUpdated:new Date().toLocaleTimeString("en-US",{hour12:false}),
-    dataDate:date,
-    feeds:{ofac:ofacStatus,eu:euStatus,un:unStatus},
-  };
-  onUpdate({...SANCTIONS_STATE});
-}
-
-// ─── Simulation Engine ──────────────────────────────────────────────────────────
-
-function pickRail(payment,vert){
-  const {toCountry,toCurrency,amount,urgency}=payment;
-  if(vert==="consumer") return {id:"selfcustody",name:"Self-Custody Card",provider:"Wirex/Gnosis Pay",reason:"Yield-funded self-custody wallet — principal protection preserved"};
-  if(toCurrency==="USDC"||toCurrency==="USDT") return {id:"stablecoin",name:"USDC / USDT",provider:"Circle",reason:"Stablecoin settlement — near-zero cost, sub-minute finality"};
-  if(["DE","FR","NL","CH"].includes(toCountry)) return {id:"sepa",name:"SEPA Instant",provider:"SEPA",reason:"EUR-zone destination — SEPA Instant at €0.20 flat, ~8s settlement"};
-  if(urgency==="critical"&&amount<50000) return {id:"rtp",name:"RTP / FedNow",provider:"TCH/Fed",reason:"Critical urgency, moderate amount — RTP delivers ~3s at $0.50"};
-  if(amount>100000) return {id:"swift",name:"SWIFT gpi",provider:"SWIFT",reason:"High-value cross-border — SWIFT gpi with end-to-end tracking"};
-  if(["IN","SG","NG"].includes(toCountry)) return {id:"wooshpay",name:"WooshPay API",provider:"WooshPay",reason:"Emerging market corridor — WooshPay local rails at 1.2%"};
-  if(amount<5000) return {id:"visa",name:"Visa Intelligent Commerce",provider:"Visa",reason:"Sub-$5K on supported corridor — Visa TAP-enabled instant settlement"};
-  return {id:"swift",name:"SWIFT gpi",provider:"SWIFT",reason:"Default high-value cross-border via SWIFT gpi"};
-}
-
-function altRails(primary,amount){
-  const alts=[];
-  if(primary.id!=="visa") alts.push({id:"visa",name:"Visa Intelligent Commerce",reason:"Card-rail fallback with Visa TAP agent authentication"});
-  if(primary.id!=="stablecoin") alts.push({id:"stablecoin",name:"USDC / USDT",reason:"Stablecoin alt — near-zero cost settlement"});
-  if(primary.id!=="swift"&&amount>10000) alts.push({id:"swift",name:"SWIFT gpi",reason:"Traditional correspondent banking with gpi tracking"});
-  return alts.slice(0,2);
-}
-
-function simulate(agentId,payment,vert,policies,sanctionsState){
-  const v=VERTICALS[vert];
-  const sdn=sanctionsState||SANCTIONS_STATE;
-
-  // Country-level sanction: policy list + OFAC country list
-  const isCountrySanctioned=policies.sanctions.includes(payment.toCountry)||OFAC_COUNTRIES.has(payment.toCountry);
-
-  // Entity screening — check beneficiary against all three live lists
-  const sdnCheckOfac=checkSDNMatch(payment.beneficiary,sdn.ofacNames);
-  const sdnCheckEu=checkSDNMatch(payment.beneficiary,sdn.euNames.size>0?sdn.euNames:SDN_FALLBACK_EU);
-  const sdnCheckUn=checkSDNMatch(payment.beneficiary,sdn.unNames.size>0?sdn.unNames:SDN_FALLBACK_UN);
-  const sdnCheck=sdnCheckOfac.match?{...sdnCheckOfac,list:"OFAC SDN"}:sdnCheckEu.match?{...sdnCheckEu,list:"EU Consolidated"}:sdnCheckUn.match?{...sdnCheckUn,list:"UN Security Council"}:{match:false,matched:null,list:null};
-  const isSanctioned=isCountrySanctioned||sdnCheck.match;
-
-  const AI_SOURCES=new Set(["google_ucp","openai","custom_agent","defi_agent","erp"]);
-  const isAgentInitiated=AI_SOURCES.has(payment.intentSource);
-  const agentThreshold=policies.agentHitlThreshold||0;
-  const overMax=payment.amount>policies.maxSingle;
-  const needsDual=payment.amount>=policies.dualApproval&&!overMax;
-  const needsAgentHitl=isAgentInitiated&&agentThreshold>0&&payment.amount>=agentThreshold&&!overMax&&!needsDual;
+function computeResult(agentId,payment,vertical,policies,sdn){
+  const v=VERTICALS[vertical]||VERTICALS.treasury;
   const isCross=payment.fromCountry!==payment.toCountry;
   const isCrossCcy=payment.currency!==payment.toCurrency;
-  const isHV=payment.amount>100000;
-  const riskBase=isSanctioned?95:isCross?(isHV?42:28):(isHV?22:15);
-  const riskScore=Math.max(5,Math.min(95,riskBase+Math.floor(Math.random()*10)-5));
-  const rail=pickRail(payment,vert);
-  const fxRate=FX[payment.toCurrency]||1; // uses live rate if loaded
+  const fxRate=FX[payment.toCurrency]||1;
   const converted=isCrossCcy?Math.round(payment.amount*fxRate*100)/100:null;
-  const feeRate=payment.amount>500000?0.0008:payment.amount>100000?0.0015:payment.amount>10000?0.003:0.024;
-  const totalFee=Math.max(0.50,Math.round(payment.amount*feeRate*100)/100);
+  const isHV=payment.amount>100000;
+  const totalEntities=(sdn.ofacCount||0)+(sdn.euCount||0)+(sdn.unCount||0)||SDN_ALL.size;
+  const liveLabel=sdn.status==="live"?"Live OFAC SDN":"Cached SDN";
+  const sourceLabel=sdn.status==="live"?`Live OFAC SDN+EU+UN (${totalEntities.toLocaleString()} entities)`:`Reference SDN lists (${SDN_ALL.size} entities)`;
+  const rail=selectRail(payment,vertical,policies);
   const txId=genTx();
-  const liveFeedsCount=[sdn.feeds?.ofac,sdn.feeds?.eu,sdn.feeds?.un].filter(f=>f==="live").length;
-  const liveLabel=liveFeedsCount>0?`Live (${liveFeedsCount}/3 feeds)`:"Cached SDN";
-  const totalEntities=(sdn.ofacCount||0)+(sdn.euCount||0)+(sdn.unCount||0)||sdn.count||SDN_FALLBACK.size;
-  const sourceLabel=liveFeedsCount>0
-    ?`OFAC${sdn.feeds?.ofac==="live"?" ✓":""}·EU${sdn.feeds?.eu==="live"?" ✓":""}·UN${sdn.feeds?.un==="live"?" ✓":""} · ${totalEntities.toLocaleString()} entities · ${sdn.dataDate||""}`
-    :`Reference SDN list · ${SDN_FALLBACK.size} entities`;
-  const fxLabel=FX_STATE.status==="live"?`ECB Live · ${FX_STATE.timestamp}`:"ECB Reference rates";
+  const totalFee=rail.cost.startsWith("$")?parseFloat(rail.cost.slice(1)):rail.cost.endsWith("%")?Math.round(payment.amount*parseFloat(rail.cost)/100*100)/100:0.50;
+  const isAgentInitiated=payment.intentSource!=="human";
+  const agentThreshold=policies.agentHitlThreshold||5000;
+  const needsAgentHitl=isAgentInitiated&&payment.amount>agentThreshold&&policies.hitl;
+  const needsDual=payment.amount>=policies.dualApproval&&policies.hitl;
+  const riskScore=Math.min(99,Math.round(
+    (isCross?15:0)+(isHV?20:0)+(OFAC_COUNTRIES.has(payment.toCountry)?50:0)+
+    (payment.urgency==="urgent"?10:payment.urgency==="critical"?20:0)+
+    (isAgentInitiated?8:0)+Math.random()*10
+  ));
 
-  if(agentId==="orchestrator") return {
-    classification:isHV?"high-value":isCross?"cross-border":payment.urgency==="urgent"?"urgent":"standard",
-    intentSource:payment.intentSource,
-    priority:isHV?"high":payment.urgency==="urgent"?"high":"medium",
-    estimatedComplexity:isHV?"high":isCross?"medium":"low",
-    routingHints:isCross?["cross_border_corridor","fx_hedge_eligible","multi_rail_candidate"]:["domestic_fast_rail","low_cost_priority"],
-    summary:`Classified as ${isHV?"high-value ":""}${isCross?"cross-border ":""}${v.label.toLowerCase()} payment. ${needsDual?"Dual approval threshold met. ":""}Routing to Governance.`
+  if(agentId==="orchestrator") return{
+    intentClassification:`${isHV?"High-value ":""}${isCross?"cross-border ":""}${vertical} payment`,
+    priority:isHV?"high":"medium",agentInitiated:isAgentInitiated,
+    intentSource:payment.intentSource,amount:payment.amount,currency:payment.currency,
+    trustSignals:{mvi:policies.verifiableIntent&&isAgentInitiated,erc8004:isAgentInitiated,visa_tap:["visa","mastercard"].includes(rail.id)},
+    summary:`Classified ${isHV?"high-value ":""}${isCross?"cross-border ":""}payment intent. Priority: ${isHV?"high":"medium"}. Source: ${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||payment.intentSource}.`
   };
 
   if(agentId==="governance"){
-    // SDN entity hit
-    if(sdnCheck.match&&!isCountrySanctioned) return {
-      approved:false,
-      checks:[
-        {name:"Entity Sanctions Screen",status:"fail",detail:`Beneficiary "${payment.beneficiary}" matched "${sdnCheck.matched}" on the ${sdnCheck.list} list. Transaction blocked.`,live:true},
-        {name:"Country Screening",status:"pass",detail:`Destination country ${payment.toCountry} is not subject to country-level sanctions.`},
-        {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — sanctions entity block takes precedence"},
-      ],
-      complianceScore:8,escalationRequired:false,escalationReason:null,
-      regulatoryFrameworks:["OFAC","EU-2580/2001","UN-1267","FATF-R6","PSD2"],
-      sdnHit:{entity:sdnCheck.matched,list:sdnCheck.list,source:sourceLabel},
-      summary:`REJECTED — Beneficiary matched "${sdnCheck.matched}" on ${sdnCheck.list}. Transaction blocked. Source: ${sourceLabel}.`
+    // Check sanctions
+    const sdnEntity=checkSDN(payment.beneficiary,SDN_ALL);
+    const euEntity=checkSDN(payment.beneficiary,SDN_EU);
+    const sanctionedCountry=OFAC_COUNTRIES.has(payment.toCountry);
+    if(sdnEntity.match||sanctionedCountry){
+      const hitList=sdnEntity.match?"OFAC SDN":sanctionedCountry?"Country Sanctions":"SDN";
+      return{
+        approved:false,sdnHit:sdnEntity.match?{entity:sdnEntity.matched,list:hitList,source:sourceLabel}:null,
+        complianceScore:0,escalationRequired:false,escalationReason:null,
+        checks:[
+          {name:"Entity Sanctions Screen",status:"fail",detail:`"${payment.beneficiary}" MATCHED on ${liveLabel} · ${hitList}. Transaction blocked.`,live:sdn.status==="live"},
+          ...(sanctionedCountry?[{name:"Country Screening",status:"fail",detail:`${payment.toCountry} subject to comprehensive OFAC country sanctions. Corridor blocked.`,live:true}]:[]),
+        ],
+        regulatoryFrameworks:["OFAC","PSD2","FATF"],
+        summary:`BLOCKED — ${sdnEntity.match?`SDN entity match: "${sdnEntity.matched}"`:""} ${sanctionedCountry?`Sanctioned country: ${payment.toCountry}`:""}`
+      };
+    }
+    if(payment.amount>policies.maxSingle) return{
+      approved:false,sdnHit:null,complianceScore:35,escalationRequired:false,escalationReason:null,
+      checks:[{name:"Amount Validation",status:"fail",detail:`${fmtAmt(payment.amount)} exceeds single payment limit of ${fmtAmt(policies.maxSingle)}.`}],
+      regulatoryFrameworks:["SOC2","PCI-DSS"],
+      summary:`REJECTED — Amount ${fmtAmt(payment.amount)} exceeds limit ${fmtAmt(policies.maxSingle)}.`
     };
-    if(isCountrySanctioned) return {
-      approved:false,
-      checks:[
-        {name:"Country Screening",status:"fail",detail:`Destination ${payment.toCountry} is subject to comprehensive sanctions. Transaction blocked.`,live:true},
-        {name:"Entity Sanctions Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" not matched on ${liveLabel} (${totalEntities.toLocaleString()} entities across OFAC, EU, UN).`,live:sdn.status==="live"},
-        {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"Beneficiary Verification",status:"warning",detail:"Suspended — country sanctions block takes precedence"},
-      ],
-      complianceScore:12,escalationRequired:false,escalationReason:null,
-      regulatoryFrameworks:["OFAC","EU-Sanctions","UN-Charter-Art41","FATF-R6","PSD2"],
-      summary:`REJECTED — ${payment.toCountry} is a sanctioned jurisdiction. Transaction blocked at governance layer.`
-    };
-    if(overMax) return {
-      approved:false,
-      checks:[
-        {name:"Amount Validation",status:"fail",detail:`${payment.currency} ${fmtAmt(payment.amount)} exceeds max single limit of ${fmtAmt(policies.maxSingle)}`},
-        {name:"Entity Sanctions Screen",status:"pass",detail:`Beneficiary "${payment.beneficiary}" cleared against ${liveLabel} (${totalEntities.toLocaleString()} entities · OFAC, EU, UN).`,live:sdn.status==="live"},
-        {name:"Country Screening",status:"pass",detail:`${payment.toCountry} cleared against OFAC, EU, and UN country sanctions lists.`},
-        {name:"Daily Volume Check",status:"warning",detail:`Would consume ${Math.round(payment.amount/policies.maxDaily*100)}% of daily limit`},
-      ],
-      complianceScore:35,escalationRequired:false,escalationReason:null,
-      regulatoryFrameworks:["SOC2","PCI-DSS","ISO20022"],
-      summary:"REJECTED — Amount exceeds maximum single payment policy threshold."
+    const trustSignals={
+      mvi:{active:policies.verifiableIntent&&isAgentInitiated,label:"Mastercard Verifiable Intent",desc:"Cryptographic proof of authorisation. Proves the intent — Revvyn decides the policy."},
+      erc8004:{active:isAgentInitiated,label:"ERC-8004",desc:"Agent reputation score consumed as input. Revvyn enforces the decision."},
+      visa_tap:{active:["visa","mastercard"].includes(rail.id),label:"Visa TAP",desc:"Token attestation validated. Credential confirmed — governance layer still applies."},
     };
     const checks=[
-      {name:"Entity Sanctions Screen",status:"pass",detail:`"${payment.beneficiary}" screened against ${liveLabel} · ${totalEntities.toLocaleString()} entities (OFAC${sdn.feeds?.ofac==="live"?" ✓":""}, EU${sdn.feeds?.eu==="live"?" ✓":""}, UN${sdn.feeds?.un==="live"?" ✓":""}). No matches found.`,live:sdn.status==="live"},
-      {name:"Country Screening",status:"pass",detail:`${payment.toCountry} cleared. Not subject to OFAC, EU, or UN comprehensive country sanctions.`,live:true},
-      {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within limit of ${fmtAmt(policies.maxSingle)} (${Math.round(payment.amount/policies.maxSingle*100)}% utilisation)`},
-      {name:"Beneficiary Verification",status:"pass",detail:`"${payment.beneficiary}" verified against KYC registry. No adverse media or PEP flags.`},
-      {name:"Daily Volume Check",status:payment.amount>policies.maxDaily*0.5?"warning":"pass",detail:`Daily volume at ${Math.round(payment.amount/policies.maxDaily*100)}% of ${fmtAmt(policies.maxDaily)} limit${payment.amount>policies.maxDaily*0.5?". Approaching threshold.":"."}`},
+      {name:"Entity Sanctions Screen",status:"pass",detail:`"${payment.beneficiary}" screened against ${liveLabel} · ${totalEntities.toLocaleString()} entities (OFAC, EU, UN). No matches.`,live:sdn.status==="live"},
+      {name:"Country Screening",status:"pass",detail:`${payment.toCountry} cleared. No comprehensive country sanctions apply.`,live:true},
+      {name:"Amount Validation",status:"pass",detail:`${fmtAmt(payment.amount)} within limit of ${fmtAmt(policies.maxSingle)} (${Math.round(payment.amount/policies.maxSingle*100)}% utilisation).`},
+      {name:"Beneficiary Verification",status:"pass",detail:`"${payment.beneficiary}" verified. No adverse media, PEP flags, or derogatory records.`},
+      {name:"Daily Volume Check",status:payment.amount>policies.maxDaily*0.5?"warning":"pass",detail:`Daily volume at ${Math.round(payment.amount/policies.maxDaily*100)}% of ${fmtAmt(policies.maxDaily)} limit.`},
     ];
-    if(isCross) checks.push({name:"Corridor Compliance",status:"pass",detail:`${payment.fromCountry} → ${payment.toCountry} cleared. No capital control restrictions. AML/CFT requirements met.`});
-    if(policies.kycRequired) checks.push({name:"KYC/AML Verification",status:"pass",detail:`Enhanced due diligence complete. Identity verified via ${vert==="consumer"?"DeFi wallet attestation":"corporate registry"}. Risk: standard.`});
-    if(vert==="consumer") checks.push({name:"Principal Protection",status:"pass",detail:`$${payment.amount} funded from accrued DeFi yield ($${Math.round(payment.amount*1.8)} available). Principal untouched.`});
-    if(policies.verifiableIntent&&payment.intentSource!=="human") checks.push({name:"Verifiable Intent",status:"pass",detail:`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} signal validated. Intent matches authorised scope.`});
-    if(isAgentInitiated) checks.push({name:"Agent Intent Classification",status:needsAgentHitl?"warning":"pass",detail:needsAgentHitl?`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} initiated — amount $${payment.amount.toLocaleString()} exceeds agent HITL threshold of $${agentThreshold.toLocaleString()}. Human review required.`:`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} initiated — amount $${payment.amount.toLocaleString()} within autonomous execution threshold of $${agentThreshold.toLocaleString()}. No human review required.`});
+    if(isCross) checks.push({name:"Corridor Compliance",status:"pass",detail:`${payment.fromCountry} → ${payment.toCountry} cleared. AML/CFT requirements met.`});
+    if(policies.kycRequired) checks.push({name:"KYC / AML Verification",status:"pass",detail:`Enhanced due diligence complete. Risk: standard.`});
+    if(vertical==="insurance") checks.push({name:"Claims Authorisation",status:"pass",detail:`Claim #${payment.beneficiary.split("#")[1]||"N/A"} validated against policy schedule. Coverage confirmed. Compensation within authorised band.`});
+    if(policies.verifiableIntent&&payment.intentSource!=="human") checks.push({name:"Verifiable Intent",status:"pass",detail:`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||"Agent"} intent signal validated. Scope confirmed.`,live:true});
+    if(isAgentInitiated) checks.push({name:"Agent Intent Classification",status:needsAgentHitl?"warning":"pass",detail:needsAgentHitl?`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name} initiated — ${fmtAmt(payment.amount)} exceeds agent HITL threshold of ${fmtAmt(agentThreshold)}. Human review required.`:`${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name} — ${fmtAmt(payment.amount)} within autonomous execution limit of ${fmtAmt(agentThreshold)}.`});
     const escalationRequired=(needsDual||needsAgentHitl)&&policies.hitl;
-    const escalationReason=needsDual
-      ?`${payment.currency} ${fmtAmt(payment.amount)} meets dual approval threshold (${fmtAmt(policies.dualApproval)}). Human authorisation required.`
-      :needsAgentHitl
-      ?`Agent-initiated payment (${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||payment.intentSource}) of ${fmtAmt(payment.amount)} exceeds agent autonomous limit of ${fmtAmt(agentThreshold)}. Policy requires human sign-off on all AI-initiated payments above this threshold.`
-      :null;
-    return {
-      approved:true,checks,
-      complianceScore:isCross?87:94,
-      escalationRequired,escalationReason,
-      regulatoryFrameworks:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]),
-      summary:`APPROVED — All ${checks.length} compliance checks passed.${escalationRequired?" Escalation triggered: "+(needsDual?"dual approval":"agent HITL policy."):""} Compliance score: ${isCross?87:94}%. SDN source: ${sourceLabel}.`
-    };
+    const escalationReason=needsDual?`${fmtAmt(payment.amount)} meets dual approval threshold (${fmtAmt(policies.dualApproval)}). Human authorisation required.`:needsAgentHitl?`Agent-initiated (${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name}) payment of ${fmtAmt(payment.amount)} exceeds agent autonomous limit of ${fmtAmt(agentThreshold)}. Policy requires human sign-off.`:null;
+    return{approved:true,checks,trustSignals,complianceScore:isCross?87:94,escalationRequired,escalationReason,regulatoryFrameworks:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]).concat(vertical==="insurance"?["Solvency II","IAIS"]:vertical==="consumer"?["DeFi-Governance"]:[]),summary:`APPROVED — All ${checks.length} compliance checks passed.${escalationRequired?" Escalation triggered.":""} Score: ${isCross?87:94}%.`};
   }
 
-  if(agentId==="control") return {
-    riskScore,
-    riskLevel:riskScore<30?"low":riskScore<60?"medium":riskScore<80?"high":"critical",
+  if(agentId==="control") return{
+    riskScore,riskLevel:riskScore<30?"low":riskScore<60?"medium":riskScore<80?"high":"critical",
     fraudIndicators:[
-      {indicator:"Velocity Check",severity:"low",detail:`Transaction frequency within normal patterns for ${v.label}. No anomalies detected.`},
-      {indicator:"Beneficiary Pattern",severity:isCross?"medium":"low",detail:isCross?`First transaction to ${payment.toCountry} corridor this period. Enhanced monitoring applied.`:"Recurring beneficiary with established payment history."},
-      {indicator:"Amount Deviation",severity:isHV?"medium":"low",detail:isHV?`Amount is ${Math.round(payment.amount/50000)}× above median for this vertical. Within policy, flagged for monitoring.`:`Amount within expected range for ${v.label} payments.`},
+      {indicator:"Velocity Check",severity:"low",detail:`Transaction frequency within normal parameters for ${v.label}.`},
+      {indicator:"Beneficiary Pattern",severity:isCross?"medium":"low",detail:isCross?`First transaction to ${payment.toCountry} corridor this period.`:"Recurring beneficiary."},
+      {indicator:"Amount Deviation",severity:isHV?"medium":"low",detail:isHV?`Amount is ${Math.round(payment.amount/50000)}× above median. Within policy, flagged.`:`Within expected range.`},
     ],
-    recommendedRail:rail,
+    recommendedRail:{...rail,reason:`Optimal for ${vertical} vertical — ${rail.speed} settlement at ${rail.cost}.`},
     alternativeRails:altRails(rail,payment.amount),
-    fxOptimization:{
-      applicable:isCrossCcy,
-      strategy:isCrossCcy?`Mid-market rate lock (${fxRate} ${payment.toCurrency}/${payment.currency}). Estimated savings vs retail: $${Math.round(payment.amount*0.003).toLocaleString()}.`:"N/A — same-currency settlement",
-      estimatedSavings:isCrossCcy?`$${Math.round(payment.amount*0.003).toLocaleString()}`:"$0",
-    },
-    summary:`Risk ${riskScore}/100 (${riskScore<30?"low":riskScore<60?"medium":"high"}). Rail: ${rail.name} via ${rail.provider}.${isCrossCcy?` FX saves ~$${Math.round(payment.amount*0.003).toLocaleString()}.`:""}`
+    fxOptimization:{applicable:isCrossCcy,strategy:isCrossCcy?`Mid-market rate lock (${fxRate} ${payment.toCurrency}/${payment.currency}). Est. savings vs retail: $${Math.round(payment.amount*0.003).toLocaleString()}.`:"N/A — same-currency settlement",estimatedSavings:isCrossCcy?`$${Math.round(payment.amount*0.003).toLocaleString()}`:"$0"},
+    summary:`Risk ${riskScore}/100 (${riskScore<30?"low":riskScore<60?"medium":"high"}). Rail: ${rail.name} via ${rail.provider}.`
   };
 
-  if(agentId==="execution") return {
+  if(agentId==="execution") return{
     status:"settled",selectedRail:rail.name,provider:rail.provider,transactionId:txId,
-    settlementTime:rail.id==="swift"?"T+2 (48h est.)":rail.id==="sepa"?"8.2 seconds":rail.id==="rtp"?"3.1 seconds":rail.id==="visa"||rail.id==="mastercard"?"Sub-second":rail.id==="stablecoin"?"2 min 14s":rail.id==="defi"?"12.4s (2 blocks)":rail.id==="selfcustody"?"Instant":"4 min 38s",
+    settlementTime:rail.id==="swift"?"T+2 (48h est.)":rail.id==="sepa"?"8.2 seconds":rail.id==="rtp"?"3.1 seconds":rail.id==="visa"||rail.id==="mastercard"?"Sub-second":rail.id==="stablecoin"?"2 min 14s":rail.id==="defi"?"12.4s (2 blocks)":"4 min 38s",
     fees:{total:totalFee,breakdown:{network:Math.round(totalFee*.45*100)/100,fx:isCrossCcy?Math.round(totalFee*.3*100)/100:0,processing:Math.round(totalFee*.2*100)/100,compliance:Math.round(totalFee*.05*100)/100}},
     fxRate:isCrossCcy?fxRate:null,convertedAmount:converted,
     ledgerEntries:[
-      {type:"debit", account:`Operating — ${payment.fromCountry}`,amount:payment.amount,   currency:payment.currency},
+      {type:"debit",account:`Operating — ${payment.fromCountry}`,amount:payment.amount,currency:payment.currency},
       {type:"credit",account:`Beneficiary — ${payment.beneficiary}`,amount:converted||payment.amount,currency:payment.toCurrency},
     ],
-    summary:`Settled ${payment.currency} ${fmtAmt(payment.amount)} via ${rail.name}.${converted?` Converted to ${payment.toCurrency} ${Number(converted).toLocaleString()} @ ${fxRate}. `:" "}Fees: $${totalFee}. Settlement: ${rail.id==="swift"?"T+2":"sub-minute"}.`
+    summary:`Settled ${payment.currency} ${fmtAmt(payment.amount)} via ${rail.name}.${converted?` Converted to ${payment.toCurrency} ${Number(converted).toLocaleString()} @ ${fxRate}.`:""} Fees: $${totalFee}.`
   };
 
-  if(agentId==="audit") return {
+  if(agentId==="audit") return{
     auditId:"AUD-"+Date.now().toString(36).toUpperCase(),
     decisionChain:[
-      {agent:"Orchestrator",decision:`Classified ${isHV?"high-value ":""}${isCross?"cross-border ":""}payment. Priority: ${isHV?"high":"medium"}`,reasonCode:"ORCH-CLF-001",confidence:97},
-      {agent:"Governance",  decision:`All compliance checks passed.${needsDual?" Dual approval obtained.":""} Score: ${isCross?87:94}%`,reasonCode:`GOV-APR-${needsDual?"DAP":"STD"}`,confidence:94},
-      {agent:"Control",     decision:`Risk ${riskScore}/100. Selected ${rail.name}.${isCrossCcy?" FX optimised.":""}`,reasonCode:`CTL-RSK-${riskScore<30?"LOW":"MED"}`,confidence:91},
-      {agent:"Execution",   decision:`Settled via ${rail.provider}. ${txId}. Fees: $${totalFee}`,reasonCode:"EXE-STL-OK",confidence:99},
-      {agent:"Audit",       decision:"Full regulatory trail. 7-year retention. All frameworks satisfied.",reasonCode:"AUD-CMP-FUL",confidence:96},
+      {agent:"Orchestrator",decision:`Classified ${isHV?"high-value ":""}${isCross?"cross-border ":""}intent`,reasonCode:"ORCH-CLF-001",confidence:97},
+      {agent:"Governance",decision:`All compliance checks passed. Score: ${isCross?87:94}%`,reasonCode:`GOV-APR-${needsDual?"DAP":"STD"}`,confidence:94},
+      {agent:"Control",decision:`Risk ${riskScore}/100. Selected ${rail.name}`,reasonCode:`CTL-RSK-${riskScore<30?"LOW":"MED"}`,confidence:91},
+      {agent:"Execution",decision:`Settled via ${rail.provider}. ${txId}. Fees: $${totalFee}`,reasonCode:"EXE-STL-OK",confidence:99},
+      {agent:"Audit",decision:"Full regulatory trail. 7-year retention. All frameworks satisfied.",reasonCode:"AUD-CMP-FUL",confidence:96},
     ],
-    complianceStatus:"compliant",
-    riskClassification:riskScore<30?"low":riskScore<60?"medium":"high",
-    regulatoryTags:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]).concat(vert==="consumer"?["DeFi-Governance"]:[]),
+    complianceStatus:"compliant",riskClassification:riskScore<30?"low":riskScore<60?"medium":"high",
+    regulatoryTags:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]).concat(vertical==="insurance"?["Solvency II","IAIS"]:[]).concat(vertical==="consumer"?["DeFi-Governance"]:[]),
     dataRetention:"7 years",sanctionsSource:sourceLabel,
     recommendations:[
       isCross?`Consider pre-funded FX positions for recurring ${payment.fromCountry}→${payment.toCountry} corridor`:"Domestic rail performing within SLA",
       isHV?"Implement batch processing for high-value payments to reduce overhead":"Current volume within optimal parameters",
       "Next review: Quarterly compliance audit per SOC2 Type II",
     ],
-    summary:`Audit complete. 5-agent decision chain recorded. ${["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].length+(isCross?2:0)} regulatory frameworks. SDN data: ${sourceLabel}.`
+    summary:`Audit complete. 5-agent decision chain recorded. All frameworks satisfied. SDN: ${sourceLabel}.`
   };
 }
 
-// ─── UI Helpers ─────────────────────────────────────────────────────────────────
+// ─── Presets ──────────────────────────────────────────────────────────────────────
+const PRESETS={
+  treasury:[
+    {label:"Standard",data:{amount:250000,toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",urgency:"standard",intentSource:"erp"}},
+    {label:"SDN Block",data:{amount:45000,toCountry:"AE",toCurrency:"USD",beneficiary:"Bank Melli Iran",urgency:"standard",intentSource:"erp"}},
+    {label:"Sanctioned Country",data:{amount:120000,toCountry:"IR",toCurrency:"USD",beneficiary:"Tehran Trade LLC",urgency:"standard",intentSource:"erp"}},
+    {label:"Agent HITL",data:{amount:80000,toCountry:"SG",toCurrency:"USD",beneficiary:"TechCo-API",urgency:"urgent",intentSource:"openai"}},
+  ],
+  marketplace:[
+    {label:"Seller Payout",data:{amount:3200,toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",urgency:"standard",intentSource:"human"}},
+    {label:"Over Limit",data:{amount:75000,toCountry:"NG",toCurrency:"NGN",beneficiary:"Seller #SKU-11023",urgency:"urgent",intentSource:"custom_agent"}},
+  ],
+  ai_commerce:[
+    {label:"Autonomous",data:{amount:890,toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",urgency:"urgent",intentSource:"openai"}},
+    {label:"HITL Trigger",data:{amount:3500,toCountry:"US",toCurrency:"USD",beneficiary:"Compute-Broker-9z",urgency:"urgent",intentSource:"google_ucp"}},
+    {label:"Google UCP",data:{amount:1200,toCountry:"US",toCurrency:"USD",beneficiary:"Cloud-Infra-API",urgency:"standard",intentSource:"google_ucp"}},
+  ],
+  insurance:[
+    {label:"Motor Claim",data:{amount:47500,toCountry:"UK",toCurrency:"GBP",beneficiary:"Claimant #CLM-2026-8841",urgency:"standard",intentSource:"erp"}},
+    {label:"Liability Settlement",data:{amount:185000,toCountry:"DE",toCurrency:"EUR",beneficiary:"Claimant #CLM-2026-4422",urgency:"standard",intentSource:"erp"}},
+    {label:"Agent Claim Decision",data:{amount:12500,toCountry:"US",toCurrency:"USD",beneficiary:"Claimant #CLM-2026-9910",urgency:"urgent",intentSource:"custom_agent"}},
+    {label:"Reinsurance",data:{amount:450000,toCountry:"CH",toCurrency:"CHF",beneficiary:"Swiss Re Ltd",urgency:"standard",intentSource:"erp"}},
+  ],
+  enterprise:[
+    {label:"Standard",data:{amount:1200000,toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",urgency:"standard",intentSource:"erp"}},
+    {label:"SDN Entity",data:{amount:500000,toCountry:"AE",toCurrency:"USD",beneficiary:"Rosoboronexport",urgency:"standard",intentSource:"erp"}},
+  ],
+  consumer:[
+    {label:"Yield Purchase",data:{amount:85,toCountry:"US",toCurrency:"USDC",beneficiary:"Self — Spending Card",urgency:"standard",intentSource:"defi_agent"}},
+    {label:"Over Limit",data:{amount:750,toCountry:"US",toCurrency:"USDC",beneficiary:"Online Store",urgency:"standard",intentSource:"defi_agent"}},
+  ],
+};
 
-const css=`
-.inp{width:100%;padding:9px 11px;border-radius:3px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;box-sizing:border-box}
-.inp:focus{border-color:var(--accent,#06d6a0)}
-.lbl{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden}
-.tag{padding:2px 7px;border-radius:2px;font-size:9px;font-family:var(--mono);letter-spacing:.06em;font-weight:500}
-.btn-kill{padding:7px 12px;border-radius:3px;border:1px solid rgba(255,69,96,.35);background:rgba(255,69,96,.07);color:#ff4560;font-family:var(--mono);font-size:9px;letter-spacing:.1em;cursor:pointer;transition:all .15s}
-.btn-kill:hover{background:rgba(255,69,96,.15)}
-.btn-kill.halted{border-color:rgba(255,184,77,.4);background:rgba(255,184,77,.08);color:#ffb84d}
-.live-dot{width:6px;height:6px;border-radius:50%;animation:pulse 2s infinite}
+// ─── CSS injection ────────────────────────────────────────────────────────────────
+const CSS=`
+.inp{width:100%;padding:8px 10px;border-radius:2px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;box-sizing:border-box}
+.inp:focus{border-color:var(--gold)}
+.lbl{display:block;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:var(--mono)}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:2px;overflow:hidden}
+.tag{padding:2px 6px;border-radius:2px;font-size:8px;font-family:var(--mono);letter-spacing:.08em;font-weight:500}
+.btn-kill{padding:6px 11px;border-radius:2px;border:1px solid rgba(224,82,82,.3);background:rgba(224,82,82,.06);color:#E05252;font-family:var(--mono);font-size:8px;letter-spacing:.12em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn-kill:hover{background:rgba(224,82,82,.12)}
+.btn-kill.halted{border-color:rgba(212,145,74,.4);background:rgba(212,145,74,.08);color:#D4914A;animation:borderPulse 1.5s infinite}
+.btn-access{padding:6px 13px;border-radius:2px;border:1px solid var(--gold);background:rgba(196,154,44,.08);color:var(--gold);font-family:var(--mono);font-size:8px;letter-spacing:.12em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn-access:hover{background:rgba(196,154,44,.15)}
+.live-dot{width:5px;height:5px;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:2px;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--gold);cursor:pointer}
+details summary{outline:none;user-select:none;list-style:none}
+.serif{font-family:var(--serif)}
 `;
 
 function StyleInjector(){
   useEffect(()=>{
-    const s=document.createElement("style");
-    s.textContent=css;
-    document.head.appendChild(s);
+    const s=document.createElement("style");s.textContent=CSS;document.head.appendChild(s);
     return()=>document.head.removeChild(s);
   },[]);
   return null;
 }
+
+// ─── KYA Registry ─────────────────────────────────────────────────────────────────
+function loadKYA(){
+  try{const d=localStorage.getItem("revvyn_kya");return d?JSON.parse(d):{};}catch{return{};}
+}
+function saveKYA(data){try{localStorage.setItem("revvyn_kya",JSON.stringify(data));}catch{}}
+
+function buildKYARecord(payment,existing){
+  const src=INTENT_SOURCES.find(s=>s.id===payment.intentSource)||{id:payment.intentSource,name:payment.intentSource,color:"#C49A2C"};
+  const prev=existing||{
+    agentId:"AGT-"+payment.intentSource.toUpperCase().slice(0,3)+"-"+Math.random().toString(36).substr(2,4).toUpperCase(),
+    origin:src.name,intentSource:payment.intentSource,
+    firstSeen:payment.timestamp,lastSeen:payment.timestamp,
+    txCount:0,totalVolume:0,blockedCount:0,
+    mandateScope:getMandateScope(payment.intentSource),
+    trustSignals:{mvi:payment.intentSource!=="human",erc8004:payment.intentSource!=="human",visa_tap:false},
+    behaviouralFlags:[],riskHistory:[],
+    agentProofScore:Math.floor(Math.random()*40)+50,
+  };
+  const riskScore=Math.min(99,Math.round((payment.amount>100000?20:0)+(prev.blockedCount>0?15:0)+Math.random()*10+30));
+  return{
+    ...prev,lastSeen:payment.timestamp,txCount:prev.txCount+1,
+    totalVolume:prev.totalVolume+payment.amount,
+    riskHistory:[...prev.riskHistory.slice(-9),riskScore],
+    agentProofScore:Math.min(99,prev.agentProofScore+(prev.blockedCount===0?1:-3)),
+  };
+}
+
+function getMandateScope(intentSource){
+  const scopes={
+    google_ucp:"Authorised for API procurement, cloud spend, data services. Max autonomous: $2,000.",
+    openai:"Authorised for compute, tooling, and API payments. Max autonomous: $5,000.",
+    erp:"Authorised for vendor payments, payroll, supplier settlement per approved schedule.",
+    human:"Full mandate. Human-directed payments subject to standard approval thresholds.",
+    custom_agent:"Limited mandate. Scope defined by deploying entity. Max autonomous: $500.",
+    defi_agent:"Yield-only spending. Principal protection enforced. DeFi corridors only.",
+  };
+  return scopes[intentSource]||"Mandate scope not defined.";
+}
+
+// ─── Components ───────────────────────────────────────────────────────────────────
 
 function Inp({label,children}){
   return <div><label className="lbl">{label}</label>{children}</div>;
 }
 
 function Badge({label,value,color}){
-  return <div style={{padding:"8px 12px",borderRadius:3,background:color+"14",border:`1px solid ${color}28`}}>
-    <div style={{fontSize:9,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:3}}>{label}</div>
-    <div style={{fontFamily:"var(--mono)",fontSize:16,fontWeight:700,color,lineHeight:1}}>{value}</div>
+  return <div style={{padding:"7px 10px",borderRadius:2,background:color+"12",border:`1px solid ${color}22`}}>
+    <div style={{fontSize:8,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:2}}>{label}</div>
+    <div style={{fontFamily:"var(--mono)",fontSize:15,fontWeight:500,color,lineHeight:1}}>{value}</div>
   </div>;
 }
-
-// ─── Sanctions Status Badge ──────────────────────────────────────────────────────
 
 function LiveDataStatus({sanctionsState,fxState}){
-  const sdn=sanctionsState;
-  const isLoading=sdn?.status==="loading";
-  const feeds=sdn?.feeds||{};
+  const sdn=sanctionsState||SANCTIONS_STATE;
+  const feeds=sdn.feeds||{};
   const liveSdn=[feeds.ofac,feeds.eu,feeds.un].filter(f=>f==="live").length;
-  const totalEntities=(sdn?.ofacCount||0)+(sdn?.euCount||0)+(sdn?.unCount||0)||sdn?.count||0;
+  const total=(sdn.ofacCount||0)+(sdn.euCount||0)+(sdn.unCount||0)||SDN_ALL.size;
   const fxLive=fxState?.status==="live";
-
-  if(isLoading) return <div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:3,background:"rgba(255,184,77,.08)",border:"1px solid rgba(255,184,77,.2)"}}>
-    <div style={{width:5,height:5,border:"1px solid #ffb84d",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>
-    <span style={{fontFamily:"var(--mono)",fontSize:8,color:"#ffb84d",letterSpacing:".08em"}}>LOADING LIVE DATA...</span>
+  const isLoading=sdn.status==="loading";
+  if(isLoading) return <div style={{display:"flex",alignItems:"center",gap:5,padding:"3px 9px",borderRadius:2,background:"rgba(212,145,74,.06)",border:"1px solid rgba(212,145,74,.2)"}}>
+    <div style={{width:5,height:5,border:"1px solid #D4914A",borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite",flexShrink:0}}/>
+    <span style={{fontFamily:"var(--mono)",fontSize:7,color:"#D4914A",letterSpacing:".1em"}}>LOADING LIVE DATA...</span>
   </div>;
-
-  return <div style={{display:"flex",alignItems:"center",gap:8}}>
-    {/* Sanctions feeds */}
-    <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:3,background:liveSdn>0?"rgba(0,229,160,.06)":"rgba(100,116,139,.06)",border:`1px solid ${liveSdn>0?"rgba(0,229,160,.2)":"rgba(100,116,139,.15)"}`}}>
-      <div style={{width:5,height:5,borderRadius:"50%",background:liveSdn>0?"#00e5a0":"#64748b",boxShadow:liveSdn>0?"0 0 6px #00e5a0":"none",animation:liveSdn>0?"pulse 2s infinite":"none",flexShrink:0}}/>
+  return <div style={{display:"flex",alignItems:"center",gap:6}}>
+    <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:2,background:liveSdn>0?"rgba(61,184,138,.05)":"rgba(100,116,139,.05)",border:`1px solid ${liveSdn>0?"rgba(61,184,138,.18)":"rgba(100,116,139,.12)"}`}}>
+      <div className="live-dot" style={{background:liveSdn>0?"#3DB88A":"#5E7494",boxShadow:liveSdn>0?"0 0 5px #3DB88A":"none"}}/>
       <div>
-        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:700,color:liveSdn>0?"#00e5a0":"#64748b",letterSpacing:".1em",whiteSpace:"nowrap"}}>
-          {liveSdn>0?`LIVE SANCTIONS · ${totalEntities.toLocaleString()} ENTITIES`:"CACHED SANCTIONS"}
-        </div>
-        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--dim)",whiteSpace:"nowrap"}}>
-          OFAC{feeds.ofac==="live"?" ✓":""}  EU{feeds.eu==="live"?" ✓":""}  UN{feeds.un==="live"?" ✓":""}
-        </div>
+        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:500,color:liveSdn>0?"#3DB88A":"#5E7494",letterSpacing:".1em",whiteSpace:"nowrap"}}>{liveSdn>0?`LIVE SDN · ${total.toLocaleString()} ENTITIES`:"CACHED SDN"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",whiteSpace:"nowrap"}}>OFAC{feeds.ofac==="live"?" ✓":""} EU{feeds.eu==="live"?" ✓":""} UN{feeds.un==="live"?" ✓":""}</div>
       </div>
     </div>
-    {/* FX rates */}
-    <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:3,background:fxLive?"rgba(56,189,248,.06)":"rgba(100,116,139,.06)",border:`1px solid ${fxLive?"rgba(56,189,248,.2)":"rgba(100,116,139,.15)"}`}}>
-      <div style={{width:5,height:5,borderRadius:"50%",background:fxLive?"#38bdf8":"#64748b",boxShadow:fxLive?"0 0 6px #38bdf8":"none",animation:fxLive?"pulse 2s infinite":"none",flexShrink:0}}/>
+    <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:2,background:fxLive?"rgba(74,158,255,.05)":"rgba(100,116,139,.05)",border:`1px solid ${fxLive?"rgba(74,158,255,.18)":"rgba(100,116,139,.12)"}`}}>
+      <div className="live-dot" style={{background:fxLive?"#4A9EFF":"#5E7494",boxShadow:fxLive?"0 0 5px #4A9EFF":"none"}}/>
       <div>
-        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:700,color:fxLive?"#38bdf8":"#64748b",letterSpacing:".1em",whiteSpace:"nowrap"}}>{fxLive?"LIVE FX RATES":"CACHED FX RATES"}</div>
-        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--dim)",whiteSpace:"nowrap"}}>{fxLive?`ECB · ${fxState.timestamp}`:"ECB Reference"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:500,color:fxLive?"#4A9EFF":"#5E7494",letterSpacing:".1em",whiteSpace:"nowrap"}}>{fxLive?"LIVE FX RATES":"CACHED FX"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",whiteSpace:"nowrap"}}>{fxLive?`ECB · ${fxState.timestamp}`:"ECB reference"}</div>
       </div>
     </div>
   </div>;
 }
 
-// ─── Header ──────────────────────────────────────────────────────────────────────
-
-function Header({vertical,killActive,onKillToggle,onHero,sanctionsState,fxState}){
+function Header({vertical,killActive,onKillToggle,onHero,sanctionsState,fxState,theme,onThemeToggle}){
   const v=VERTICALS[vertical];
-  return <div style={{height:52,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",borderBottom:"1px solid var(--border)",background:"rgba(6,8,14,.97)",flexShrink:0,gap:12}}>
+  return <div style={{height:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",borderBottom:"1px solid var(--border)",background:"var(--bg)",flexShrink:0,gap:12}}>
     <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={onHero}>
-      <div style={{width:30,height:30,borderRadius:6,background:`linear-gradient(135deg,${v.accent},${v.accent}88)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:800,fontSize:14,color:"#000",animation:"glow 3s ease-in-out infinite"}}>R</div>
+      <div style={{width:28,height:28,borderRadius:4,background:`linear-gradient(135deg,${v.accent},${v.accent}80)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--serif)",fontWeight:700,fontSize:15,color:"#000",animation:"goldGlow 4s ease-in-out infinite",flexShrink:0}}>R</div>
       <div>
-        <div style={{fontFamily:"var(--sans)",fontSize:14,fontWeight:800,letterSpacing:"-.3px"}}>Revvyn</div>
-        <div style={{fontSize:9,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase"}}>Governance Sandbox</div>
+        <div className="serif" style={{fontSize:17,fontWeight:700,letterSpacing:"-.2px",lineHeight:1,color:"var(--text)"}}>Revvyn</div>
+        <div style={{fontSize:7,color:"var(--muted)",letterSpacing:".14em",textTransform:"uppercase",marginTop:1}}>Governance Sandbox</div>
       </div>
     </div>
     <div style={{flex:1,display:"flex",justifyContent:"center"}}>
       <LiveDataStatus sanctionsState={sanctionsState} fxState={fxState}/>
     </div>
-    <button className={`btn-kill${killActive?" halted":""}`} onClick={onKillToggle}>
-      {killActive?"⬛ HALTED":"⬛ Kill Switch"}
-    </button>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <button onClick={onThemeToggle} style={{padding:"5px 8px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",fontFamily:"var(--mono)",fontSize:9,cursor:"pointer",letterSpacing:".06em"}}>{theme==="dark"?"☽ Light":"☀ Dark"}</button>
+      <button className={`btn-kill${killActive?" halted":""}`} onClick={onKillToggle}>{killActive?"■ HALTED":"■ Kill Switch"}</button>
+      <button className="btn-access" onClick={()=>window.open("mailto:daniel@revvyn.io?subject=Revvyn%20Access%20Request","_blank")}>Request Access</button>
+    </div>
   </div>;
 }
 
-// ─── Vertical Tabs ────────────────────────────────────────────────────────────────
-
 function VerticalTabs({active,onChange}){
-  return <div style={{display:"flex",gap:2,padding:"5px 8px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
+  return <div style={{display:"flex",gap:1,padding:"4px 8px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
     {Object.values(VERTICALS).map(v=><button key={v.id} onClick={()=>onChange(v.id)} style={{
-      padding:"5px 12px",borderRadius:3,border:`1px solid ${active===v.id?v.accent:"transparent"}`,
-      background:active===v.id?v.accent+"12":"transparent",cursor:"pointer",
-      fontFamily:"var(--mono)",fontSize:10,fontWeight:600,color:active===v.id?v.accent:"var(--muted)",
-      whiteSpace:"nowrap",letterSpacing:".05em",transition:"all .15s"
+      padding:"4px 11px",borderRadius:2,border:`1px solid ${active===v.id?v.accent+"60":"transparent"}`,
+      background:active===v.id?v.accent+"0D":"transparent",cursor:"pointer",
+      fontFamily:"var(--mono)",fontSize:9,fontWeight:active===v.id?600:400,color:active===v.id?v.accent:"var(--muted)",
+      whiteSpace:"nowrap",letterSpacing:".06em",transition:"all .15s"
     }}>{v.icon} {v.label}</button>)}
   </div>;
 }
 
-// ─── Agent Pipeline ───────────────────────────────────────────────────────────────
-
 function AgentPipeline({statuses,selected,onSelect}){
-  return <div style={{display:"flex",gap:4,padding:"8px 14px",background:"var(--surface)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto"}}>
+  return <div style={{display:"flex",gap:3,padding:"7px 12px",background:"var(--surface)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto"}}>
     {AGENTS.map((a,i)=>{
       const st=statuses[a.id]||"idle";
       const isSel=selected===a.id;
       return <React.Fragment key={a.id}>
         <div onClick={()=>onSelect(a.id)} style={{
-          flex:"1 0 0",minWidth:90,padding:"7px 9px",borderRadius:3,cursor:"pointer",
-          background:isSel?a.color+"10":st==="running"?a.color+"06":"var(--card)",
-          border:`1.5px solid ${isSel?a.color:st==="running"?a.color+"60":st==="complete"?a.color+"40":st==="failed"?"#ff456040":"var(--border)"}`,
+          flex:"1 0 0",minWidth:88,padding:"6px 8px",borderRadius:2,cursor:"pointer",
+          background:isSel?a.color+"0E":st==="running"?a.color+"06":"var(--card)",
+          border:`1px solid ${isSel?a.color:st==="running"?a.color+"50":st==="complete"?a.color+"35":st==="failed"?"rgba(224,82,82,.35)":"var(--border)"}`,
           position:"relative",overflow:"hidden",transition:"all .2s"
         }}>
-          {st==="running"&&<div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${a.color},transparent)`,animation:"shimmer 1.5s infinite"}}/>}
+          {st==="running"&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${a.color},transparent)`,animation:"shimmer 1.5s infinite"}}/>}
           <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
-            <span style={{fontSize:11,color:a.color}}>{a.icon}</span>
-            <span style={{fontFamily:"var(--sans)",fontSize:9,fontWeight:700,color:a.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
-            <div style={{marginLeft:"auto",width:5,height:5,borderRadius:"50%",flexShrink:0,
-              background:st==="complete"?a.color:st==="failed"?"#ff4560":st==="running"?a.color:"var(--border)",
-              boxShadow:st==="running"?`0 0 6px ${a.color}`:"none",
-              animation:st==="running"?"pulse 1s infinite":"none"
-            }}/>
+            <span style={{fontSize:10,color:a.color}}>{a.icon}</span>
+            <span style={{fontFamily:"var(--serif)",fontSize:10,fontWeight:700,color:a.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
+            <div style={{marginLeft:"auto",width:4,height:4,borderRadius:"50%",flexShrink:0,background:st==="complete"?a.color:st==="failed"?"#E05252":st==="running"?a.color:"var(--border)",boxShadow:st==="running"?`0 0 5px ${a.color}`:"none",animation:st==="running"?"pulse 1s infinite":"none"}}/>
           </div>
-          <div style={{fontSize:8,color:"var(--muted)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-            {st==="running"?"Processing...":st==="complete"?"Done ✓":st==="failed"?"Blocked ✗":a.role}
+          <div style={{fontSize:7,color:"var(--muted)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:".05em"}}>
+            {st==="running"?"Processing...":st==="complete"?"Complete ✓":st==="failed"?"Blocked ✗":a.role}
           </div>
         </div>
-        {i<AGENTS.length-1&&<div style={{display:"flex",alignItems:"center",color:st==="complete"?a.color:"var(--border)",fontSize:8,flexShrink:0}}>▸</div>}
+        {i<AGENTS.length-1&&<div style={{display:"flex",alignItems:"center",color:st==="complete"?a.color+"60":"var(--dim)",fontSize:7,flexShrink:0}}>▸</div>}
       </React.Fragment>;
     })}
   </div>;
 }
 
-// ─── Lifecycle Bar ────────────────────────────────────────────────────────────────
-
 function LifecycleBar({current}){
   const idx=TX_STATES.indexOf(current);
-  return <div style={{display:"flex",alignItems:"center",padding:"5px 14px",background:"var(--card)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto",gap:0}}>
+  return <div style={{display:"flex",alignItems:"center",padding:"4px 12px",background:"var(--card)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto",gap:0}}>
     {TX_STATES.map((s,i)=><React.Fragment key={s}>
-      <span style={{
-        padding:"2px 7px",borderRadius:2,fontSize:8,fontFamily:"var(--mono)",fontWeight:i===idx?600:400,
-        letterSpacing:".08em",whiteSpace:"nowrap",transition:"all .3s",
-        background:i===idx?"rgba(0,212,255,.12)":i<idx?"rgba(0,229,160,.06)":"transparent",
-        color:i===idx?"#00d4ff":i<idx?"#00e5a0":"var(--dim)",
-        border:i===idx?"1px solid rgba(0,212,255,.25)":"1px solid transparent",
-      }}>{s.toUpperCase()}</span>
-      {i<TX_STATES.length-1&&<span style={{color:i<idx?"#00e5a0":"var(--border)",fontSize:8,padding:"0 1px",transition:"color .3s"}}>→</span>}
+      <span style={{padding:"2px 6px",borderRadius:2,fontSize:7,fontFamily:"var(--mono)",fontWeight:i===idx?600:400,letterSpacing:".1em",whiteSpace:"nowrap",transition:"all .3s",background:i===idx?"rgba(196,154,44,.1)":i<idx?"rgba(61,184,138,.05)":"transparent",color:i===idx?"var(--gold)":i<idx?"#3DB88A":"var(--dim)",border:i===idx?"1px solid rgba(196,154,44,.22)":"1px solid transparent"}}>{s.toUpperCase()}</span>
+      {i<TX_STATES.length-1&&<span style={{color:i<idx?"rgba(61,184,138,.4)":"var(--dim)",fontSize:7,padding:"0 1px"}}>→</span>}
     </React.Fragment>)}
   </div>;
 }
-
-// ─── Metrics Bar ──────────────────────────────────────────────────────────────────
 
 function MetricsBar({payments}){
   const settled=payments.filter(p=>p.finalStatus==="settled").length;
@@ -731,222 +534,93 @@ function MetricsBar({payments}){
   const escalated=payments.filter(p=>p.wasEscalated).length;
   const sdnBlocked=payments.filter(p=>p.sdnBlocked).length;
   const items=[
-    {label:"Total",value:payments.length,color:"#00d4ff"},
-    {label:"Settled",value:settled,color:"#00e5a0"},
-    {label:"Blocked",value:rejected,color:"#ff4560"},
-    {label:"SDN Hits",value:sdnBlocked,color:"#a78bfa"},
-    {label:"Escalated",value:escalated,color:"#ffb84d"},
+    {label:"Total",value:payments.length,color:"var(--gold)"},
+    {label:"Settled",value:settled,color:"#3DB88A"},
+    {label:"Blocked",value:rejected,color:"#E05252"},
+    {label:"SDN Hits",value:sdnBlocked,color:"#8B72D4"},
+    {label:"Escalated",value:escalated,color:"#D4914A"},
   ];
   return <div style={{display:"flex",borderBottom:"1px solid var(--border)",background:"var(--card)",flexShrink:0}}>
-    {items.map(m=><div key={m.label} style={{flex:1,padding:"8px 12px",borderRight:"1px solid var(--border)"}}>
-      <div style={{fontFamily:"var(--sans)",fontSize:18,fontWeight:800,color:m.color,lineHeight:1}}>{m.value}</div>
-      <div style={{fontSize:8,color:"var(--muted)",marginTop:2,letterSpacing:".08em",textTransform:"uppercase"}}>{m.label}</div>
+    {items.map(m=><div key={m.label} style={{flex:1,padding:"7px 11px",borderRight:"1px solid var(--border)"}}>
+      <div className="serif" style={{fontSize:20,fontWeight:700,color:m.color,lineHeight:1}}>{m.value}</div>
+      <div style={{fontSize:7,color:"var(--muted)",marginTop:2,letterSpacing:".1em",textTransform:"uppercase"}}>{m.label}</div>
     </div>)}
   </div>;
 }
 
-// ─── Stack Diagram ────────────────────────────────────────────────────────────────
-
 function StackDiagram({selectedRail,intentSource,vertical}){
   const v=VERTICALS[vertical];
-  return <div style={{padding:"8px 14px 4px",flexShrink:0,display:"flex",flexDirection:"column",gap:3}}>
-    <div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)",letterSpacing:"1px",marginBottom:3}}>ARCHITECTURE STACK</div>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:48,fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)",textAlign:"right",flexShrink:0}}>INTENT</div>
+  return <div style={{padding:"7px 12px 3px",flexShrink:0,display:"flex",flexDirection:"column",gap:2}}>
+    <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--dim)",letterSpacing:"1.5px",marginBottom:2}}>ARCHITECTURE STACK</div>
+    <div style={{display:"flex",alignItems:"center",gap:5}}>
+      <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".08em"}}>INTENT</div>
       <div style={{flex:1,display:"flex",gap:2}}>
-        {INTENT_SOURCES.map(s=><div key={s.id} style={{flex:1,padding:"2px 2px",borderRadius:2,textAlign:"center",background:intentSource===s.id?s.color+"14":"var(--card)",border:`1px solid ${intentSource===s.id?s.color:"var(--border)"}`}}>
+        {INTENT_SOURCES.map(s=><div key={s.id} style={{flex:1,padding:"2px",borderRadius:2,textAlign:"center",background:intentSource===s.id?s.color+"12":"var(--card)",border:`1px solid ${intentSource===s.id?s.color:"var(--border)"}`}}>
           <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:intentSource===s.id?s.color:"var(--dim)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
         </div>)}
       </div>
     </div>
-    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:8,color:v.accent,paddingLeft:54}}>↓</div>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:48,fontFamily:"var(--mono)",fontSize:7,color:v.accent,textAlign:"right",fontWeight:700,flexShrink:0}}>REVVYN</div>
-      <div style={{flex:1,padding:"5px 8px",borderRadius:3,background:`linear-gradient(135deg,${v.accent}08,rgba(167,139,250,.04))`,border:`1.5px solid ${v.accent}28`,textAlign:"center"}}>
-        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:700,color:v.accent,letterSpacing:".5px"}}>GOVERNANCE · CONTROL · EXECUTION</div>
+    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:7,color:v.accent,paddingLeft:49}}>↓</div>
+    <div style={{display:"flex",alignItems:"center",gap:5}}>
+      <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:v.accent,textAlign:"right",fontWeight:700,flexShrink:0,letterSpacing:".06em"}}>REVVYN</div>
+      <div style={{flex:1,padding:"4px 8px",borderRadius:2,background:`linear-gradient(135deg,${v.accent}07,rgba(139,114,212,.04))`,border:`1px solid ${v.accent}22`,textAlign:"center"}}>
+        <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:700,color:v.accent,letterSpacing:".6px"}}>GOVERNANCE · CONTROL · EXECUTION · AUDIT</div>
       </div>
     </div>
-    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:8,color:"#38bdf8",paddingLeft:54}}>↓</div>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>
-      <div style={{width:48,fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)",textAlign:"right",flexShrink:0}}>RAILS</div>
-      <div style={{flex:1,display:"flex",gap:2,flexWrap:"wrap"}}>
-        {RAILS.map(r=><div key={r.id} style={{flex:"1 0 0",minWidth:36,padding:"2px 2px",borderRadius:2,textAlign:"center",background:selectedRail===r.id?"rgba(0,229,160,.1)":"var(--card)",border:`1px solid ${selectedRail===r.id?"#00e5a0":"var(--border)"}`}}>
-          <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:selectedRail===r.id?"#00e5a0":"#64748b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.provider}</div>
+    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:7,color:"#4A9EFF",paddingLeft:49}}>↓</div>
+    <div style={{display:"flex",alignItems:"center",gap:5}}>
+      <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".08em"}}>RAILS</div>
+      <div style={{flex:1,display:"flex",gap:1,flexWrap:"wrap"}}>
+        {RAILS.map(r=><div key={r.id} style={{flex:"1 0 0",minWidth:32,padding:"2px",borderRadius:2,textAlign:"center",background:selectedRail===r.id?"rgba(61,184,138,.09)":"var(--card)",border:`1px solid ${selectedRail===r.id?"#3DB88A":"var(--border)"}`}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:selectedRail===r.id?"#3DB88A":"var(--dim)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.provider}</div>
         </div>)}
       </div>
     </div>
   </div>;
 }
-
-// ─── Policy Panel ─────────────────────────────────────────────────────────────────
-
-function PolicyPanel({vertical,policies,onChange}){
-  const v=VERTICALS[vertical];
-  const sliders=[
-    {key:"maxSingle",    label:"Transaction Limit",   max:vertical==="consumer"?2000:5000000},
-    {key:"maxDaily",     label:"Daily Spend Limit",   max:vertical==="consumer"?10000:30000000},
-    {key:"requireApproval",label:"Approval Threshold",max:vertical==="consumer"?1000:2000000},
-    {key:"dualApproval", label:"Dual Approval",       max:vertical==="consumer"?2000:5000000},
-  ];
-  const toggles=[
-    {key:"sanctions",       label:"Sanctions Screening",    sub:"Live OFAC SDN + country lists"},
-    {key:"kycRequired",     label:"KYC / AML Verification", sub:"Counterparty identity check"},
-    {key:"hitl",            label:"Human-in-the-Loop",      sub:"Escalate for approval"},
-    {key:"verifiableIntent",label:"Verifiable Intent",      sub:"Mastercard / ERC-8004 / Visa TAP"},
-    {key:"killswitch",      label:"Kill Switch Active",     sub:"Instant halt capability"},
-  ];
-  const upd=(k,val)=>onChange({...policies,[k]:val});
-  const agentMax=vertical==="consumer"?1000:vertical==="ai_commerce"?10000:vertical==="marketplace"?50000:5000000;
-  return <div style={{flex:1,overflowY:"auto",padding:"14px 16px",display:"flex",flexDirection:"column",gap:14}}>
-    <div style={{fontSize:11,color:"var(--muted)"}}>Active governance rules for <span style={{color:v.accent,fontWeight:600}}>{v.label}</span></div>
-    {sliders.map(s=><div key={s.key}>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-        <label className="lbl" style={{margin:0}}>{s.label}</label>
-        <span style={{fontFamily:"var(--mono)",fontSize:11,color:v.accent,fontWeight:600}}>${Number(policies[s.key]).toLocaleString()}</span>
-      </div>
-      <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]} onChange={e=>upd(s.key,Number(e.target.value))}
-        style={{width:"100%",height:3,accentColor:v.accent,cursor:"pointer",background:"var(--border)",border:"none",padding:0,appearance:"none",WebkitAppearance:"none",borderRadius:2}}/>
-    </div>)}
-
-    {/* Agent vs Human HITL thresholds */}
-    <div style={{padding:"12px",borderRadius:3,background:"rgba(167,139,250,.06)",border:"1px solid rgba(167,139,250,.2)"}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:".1em",textTransform:"uppercase",marginBottom:8}}>◎ Intent-Based Escalation</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-        <div style={{padding:"8px 10px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
-          <div style={{fontSize:8,color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:3}}>Human Initiated</div>
-          <div style={{fontFamily:"var(--mono)",fontSize:13,fontWeight:700,color:"#f472b6"}}>${Number(policies.dualApproval).toLocaleString()}</div>
-          <div style={{fontSize:8,color:"var(--dim)",marginTop:2}}>HITL threshold</div>
-        </div>
-        <div style={{padding:"8px 10px",borderRadius:2,background:"var(--card)",border:"1px solid rgba(167,139,250,.3)"}}>
-          <div style={{fontSize:8,color:"#a78bfa",letterSpacing:".08em",textTransform:"uppercase",marginBottom:3}}>AI Agent Initiated</div>
-          <div style={{fontFamily:"var(--mono)",fontSize:13,fontWeight:700,color:"#a78bfa"}}>${Number(policies.agentHitlThreshold||0).toLocaleString()}</div>
-          <div style={{fontSize:8,color:"var(--dim)",marginTop:2}}>HITL threshold</div>
-        </div>
-      </div>
-      <div style={{marginBottom:6}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-          <label className="lbl" style={{margin:0,color:"#a78bfa"}}>Agent Autonomous Limit</label>
-          <span style={{fontFamily:"var(--mono)",fontSize:10,color:"#a78bfa",fontWeight:600}}>${Number(policies.agentHitlThreshold||0).toLocaleString()}</span>
-        </div>
-        <input type="range" min={0} max={agentMax} step={vertical==="consumer"?10:vertical==="ai_commerce"?500:25000} value={policies.agentHitlThreshold||0} onChange={e=>upd("agentHitlThreshold",Number(e.target.value))}
-          style={{width:"100%",height:3,accentColor:"#a78bfa",cursor:"pointer",background:"var(--border)",border:"none",padding:0,appearance:"none",WebkitAppearance:"none",borderRadius:2}}/>
-      </div>
-      <div style={{fontSize:10,color:"var(--dim)",lineHeight:1.5}}>
-        AI-initiated payments (Google UCP, OpenAI, ERP, DeFi) above this threshold pause for human approval — regardless of the human dual-approval limit.
-      </div>
-    </div>
-
-    <div style={{borderTop:"1px solid var(--border)",paddingTop:14,display:"flex",flexDirection:"column",gap:0}}>
-      {toggles.map(t=><div key={t.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,.03)"}}>
-        <div>
-          <div style={{fontSize:12,color:"var(--text)"}}>{t.label}</div>
-          <div style={{fontSize:9,color:"var(--muted)",marginTop:1}}>{t.sub}</div>
-        </div>
-        <div style={{position:"relative",width:34,height:18,flexShrink:0,cursor:"pointer"}} onClick={()=>upd(t.key,!policies[t.key])}>
-          <div style={{position:"absolute",inset:0,borderRadius:18,background:policies[t.key]?v.accent+"40":"var(--border)",transition:"background .2s"}}/>
-          <div style={{position:"absolute",width:12,height:12,borderRadius:"50%",top:3,left:policies[t.key]?19:3,background:policies[t.key]?v.accent:"var(--muted)",boxShadow:policies[t.key]?`0 0 6px ${v.accent}`:"none",transition:"all .2s"}}/>
-        </div>
-      </div>)}
-    </div>
-    <div style={{padding:"10px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)"}}>
-      <div className="lbl" style={{marginBottom:6}}>Sanctioned Countries</div>
-      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>{policies.sanctions.map(s=><span key={s} style={{padding:"2px 6px",borderRadius:2,fontSize:9,fontFamily:"var(--mono)",fontWeight:600,background:"rgba(255,69,96,.12)",color:"#ff4560"}}>{s}</span>)}</div>
-    </div>
-    {vertical==="consumer"&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(244,114,182,.06)",border:"1px solid rgba(244,114,182,.2)"}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#f472b6",marginBottom:4,letterSpacing:".08em",textTransform:"uppercase"}}>Yield Guardian</div>
-      <div style={{fontSize:11,color:"var(--muted)",lineHeight:1.5}}>Principal protection: ON. Only accrued DeFi yield may be spent.</div>
-    </div>}
-  </div>;
-}
-
-// ─── Payment Form ──────────────────────────────────────────────────────────────────
-
-const PRESETS={
-  treasury:[
-    {label:"Standard B2B",    data:{amount:250000,toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",urgency:"standard",intentSource:"erp"}},
-    {label:"Over Limit",      data:{amount:600000,toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",urgency:"standard",intentSource:"erp"}},
-    {label:"SDN Entity Hit",  data:{amount:45000, toCountry:"AE",toCurrency:"USD",beneficiary:"Bank Melli Iran",urgency:"urgent",intentSource:"erp"}},
-    {label:"Sanctioned Country",data:{amount:50000,toCountry:"IR",toCurrency:"USD",beneficiary:"Tehran Corp",urgency:"standard",intentSource:"erp"}},
-    {label:"High Value",      data:{amount:1800000,toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",urgency:"standard",intentSource:"erp"}},
-  ],
-  marketplace:[
-    {label:"Standard Payout", data:{amount:3200,toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",urgency:"standard",intentSource:"human"}},
-    {label:"SDN Entity Hit",  data:{amount:8000,toCountry:"AE",toCurrency:"USD",beneficiary:"Mahan Air",urgency:"urgent",intentSource:"human"}},
-    {label:"Over Limit",      data:{amount:55000,toCountry:"NG",toCurrency:"NGN",beneficiary:"Lagos Trader Co",urgency:"standard",intentSource:"human"}},
-  ],
-  ai_commerce:[
-    {label:"Agent Procurement",   data:{amount:890,toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",urgency:"urgent",intentSource:"openai"}},
-    {label:"Agent HITL Escalation",data:{amount:3500,toCountry:"SG",toCurrency:"USD",beneficiary:"Compute-Broker-9z",urgency:"urgent",intentSource:"google_ucp"}},
-    {label:"SDN Entity Hit",      data:{amount:2000,toCountry:"AE",toCurrency:"USD",beneficiary:"Wagner Group",urgency:"urgent",intentSource:"custom_agent"}},
-    {label:"Over Limit",          data:{amount:15000,toCountry:"US",toCurrency:"USD",beneficiary:"Cloud Compute LLC",urgency:"critical",intentSource:"google_ucp"}},
-  ],
-  enterprise:[
-    {label:"Standard",        data:{amount:1200000,toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",urgency:"standard",intentSource:"erp"}},
-    {label:"SDN Entity Hit",  data:{amount:500000,toCountry:"AE",toCurrency:"USD",beneficiary:"Rosoboronexport",urgency:"standard",intentSource:"erp"}},
-    {label:"Sanctioned Country",data:{amount:300000,toCountry:"RU",toCurrency:"USD",beneficiary:"Moscow Trade LLC",urgency:"standard",intentSource:"erp"}},
-  ],
-  consumer:[
-    {label:"Yield Purchase",  data:{amount:85,toCountry:"US",toCurrency:"USDC",beneficiary:"Self — Spending Card",urgency:"standard",intentSource:"defi_agent"}},
-    {label:"Over Limit",      data:{amount:750,toCountry:"US",toCurrency:"USDC",beneficiary:"Online Store",urgency:"standard",intentSource:"defi_agent"}},
-  ],
-};
 
 function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
   const v=VERTICALS[vertical];
   const [form,setForm]=useState({...v.defaults});
   useEffect(()=>setForm({...VERTICALS[vertical].defaults}),[vertical]);
   const u=(k,val)=>setForm(f=>({...f,[k]:val}));
-  const s={width:"100%",padding:"8px 10px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--mono)",fontSize:12,outline:"none",boxSizing:"border-box"};
+  const s={width:"100%",padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--mono)",fontSize:11,outline:"none",boxSizing:"border-box"};
   const isCross=form.fromCountry!==form.toCountry;
   const fx=FX[form.toCurrency]||1;
   const converted=form.currency!==form.toCurrency?Math.round(form.amount*fx*100)/100:null;
   const presets=PRESETS[vertical]||[];
-
-  return <div style={{display:"flex",flexDirection:"column",gap:10,padding:"12px 14px",overflowY:"auto",flex:1}}>
-    <div style={{padding:"9px 11px",borderRadius:3,background:v.accent+"08",border:`1px solid ${v.accent}20`}}>
-      <div style={{fontFamily:"var(--sans)",fontSize:12,fontWeight:700,color:v.accent,marginBottom:2}}>{v.icon} {v.label}</div>
-      <div style={{fontSize:10,color:"var(--muted)"}}>{v.desc}</div>
+  return <div style={{display:"flex",flexDirection:"column",gap:9,padding:"11px 14px",overflowY:"auto",flex:1}}>
+    <div style={{padding:"8px 10px",borderRadius:2,background:v.accent+"07",border:`1px solid ${v.accent}18`}}>
+      <div className="serif" style={{fontSize:13,fontWeight:700,color:v.accent,marginBottom:2}}>{v.icon} {v.label}</div>
+      <div style={{fontSize:9,color:"var(--muted)"}}>{v.desc}</div>
     </div>
-
     {presets.length>0&&<div>
-      <div className="lbl" style={{marginBottom:5}}>Quick Scenarios</div>
+      <div className="lbl" style={{marginBottom:4}}>Quick Scenarios</div>
       <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-        {presets.map((p,i)=><button key={i} onClick={()=>setForm(f=>({...f,...p.data}))} style={{
-          padding:"4px 9px",borderRadius:3,border:"1px solid var(--border)",background:"var(--card)",
-          fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",cursor:"pointer",
-          transition:"all .15s",whiteSpace:"nowrap"
-        }}
-        onMouseOver={e=>{e.currentTarget.style.borderColor=v.accent;e.currentTarget.style.color=v.accent}}
-        onMouseOut={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted)"}}
+        {presets.map((p,i)=><button key={i} onClick={()=>setForm(f=>({...f,...p.data}))} style={{padding:"3px 8px",borderRadius:2,border:"1px solid var(--border)",background:"var(--card)",fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)",cursor:"pointer",transition:"all .15s",whiteSpace:"nowrap"}}
+          onMouseOver={e=>{e.currentTarget.style.borderColor=v.accent;e.currentTarget.style.color=v.accent}}
+          onMouseOut={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted)"}}
         >{p.label}</button>)}
       </div>
     </div>}
-
     <Inp label="Intent Source">
-      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-        {INTENT_SOURCES.map(src=><button key={src.id} onClick={()=>u("intentSource",src.id)} style={{
-          flex:"1 0 0",minWidth:55,padding:"5px 3px",borderRadius:3,cursor:"pointer",
-          border:`1px solid ${form.intentSource===src.id?src.color:"var(--border)"}`,
-          background:form.intentSource===src.id?src.color+"12":"var(--card)",
-          fontFamily:"var(--mono)",fontSize:8,fontWeight:600,
-          color:form.intentSource===src.id?src.color:"var(--muted)"
-        }}>{src.name}</button>)}
+      <div style={{display:"flex",gap:2,flexWrap:"wrap"}}>
+        {INTENT_SOURCES.map(src=><button key={src.id} onClick={()=>u("intentSource",src.id)} style={{flex:"1 0 0",minWidth:54,padding:"4px 2px",borderRadius:2,cursor:"pointer",border:`1px solid ${form.intentSource===src.id?src.color:"var(--border)"}`,background:form.intentSource===src.id?src.color+"10":"var(--card)",fontFamily:"var(--mono)",fontSize:7,fontWeight:600,color:form.intentSource===src.id?src.color:"var(--muted)"}}>{src.name}</button>)}
       </div>
     </Inp>
-
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
       <Inp label="Amount"><input type="number" value={form.amount} onChange={e=>u("amount",Number(e.target.value))} style={s}/></Inp>
       <Inp label="Currency"><select value={form.currency} onChange={e=>u("currency",e.target.value)} style={s}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7}}>
       <Inp label="From"><select value={form.fromCountry} onChange={e=>u("fromCountry",e.target.value)} style={s}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
       <Inp label="To"><select value={form.toCountry} onChange={e=>u("toCountry",e.target.value)} style={s}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
       <Inp label="To Ccy"><select value={form.toCurrency} onChange={e=>u("toCurrency",e.target.value)} style={s}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
     </div>
-    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"6px 10px",borderRadius:3,background:"rgba(56,189,248,.06)",border:"1px solid rgba(56,189,248,.2)",fontSize:11,color:"#38bdf8",fontFamily:"var(--mono)"}}>
+    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"5px 9px",borderRadius:2,background:"rgba(74,158,255,.05)",border:"1px solid rgba(74,158,255,.18)",fontSize:10,color:"#4A9EFF",fontFamily:"var(--mono)"}}>
       {FX_STATE.status==="live"?"◉ LIVE":"○"} FX: {fmtAmt(form.amount)} {form.currency} → {Number(converted).toLocaleString()} {form.toCurrency} @ {fx} {FX_STATE.status==="live"?`· ${FX_STATE.timestamp}`:""}
     </div>}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
       <Inp label="Beneficiary"><input value={form.beneficiary} onChange={e=>u("beneficiary",e.target.value)} style={s}/></Inp>
       <Inp label="Urgency"><select value={form.urgency} onChange={e=>u("urgency",e.target.value)} style={s}>
         <option value="standard">Standard</option>
@@ -955,108 +629,191 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
       </select></Inp>
     </div>
     <Inp label="Purpose"><input value={form.purpose} onChange={e=>u("purpose",e.target.value)} style={s}/></Inp>
-
     <button onClick={()=>onSubmit({...form,id:genId(),timestamp:new Date().toISOString(),vertical})}
       disabled={isProcessing||killActive}
-      style={{padding:"12px",borderRadius:3,border:"none",cursor:isProcessing||killActive?"not-allowed":"pointer",
-        background:killActive?"rgba(255,69,96,.15)":isProcessing?"var(--border)":`linear-gradient(135deg,${v.accent},${v.accent}bb)`,
-        color:killActive?"#ff4560":isProcessing?"var(--muted)":"#000",
-        fontFamily:"var(--sans)",fontSize:12,fontWeight:700,letterSpacing:".06em",transition:"all .2s"
+      style={{padding:"11px",borderRadius:2,border:`1px solid ${killActive?"rgba(224,82,82,.3)":isProcessing?"var(--border)":`${v.accent}40`}`,cursor:isProcessing||killActive?"not-allowed":"pointer",
+        background:killActive?"rgba(224,82,82,.06)":isProcessing?"var(--card)":v.accent+"14",
+        color:killActive?"#E05252":isProcessing?"var(--muted)":v.accent,
+        fontFamily:"var(--mono)",fontSize:10,fontWeight:600,letterSpacing:".12em",transition:"all .2s",textTransform:"uppercase"
       }}>
-      {killActive?"⬛ HALTED":isProcessing?"⏳ Agents Processing...":"▶ Submit Payment Intent"}
+      {killActive?"■ HALTED":isProcessing?"Processing...":"▶ Submit Payment Intent"}
     </button>
   </div>;
 }
 
-// ─── Agent Detail ──────────────────────────────────────────────────────────────────
+function PolicyPanel({vertical,policies,onChange}){
+  const v=VERTICALS[vertical];
+  const sliders=[
+    {key:"maxSingle",label:"Transaction Limit",max:vertical==="consumer"?2000:5000000},
+    {key:"maxDaily",label:"Daily Spend Limit",max:vertical==="consumer"?10000:30000000},
+    {key:"requireApproval",label:"Approval Threshold",max:vertical==="consumer"?1000:2000000},
+    {key:"dualApproval",label:"Dual Approval",max:vertical==="consumer"?2000:5000000},
+  ];
+  const toggles=[
+    {key:"kycRequired",label:"KYC / AML Verification",sub:"Counterparty identity check"},
+    {key:"hitl",label:"Human-in-the-Loop",sub:"Escalate for approval"},
+    {key:"verifiableIntent",label:"Verifiable Intent",sub:"MVI / ERC-8004 / Visa TAP"},
+    {key:"killswitch",label:"Kill Switch Active",sub:"Instant global halt capability"},
+  ];
+  const upd=(k,val)=>onChange({...policies,[k]:val});
+  const agentMax=vertical==="consumer"?1000:vertical==="ai_commerce"?10000:vertical==="marketplace"?50000:500000;
+  return <div style={{flex:1,overflowY:"auto",padding:"12px 14px",display:"flex",flexDirection:"column",gap:13}}>
+    <div style={{fontSize:10,color:"var(--muted)"}}>Active rules for <span style={{color:v.accent,fontWeight:600}}>{v.label}</span></div>
+    {sliders.map(s=><div key={s.key}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+        <label className="lbl" style={{margin:0}}>{s.label}</label>
+        <span style={{fontFamily:"var(--mono)",fontSize:10,color:v.accent,fontWeight:500}}>${Number(policies[s.key]).toLocaleString()}</span>
+      </div>
+      <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]} onChange={e=>upd(s.key,Number(e.target.value))} style={{width:"100%"}}/>
+    </div>)}
+    <div style={{padding:"11px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.15)"}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"#8B72D4",fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>◎ Intent-Based Escalation</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:9}}>
+        <div style={{padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div style={{fontSize:7,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:2}}>Human Initiated</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:13,fontWeight:500,color:"#C46E8A"}}>${Number(policies.dualApproval).toLocaleString()}</div>
+          <div style={{fontSize:7,color:"var(--muted)",marginTop:1}}>Dual approval above this</div>
+        </div>
+        <div style={{padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div style={{fontSize:7,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:2}}>Agent Initiated</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:13,fontWeight:500,color:"#8B72D4"}}>${Number(policies.agentHitlThreshold||5000).toLocaleString()}</div>
+          <div style={{fontSize:7,color:"var(--muted)",marginTop:1}}>HITL above this</div>
+        </div>
+      </div>
+      <div>
+        <label className="lbl" style={{marginBottom:3}}>Agent Autonomous Limit</label>
+        <input type="range" min={0} max={agentMax} step={500} value={policies.agentHitlThreshold||5000} onChange={e=>upd("agentHitlThreshold",Number(e.target.value))} style={{width:"100%"}}/>
+      </div>
+    </div>
+    {/* Trust Signals */}
+    <div style={{padding:"11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.14)"}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--gold)",fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>◈ Trust Signal Inputs</div>
+      {TRUST_SIGNALS.map(ts=><div key={ts.id} style={{padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:5}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+          <div style={{width:4,height:4,borderRadius:"50%",background:ts.color,flexShrink:0}}/>
+          <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:ts.color}}>{ts.short}</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)"}}>{ts.label}</span>
+        </div>
+        <div style={{fontSize:9,color:"var(--dim)",lineHeight:1.4}}>{ts.desc}</div>
+      </div>)}
+      <div style={{padding:"7px 9px",borderRadius:2,background:"rgba(196,154,44,.06)",border:"1px solid rgba(196,154,44,.18)",fontSize:9,color:"var(--muted)",lineHeight:1.5,marginTop:2}}>
+        <span style={{color:"var(--gold)",fontWeight:600}}>Revvyn position: </span>MVI proves intent. ERC-8004 scores the agent. Visa TAP validates the credential. <strong style={{color:"var(--text)"}}>Revvyn decides whether the payment is permitted.</strong>
+      </div>
+    </div>
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      {toggles.map(t=><div key={t.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+        <div>
+          <div style={{fontFamily:"var(--mono)",fontSize:10,fontWeight:500,color:"var(--text)",marginBottom:1}}>{t.label}</div>
+          <div style={{fontSize:8,color:"var(--muted)"}}>{t.sub}</div>
+        </div>
+        <button onClick={()=>upd(t.key,!policies[t.key])} style={{width:36,height:20,borderRadius:10,border:`1px solid ${policies[t.key]?v.accent+"40":"var(--border)"}`,background:policies[t.key]?v.accent+"14":"var(--card)",cursor:"pointer",position:"relative",transition:"all .2s",flexShrink:0}}>
+          <div style={{position:"absolute",top:2,left:policies[t.key]?17:2,width:14,height:14,borderRadius:"50%",background:policies[t.key]?v.accent:"var(--muted)",transition:"all .2s"}}/>
+        </button>
+      </div>)}
+    </div>
+  </div>;
+}
 
 function AgentDetail({agentId,results}){
   const agent=AGENTS.find(a=>a.id===agentId);
   const result=results[agentId];
-  if(!result) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:11}}>Click an agent above to inspect its decision output</div>;
-  return <div style={{padding:"14px 16px",overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:12}}>
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <span style={{fontSize:16,color:agent.color}}>{agent.icon}</span>
+  if(!result) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:11}}>Select an agent above to inspect its decision output</div>;
+  return <div style={{padding:"13px 15px",overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:11}}>
+    <div style={{display:"flex",alignItems:"center",gap:9}}>
+      <span style={{fontSize:14,color:agent.color}}>{agent.icon}</span>
       <div>
-        <div style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:700,color:agent.color}}>{agent.name}</div>
-        <div style={{fontSize:10,color:"var(--muted)"}}>{agent.role}</div>
+        <div className="serif" style={{fontSize:14,fontWeight:700,color:agent.color}}>{agent.name}</div>
+        <div style={{fontSize:9,color:"var(--muted)"}}>{agent.role}</div>
       </div>
     </div>
-    {result.summary&&<div style={{padding:"10px 12px",borderRadius:3,background:agent.color+"08",border:`1px solid ${agent.color}20`,fontSize:12,color:"#cbd5e1",lineHeight:1.6}}>{result.summary}</div>}
-    {result.sdnHit&&<div style={{padding:"10px 12px",borderRadius:3,background:"rgba(167,139,250,.08)",border:"1px solid rgba(167,139,250,.3)",fontSize:11,lineHeight:1.5}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:9,color:"#a78bfa",fontWeight:700,letterSpacing:".08em",marginBottom:4}}>⬡ SANCTIONS MATCH — {result.sdnHit.list||"OFAC SDN"}</div>
-      <div style={{color:"var(--text)"}}>Matched entity: <strong style={{color:"#ff4560"}}>{result.sdnHit.entity}</strong></div>
-      <div style={{color:"var(--muted)",marginTop:2,fontSize:10}}>Source: {result.sdnHit.source}</div>
+    {result.summary&&<div style={{padding:"9px 11px",borderRadius:2,background:agent.color+"07",border:`1px solid ${agent.color}18`,fontSize:11,color:"#CBD5E1",lineHeight:1.6}}>{result.summary}</div>}
+    {result.sdnHit&&<div style={{padding:"9px 11px",borderRadius:2,background:"rgba(139,114,212,.07)",border:"1px solid rgba(139,114,212,.25)",fontSize:11,lineHeight:1.5}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"#8B72D4",fontWeight:600,letterSpacing:".1em",marginBottom:3}}>⬡ SANCTIONS MATCH — {result.sdnHit.list||"OFAC SDN"}</div>
+      <div style={{color:"var(--text)"}}>Matched: <strong style={{color:"#E05252"}}>{result.sdnHit.entity}</strong></div>
+      <div style={{color:"var(--muted)",marginTop:2,fontSize:9}}>Source: {result.sdnHit.source}</div>
     </div>}
-    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-      {result.complianceScore!==undefined&&<Badge label="Compliance" value={result.complianceScore+"%"} color={result.complianceScore>80?"#00e5a0":"#ffb84d"}/>}
-      {result.riskScore!==undefined&&<Badge label="Risk Score" value={result.riskScore+"/100"} color={result.riskScore<40?"#00e5a0":result.riskScore<70?"#ffb84d":"#ff4560"}/>}
-      {result.approved!==undefined&&<Badge label="Status" value={result.approved?"APPROVED":"REJECTED"} color={result.approved?"#00e5a0":"#ff4560"}/>}
-      {result.fees?.total!==undefined&&<Badge label="Fees" value={"$"+result.fees.total} color="#38bdf8"/>}
-      {result.status&&<Badge label="Settlement" value={result.status.toUpperCase()} color={result.status==="settled"?"#00e5a0":"#ffb84d"}/>}
-      {result.provider&&<Badge label="Provider" value={result.provider} color="#a78bfa"/>}
+    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+      {result.complianceScore!==undefined&&<Badge label="Compliance" value={result.complianceScore+"%"} color={result.complianceScore>80?"#3DB88A":"#D4914A"}/>}
+      {result.riskScore!==undefined&&<Badge label="Risk Score" value={result.riskScore+"/100"} color={result.riskScore<40?"#3DB88A":result.riskScore<70?"#D4914A":"#E05252"}/>}
+      {result.approved!==undefined&&<Badge label="Decision" value={result.approved?"APPROVED":"REJECTED"} color={result.approved?"#3DB88A":"#E05252"}/>}
+      {result.fees?.total!==undefined&&<Badge label="Fees" value={"$"+result.fees.total} color="#4A9EFF"/>}
+      {result.status&&<Badge label="Settlement" value={result.status.toUpperCase()} color={result.status==="settled"?"#3DB88A":"#D4914A"}/>}
+      {result.provider&&<Badge label="Provider" value={result.provider} color="#8B72D4"/>}
     </div>
+    {/* Trust signals in Governance agent */}
+    {agentId==="governance"&&result.trustSignals&&<div style={{padding:"9px 11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.15)"}}>
+      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--gold)",fontWeight:600,letterSpacing:".12em",marginBottom:7}}>◈ TRUST SIGNAL STATUS</div>
+      <div style={{display:"flex",flex:1,gap:5,flexWrap:"wrap"}}>
+        {TRUST_SIGNALS.map(ts=>{
+          const active=result.trustSignals[ts.id];
+          return <div key={ts.id} style={{flex:1,minWidth:80,padding:"6px 8px",borderRadius:2,background:"var(--card)",border:`1px solid ${active?ts.color+"30":"var(--border)"}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:active?ts.color:"var(--muted)",flexShrink:0}}/>
+              <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:active?ts.color:"var(--muted)"}}>{ts.short}</span>
+            </div>
+            <div style={{fontSize:7,color:"var(--dim)",lineHeight:1.3}}>{active?"Signal consumed as input":"Not present"}</div>
+          </div>;
+        })}
+      </div>
+      <div style={{fontSize:9,color:"var(--muted)",marginTop:6,lineHeight:1.4}}>Trust signals are <em>inputs</em> to Revvyn. They prove identity and intent — Revvyn enforces the policy.</div>
+    </div>}
     {result.checks&&<div>
-      <div className="lbl" style={{marginBottom:5}}>Compliance Checks</div>
-      {result.checks.map((c,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:7,marginBottom:3,padding:"6px 8px",borderRadius:2,background:"var(--card)",fontSize:11,border:c.live&&c.status==="pass"?"1px solid rgba(0,229,160,.08)":c.live&&c.status==="fail"?"1px solid rgba(255,69,96,.15)":"1px solid transparent"}}>
-        <span className="tag" style={{flexShrink:0,background:c.status==="pass"?"rgba(0,229,160,.12)":c.status==="fail"?"rgba(255,69,96,.12)":"rgba(255,184,77,.12)",color:c.status==="pass"?"#00e5a0":c.status==="fail"?"#ff4560":"#ffb84d"}}>{c.status.toUpperCase()}</span>
-        {c.live&&<span className="tag" style={{flexShrink:0,background:"rgba(0,212,255,.1)",color:"#00d4ff"}}>LIVE</span>}
-        <span style={{color:"#94a3b8"}}><strong style={{color:"#cbd5e1"}}>{c.name}: </strong>{c.detail}</span>
+      <div className="lbl" style={{marginBottom:4}}>Compliance Checks</div>
+      {result.checks.map((c,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:3,padding:"5px 7px",borderRadius:2,background:"var(--card)",fontSize:10,border:c.live&&c.status==="pass"?"1px solid rgba(61,184,138,.08)":c.live&&c.status==="fail"?"1px solid rgba(224,82,82,.12)":"1px solid transparent"}}>
+        <span className="tag" style={{flexShrink:0,background:c.status==="pass"?"rgba(61,184,138,.1)":c.status==="fail"?"rgba(224,82,82,.1)":"rgba(212,145,74,.1)",color:c.status==="pass"?"#3DB88A":c.status==="fail"?"#E05252":"#D4914A"}}>{c.status.toUpperCase()}</span>
+        {c.live&&<span className="tag" style={{flexShrink:0,background:"rgba(74,158,255,.08)",color:"#4A9EFF"}}>LIVE</span>}
+        <span style={{color:"#94A3B8",flex:1,lineHeight:1.4}}><strong style={{color:"#CBD5E1"}}>{c.name}: </strong>{c.detail}</span>
       </div>)}
     </div>}
     {result.recommendedRail&&<div>
-      <div className="lbl" style={{marginBottom:5}}>Rail Selection</div>
-      <div style={{padding:"9px 11px",borderRadius:3,background:"rgba(0,229,160,.06)",border:"1px solid rgba(0,229,160,.2)",marginBottom:5}}>
-        <div style={{fontSize:12,fontWeight:600,color:"#00e5a0",marginBottom:2}}>✓ {result.recommendedRail.name}</div>
-        <div style={{fontSize:11,color:"var(--muted)"}}>{result.recommendedRail.reason}</div>
+      <div className="lbl" style={{marginBottom:4}}>Rail Selection</div>
+      <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(61,184,138,.05)",border:"1px solid rgba(61,184,138,.18)",marginBottom:4}}>
+        <div style={{fontSize:11,fontWeight:600,color:"#3DB88A",marginBottom:2}}>✓ {result.recommendedRail.name}</div>
+        <div style={{fontSize:10,color:"var(--muted)"}}>{result.recommendedRail.reason}</div>
       </div>
-      {result.alternativeRails?.map((r,i)=><div key={i} style={{padding:"6px 9px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",marginBottom:3,fontSize:11,color:"var(--muted)"}}>
-        Alt {i+1}: <span style={{color:"#38bdf8"}}>{r.name}</span> — {r.reason}
+      {result.alternativeRails?.map((r,i)=><div key={i} style={{padding:"5px 8px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:2,fontSize:10,color:"var(--muted)"}}>
+        Alt {i+1}: <span style={{color:"#4A9EFF"}}>{r.name}</span> — {r.reason}
       </div>)}
     </div>}
-    {result.fxOptimization?.applicable&&<div style={{padding:"9px 11px",borderRadius:3,background:"rgba(0,212,255,.06)",border:"1px solid rgba(0,212,255,.2)",fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
-      <span style={{color:"#00d4ff",fontWeight:600}}>FX Optimization: </span>{result.fxOptimization.strategy}
+    {result.fxOptimization?.applicable&&<div style={{padding:"8px 10px",borderRadius:2,background:"rgba(74,158,255,.05)",border:"1px solid rgba(74,158,255,.18)",fontSize:10,color:"var(--muted)",lineHeight:1.5}}>
+      <span style={{color:"#4A9EFF",fontWeight:600}}>FX Optimisation: </span>{result.fxOptimization.strategy}
     </div>}
     {result.decisionChain&&<div>
-      <div className="lbl" style={{marginBottom:5}}>Decision Chain</div>
-      {result.decisionChain.map((d,i)=><div key={i} style={{display:"flex",gap:7,fontSize:11,marginBottom:2,padding:"5px 7px",borderRadius:2,background:"var(--card)"}}>
-        <span style={{fontFamily:"var(--mono)",fontSize:8,color:"#38bdf8",fontWeight:600,whiteSpace:"nowrap"}}>[{d.reasonCode}]</span>
-        <span style={{color:"#94a3b8",flex:1}}><strong style={{color:"#cbd5e1"}}>{d.agent}:</strong> {d.decision}</span>
-        <span style={{fontSize:9,color:"var(--dim)",whiteSpace:"nowrap"}}>{d.confidence}%</span>
+      <div className="lbl" style={{marginBottom:4}}>Decision Chain</div>
+      {result.decisionChain.map((d,i)=><div key={i} style={{display:"flex",gap:6,fontSize:10,marginBottom:2,padding:"4px 6px",borderRadius:2,background:"var(--card)"}}>
+        <span style={{fontFamily:"var(--mono)",fontSize:7,color:"#4A9EFF",fontWeight:600,whiteSpace:"nowrap"}}>[{d.reasonCode}]</span>
+        <span style={{color:"#94A3B8",flex:1}}><strong style={{color:"#CBD5E1"}}>{d.agent}:</strong> {d.decision}</span>
+        <span style={{fontSize:8,color:"var(--dim)",whiteSpace:"nowrap"}}>{d.confidence}%</span>
       </div>)}
     </div>}
-    {result.sanctionsSource&&<div style={{fontSize:10,color:"var(--dim)",padding:"5px 0",borderTop:"1px solid var(--border)"}}>Sanctions data: {result.sanctionsSource}</div>}
+    {result.regulatoryTags&&<div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+      {result.regulatoryTags.map(t=><span key={t} className="tag" style={{background:"rgba(196,154,44,.08)",color:"var(--gold)",border:"1px solid rgba(196,154,44,.2)"}}>{t}</span>)}
+    </div>}
     <details style={{marginTop:2}}>
-      <summary style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--dim)",cursor:"pointer",listStyle:"none"}}>▸ Raw JSON</summary>
-      <pre style={{marginTop:5,padding:"9px",borderRadius:3,background:"#050709",fontSize:9,color:"var(--muted)",fontFamily:"var(--mono)",lineHeight:1.4,border:"1px solid var(--border)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:220,overflow:"auto"}}>
-        {JSON.stringify(result,null,2)}
-      </pre>
+      <summary style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--dim)",cursor:"pointer"}}>▸ Raw JSON</summary>
+      <pre style={{marginTop:5,padding:"8px",borderRadius:2,background:"#030608",fontSize:8,color:"var(--muted)",fontFamily:"var(--mono)",lineHeight:1.4,border:"1px solid var(--border)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{JSON.stringify(result,null,2)}</pre>
     </details>
   </div>;
 }
 
-// ─── Audit Trail ───────────────────────────────────────────────────────────────────
-
 function AuditTrail({entries}){
   const ref=useRef();
-  useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight},[entries]);
-  return <div ref={ref} style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:3,padding:"10px 14px"}}>
-    {entries.length===0&&<div style={{color:"var(--dim)",fontSize:11,textAlign:"center",padding:24}}>Audit trail populates as agents process...</div>}
+  useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},[entries]);
+  return <div ref={ref} style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:2,padding:"9px 13px"}}>
+    {entries.length===0&&<div style={{color:"var(--dim)",fontSize:11,textAlign:"center",padding:24,lineHeight:1.6}}>Audit trail populates as agents process transactions</div>}
     {entries.map((e,i)=>{
       const ag=AGENTS.find(a=>a.id===e.agent);
-      return <div key={i} style={{padding:"5px 8px",borderRadius:2,background:"var(--card)",borderLeft:`3px solid ${ag?ag.color:"var(--border)"}`,animation:"fadeUp .2s ease"}}>
+      return <div key={i} style={{padding:"4px 7px",borderRadius:2,background:"var(--card)",borderLeft:`2px solid ${ag?ag.color+"60":"var(--border)"}`,animation:"fadeUp .2s ease"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:1}}>
-          <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{e.agent}</span>
+          <span className="serif" style={{fontSize:8,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{e.agent}</span>
           <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)"}}>{e.time}</span>
         </div>
-        <div style={{fontSize:11,color:"#94a3b8",lineHeight:1.4}}>{e.message}</div>
-        {e.status&&<span className="tag" style={{display:"inline-block",marginTop:2,background:e.status==="pass"?"rgba(0,229,160,.1)":e.status==="fail"?"rgba(255,69,96,.1)":"rgba(255,184,77,.1)",color:e.status==="pass"?"#00e5a0":e.status==="fail"?"#ff4560":"#ffb84d"}}>{e.status.toUpperCase()}</span>}
+        <div style={{fontSize:10,color:"#94A3B8",lineHeight:1.4}}>{e.message}</div>
+        {e.status&&<span className="tag" style={{display:"inline-block",marginTop:2,background:e.status==="pass"?"rgba(61,184,138,.08)":e.status==="fail"?"rgba(224,82,82,.08)":"rgba(212,145,74,.08)",color:e.status==="pass"?"#3DB88A":e.status==="fail"?"#E05252":"#D4914A"}}>{e.status.toUpperCase()}</span>}
       </div>;
     })}
   </div>;
 }
-
-// ─── Analytics ─────────────────────────────────────────────────────────────────────
 
 function Analytics({payments,vertical}){
   const v=VERTICALS[vertical];
@@ -1067,268 +824,334 @@ function Analytics({payments,vertical}){
   const total=vp.reduce((s,p)=>s+(p.payment?.amount||0),0);
   const avgRisk=settled.length?Math.round(settled.reduce((s,p)=>s+(p.results?.control?.riskScore||0),0)/settled.length):0;
   const byRail={};
-  settled.forEach(p=>{const r=p.results?.control?.recommendedRail?.name||"Unknown";byRail[r]=(byRail[r]||0)+1});
-  return <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-      <Badge label="Total Processed" value={vp.length} color={v.accent}/>
+  settled.forEach(p=>{const r=p.results?.control?.recommendedRail?.name||"Unknown";byRail[r]=(byRail[r]||0)+1;});
+  const byIntent={};
+  vp.forEach(p=>{const s=p.payment?.intentSource||"unknown";byIntent[s]=(byIntent[s]||0)+1;});
+  return <div style={{padding:"13px 15px",display:"flex",flexDirection:"column",gap:11}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+      <Badge label="Processed" value={vp.length} color={v.accent}/>
       <Badge label="Volume" value={total>1e6?`$${(total/1e6).toFixed(1)}M`:`$${total.toLocaleString()}`} color={v.accent}/>
-      <Badge label="Settled" value={`${settled.length} (${vp.length?Math.round(settled.length/vp.length*100):0}%)`} color="#00e5a0"/>
-      <Badge label="Blocked" value={`${rejected.length} (${vp.length?Math.round(rejected.length/vp.length*100):0}%)`} color="#ff4560"/>
-      <Badge label="SDN Hits" value={sdnBlocked.length} color="#a78bfa"/>
-      <Badge label="Avg Risk" value={avgRisk||"—"} color={avgRisk<40?"#00e5a0":avgRisk<70?"#ffb84d":"#ff4560"}/>
+      <Badge label="Settled" value={`${settled.length} (${vp.length?Math.round(settled.length/vp.length*100):0}%)`} color="#3DB88A"/>
+      <Badge label="Blocked" value={`${rejected.length} (${vp.length?Math.round(rejected.length/vp.length*100):0}%)`} color="#E05252"/>
+      <Badge label="SDN Hits" value={sdnBlocked.length} color="#8B72D4"/>
+      <Badge label="Avg Risk" value={avgRisk||"—"} color={avgRisk<40?"#3DB88A":avgRisk<70?"#D4914A":"#E05252"}/>
     </div>
     {Object.keys(byRail).length>0&&<div>
-      <div className="lbl" style={{marginBottom:6}}>Rail Distribution</div>
-      {Object.entries(byRail).map(([name,count])=><div key={name} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid var(--border)",fontSize:11,color:"var(--muted)"}}>
-        <span style={{color:"#38bdf8"}}>{name}</span>
+      <div className="lbl" style={{marginBottom:5}}>Rail Distribution</div>
+      {Object.entries(byRail).map(([name,count])=><div key={name} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid var(--border)",fontSize:10,color:"var(--muted)"}}>
+        <span style={{color:"#4A9EFF"}}>{name}</span>
         <span>{count} tx ({Math.round(count/settled.length*100)}%)</span>
       </div>)}
+    </div>}
+    {Object.keys(byIntent).length>0&&<div>
+      <div className="lbl" style={{marginBottom:5}}>Intent Sources</div>
+      {Object.entries(byIntent).map(([id,count])=>{
+        const src=INTENT_SOURCES.find(s=>s.id===id);
+        return <div key={id} style={{display:"flex",justifyContent:"space-between",padding:"4px 0",borderBottom:"1px solid var(--border)",fontSize:10,color:"var(--muted)"}}>
+          <span style={{color:src?.color||"var(--gold)"}}>{src?.name||id}</span>
+          <span>{count} tx</span>
+        </div>;
+      })}
     </div>}
     {vp.length===0&&<div style={{textAlign:"center",color:"var(--dim)",fontSize:11,padding:14}}>Submit transactions to see analytics</div>}
   </div>;
 }
 
-// ─── Landscape ─────────────────────────────────────────────────────────────────────
-
-function Landscape(){
-  return <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:12}}>
-    <div style={{fontSize:12,color:"#94a3b8",lineHeight:1.6}}>
-      <span style={{color:"#06d6a0",fontWeight:700}}>$50M+ raised</span> in agentic payment infrastructure in 6 months. Every funded company solves execution, identity, or checkout. <span style={{color:"#06d6a0",fontWeight:600}}>Nobody is building the governance layer. That's Revvyn.</span>
+function KYAPanel({kyaRegistry,onClear}){
+  const entries=Object.values(kyaRegistry);
+  const [selected,setSelected]=useState(null);
+  const sel=selected?kyaRegistry[selected]:null;
+  if(entries.length===0) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:11,lineHeight:1.7}}>
+    <div style={{fontFamily:"var(--serif)",fontSize:16,color:"var(--muted)",marginBottom:8}}>Know Your Agent</div>
+    <div>Agent identities populate as transactions are submitted.</div>
+    <div style={{marginTop:4}}>Each unique intent source generates a KYA record with mandate scope, trust signal history, and risk scoring.</div>
+  </div>;
+  const avgRisk=sel&&sel.riskHistory.length?Math.round(sel.riskHistory.reduce((a,b)=>a+b,0)/sel.riskHistory.length):null;
+  return <div style={{display:"flex",flex:1,overflow:"hidden",minHeight:0}}>
+    {/* List */}
+    <div style={{width:160,borderRight:"1px solid var(--border)",overflowY:"auto",flexShrink:0}}>
+      <div style={{padding:"8px 10px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)",letterSpacing:".12em",textTransform:"uppercase"}}>{entries.length} Agents</div>
+        <button onClick={onClear} style={{padding:"2px 5px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:7,cursor:"pointer"}}>Clear</button>
+      </div>
+      {entries.map(e=>{
+        const src=INTENT_SOURCES.find(s=>s.id===e.intentSource)||{color:"var(--gold)"};
+        const isSel=selected===e.intentSource;
+        return <div key={e.intentSource} onClick={()=>setSelected(e.intentSource)} style={{padding:"9px 10px",borderBottom:"1px solid var(--border)",cursor:"pointer",background:isSel?"rgba(196,154,44,.06)":"transparent",borderLeft:`2px solid ${isSel?src.color:"transparent"}`,transition:"all .15s"}}>
+          <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:src.color,flexShrink:0}}/>
+            <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:isSel?src.color:"var(--text)"}}>{e.origin}</span>
+          </div>
+          <div style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)"}}>{e.agentId}</div>
+          <div style={{display:"flex",justifyContent:"space-between",marginTop:3}}>
+            <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--muted)"}}>{e.txCount} tx</span>
+            <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--gold)"}}>{e.agentProofScore}/100</span>
+          </div>
+        </div>;
+      })}
     </div>
-    {COMPS.map(c=><div key={c.name} style={{padding:"11px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
-        <span style={{fontFamily:"var(--sans)",fontSize:12,fontWeight:700}}>{c.name}</span>
-        <span style={{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:"#06d6a0"}}>{c.raised}</span>
-      </div>
-      <div style={{fontSize:9,color:"var(--dim)",marginBottom:2,letterSpacing:".06em"}}>{c.lead}</div>
-      <div style={{fontSize:11,color:"#94a3b8",marginBottom:3}}>{c.what}</div>
-      <div style={{fontSize:11,color:"#ff4560",fontFamily:"var(--mono)"}}>Gap: {c.gap}</div>
-    </div>)}
-    <div style={{padding:"14px",borderRadius:3,background:"linear-gradient(135deg,rgba(6,214,160,.06),rgba(167,139,250,.04))",border:"1.5px solid rgba(6,214,160,.25)"}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-        <span style={{fontFamily:"var(--sans)",fontSize:14,fontWeight:800,color:"#06d6a0"}}>REVVYN</span>
-        <span style={{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:"#ffb84d"}}>Raising $1.5M Seed</span>
-      </div>
-      <div style={{fontSize:11,color:"var(--text)",lineHeight:1.6}}>Protocol-agnostic governance: policy enforcement, risk scoring, 9-rail optimisation, compliance audit trails. 5 verticals. <strong style={{color:"#06d6a0"}}>The only company building the governance layer.</strong></div>
+    {/* Detail */}
+    <div style={{flex:1,overflowY:"auto",padding:"13px 15px",display:"flex",flexDirection:"column",gap:11}}>
+      {!sel&&<div style={{color:"var(--dim)",fontSize:11,textAlign:"center",padding:20}}>Select an agent to view identity record</div>}
+      {sel&&<>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <div style={{width:36,height:36,borderRadius:4,background:"rgba(196,154,44,.08)",border:"1px solid rgba(196,154,44,.2)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{width:12,height:12,borderRadius:"50%",background:INTENT_SOURCES.find(s=>s.id===sel.intentSource)?.color||"var(--gold)"}}/>
+          </div>
+          <div>
+            <div className="serif" style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{sel.origin}</div>
+            <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)"}}>{sel.agentId}</div>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+          <Badge label="Transactions" value={sel.txCount} color="var(--gold)"/>
+          <Badge label="AgentProof Score" value={`${sel.agentProofScore}/100`} color={sel.agentProofScore>70?"#3DB88A":sel.agentProofScore>50?"#D4914A":"#E05252"}/>
+          <Badge label="Total Volume" value={`$${sel.totalVolume.toLocaleString()}`} color="#4A9EFF"/>
+          {avgRisk!==null&&<Badge label="Avg Risk Score" value={`${avgRisk}/100`} color={avgRisk<40?"#3DB88A":avgRisk<70?"#D4914A":"#E05252"}/>}
+        </div>
+        <div style={{padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div className="lbl" style={{marginBottom:4}}>Mandate Scope</div>
+          <div style={{fontSize:10,color:"#94A3B8",lineHeight:1.5}}>{sel.mandateScope}</div>
+        </div>
+        <div style={{padding:"9px 11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.14)"}}>
+          <div className="lbl" style={{marginBottom:6}}>◈ Trust Signal History</div>
+          {TRUST_SIGNALS.map(ts=>{
+            const active=sel.trustSignals[ts.id];
+            return <div key={ts.id} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 0",borderBottom:"1px solid var(--border)"}}>
+              <div style={{width:5,height:5,borderRadius:"50%",background:active?ts.color:"var(--dim)",flexShrink:0}}/>
+              <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:active?ts.color:"var(--muted)",minWidth:34}}>{ts.short}</span>
+              <span style={{fontSize:9,color:"var(--muted)",flex:1}}>{ts.label}</span>
+              <span className="tag" style={{background:active?"rgba(61,184,138,.08)":"rgba(100,116,139,.08)",color:active?"#3DB88A":"var(--dim)"}}>{active?"PRESENT":"ABSENT"}</span>
+            </div>;
+          })}
+        </div>
+        {sel.riskHistory.length>0&&<div>
+          <div className="lbl" style={{marginBottom:5}}>Risk Score History</div>
+          <div style={{display:"flex",gap:2,alignItems:"flex-end",height:40}}>
+            {sel.riskHistory.map((score,i)=>{
+              const color=score<40?"#3DB88A":score<70?"#D4914A":"#E05252";
+              return <div key={i} style={{flex:1,background:color+"30",border:`1px solid ${color}40`,borderRadius:2,height:`${score}%`,minHeight:3,position:"relative"}} title={`${score}/100`}>
+                <div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",fontFamily:"var(--mono)",fontSize:6,color:color,whiteSpace:"nowrap",paddingBottom:1}}>{score}</div>
+              </div>;
+            })}
+          </div>
+        </div>}
+        <div style={{padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+          <div className="lbl" style={{marginBottom:4}}>Activity</div>
+          <div style={{display:"flex",flexDirection:"column",gap:3}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>First seen</span><span style={{fontFamily:"var(--mono)",fontSize:9}}>{new Date(sel.firstSeen).toLocaleString()}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>Last seen</span><span style={{fontFamily:"var(--mono)",fontSize:9}}>{new Date(sel.lastSeen).toLocaleString()}</span></div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>Blocked count</span><span style={{fontFamily:"var(--mono)",fontSize:9,color:sel.blockedCount>0?"#E05252":"#3DB88A"}}>{sel.blockedCount}</span></div>
+          </div>
+        </div>
+        <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.15)",fontSize:9,color:"var(--muted)",lineHeight:1.5}}>
+          <span style={{color:"#8B72D4",fontWeight:600}}>KYA principle: </span>KYC was built for humans. KYA is built for agents. AgentProof scores the agent — Revvyn decides whether it's permitted to act.
+        </div>
+      </>}
     </div>
   </div>;
 }
 
-// ─── HITL Modal ────────────────────────────────────────────────────────────────────
-
 function HITLModal({payment,reason,checks,onApprove,onReject}){
-  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(4px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
-    <div style={{background:"var(--surface)",border:"1px solid rgba(255,184,77,.4)",borderRadius:4,padding:24,maxWidth:440,width:"100%",boxShadow:"0 0 60px rgba(255,184,77,.12)",animation:"fadeUp .3s ease"}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-        <div style={{width:34,height:34,borderRadius:6,background:"rgba(255,184,77,.12)",border:"1px solid rgba(255,184,77,.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>⚠</div>
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
+    <div style={{background:"var(--surface)",border:"1px solid rgba(212,145,74,.35)",borderRadius:3,padding:22,maxWidth:420,width:"100%",boxShadow:"0 0 60px rgba(212,145,74,.1)",animation:"fadeUp .3s ease"}}>
+      <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:14}}>
+        <div style={{width:32,height:32,borderRadius:4,background:"rgba(212,145,74,.08)",border:"1px solid rgba(212,145,74,.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>⚠</div>
         <div>
-          <div style={{fontFamily:"var(--sans)",fontSize:13,fontWeight:700,color:"#ffb84d",textTransform:"uppercase",letterSpacing:".06em"}}>Human Review Required</div>
-          <div style={{fontSize:11,color:"var(--muted)"}}>Pipeline paused — awaiting decision</div>
+          <div className="serif" style={{fontSize:14,fontWeight:700,color:"#D4914A"}}>Human Review Required</div>
+          <div style={{fontSize:9,color:"var(--muted)"}}>Pipeline paused — awaiting decision</div>
         </div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,padding:"10px 12px",borderRadius:3,background:"var(--card)",border:"1px solid var(--border)",marginBottom:10,fontSize:12}}>
-        <div><span style={{color:"var(--muted)"}}>ID: </span><span style={{fontFamily:"var(--mono)",fontWeight:600}}>{payment.id}</span></div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:9,fontSize:11}}>
+        <div><span style={{color:"var(--muted)"}}>ID: </span><span style={{fontFamily:"var(--mono)",fontWeight:500}}>{payment.id}</span></div>
         <div><span style={{color:"var(--muted)"}}>Amount: </span><span style={{fontFamily:"var(--mono)"}}>{payment.currency} {fmtAmt(payment.amount)}</span></div>
         <div><span style={{color:"var(--muted)"}}>To: </span>{payment.beneficiary}</div>
         <div><span style={{color:"var(--muted)"}}>Route: </span>{payment.fromCountry} → {payment.toCountry}</div>
       </div>
-      <div style={{padding:"8px 10px",borderRadius:3,background:"rgba(255,184,77,.06)",border:"1px solid rgba(255,184,77,.2)",fontSize:11,color:"var(--text)",lineHeight:1.5,marginBottom:10}}>{reason}</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-        <button onClick={onReject} style={{padding:"11px",borderRadius:3,border:"1px solid rgba(255,69,96,.4)",background:"rgba(255,69,96,.08)",color:"#ff4560",fontFamily:"var(--sans)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".06em"}}>✗ Reject</button>
-        <button onClick={onApprove} style={{padding:"11px",borderRadius:3,border:"none",background:"linear-gradient(135deg,#00e5a0,#06d6a0)",color:"#000",fontFamily:"var(--sans)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".06em"}}>✓ Approve</button>
+      <div style={{padding:"7px 9px",borderRadius:2,background:"rgba(212,145,74,.05)",border:"1px solid rgba(212,145,74,.18)",fontSize:10,color:"var(--text)",lineHeight:1.5,marginBottom:9}}>{reason}</div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+        <button onClick={onReject} style={{padding:"10px",borderRadius:2,border:"1px solid rgba(224,82,82,.3)",background:"rgba(224,82,82,.06)",color:"#E05252",fontFamily:"var(--mono)",fontSize:10,fontWeight:600,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase"}}>✗ Reject</button>
+        <button onClick={onApprove} style={{padding:"10px",borderRadius:2,border:`1px solid rgba(196,154,44,.4)`,background:"rgba(196,154,44,.1)",color:"var(--gold)",fontFamily:"var(--mono)",fontSize:10,fontWeight:600,cursor:"pointer",letterSpacing:".08em",textTransform:"uppercase"}}>✓ Approve</button>
       </div>
     </div>
   </div>;
 }
 
-// ─── Tab Bar ───────────────────────────────────────────────────────────────────────
-
 function TabBar({tabs,active,onChange,accent}){
   return <div style={{display:"flex",gap:0,borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
-    {tabs.map(t=><button key={t.id} onClick={()=>onChange(t.id)} style={{
-      padding:"9px 14px",border:"none",background:"transparent",
-      fontFamily:"var(--mono)",fontSize:10,fontWeight:600,letterSpacing:".08em",
-      color:active===t.id?accent:"var(--muted)",cursor:"pointer",whiteSpace:"nowrap",
-      borderBottom:`2px solid ${active===t.id?accent:"transparent"}`,transition:"all .15s"
-    }}>{t.label}</button>)}
+    {tabs.map(t=><button key={t.id} onClick={()=>onChange(t.id)} style={{padding:"8px 13px",border:"none",background:"transparent",fontFamily:"var(--mono)",fontSize:9,fontWeight:600,letterSpacing:".1em",color:active===t.id?accent:"var(--muted)",cursor:"pointer",whiteSpace:"nowrap",borderBottom:`2px solid ${active===t.id?accent:"transparent"}`,transition:"all .15s",textTransform:"uppercase"}}>{t.label}</button>)}
   </div>;
 }
 
-// ─── Hero ──────────────────────────────────────────────────────────────────────────
-
 function Hero({onEnter,onAutoDemo}){
   return <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 24px",position:"relative",overflow:"hidden",background:"var(--bg)"}}>
-    <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(74,158,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(74,158,255,.025) 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
-    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% -20%,rgba(6,214,160,.08) 0%,transparent 60%)"}}/>
+    <div style={{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(196,154,44,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(196,154,44,.018) 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
+    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 70% 50% at 50% -10%,rgba(196,154,44,.06) 0%,transparent 60%)"}}/>
     <div style={{textAlign:"center",maxWidth:680,position:"relative",zIndex:1}}>
-      <div style={{display:"inline-flex",alignItems:"center",gap:14,marginBottom:28,animation:"fadeUp .6s ease-out"}}>
-        <div style={{width:52,height:52,borderRadius:12,background:"linear-gradient(135deg,#06d6a0,#06d6a088)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:800,fontSize:24,color:"#000",animation:"glow 3s ease-in-out infinite"}}>R</div>
-        <span style={{fontFamily:"var(--sans)",fontWeight:800,fontSize:26,letterSpacing:"-.5px"}}>Revvyn</span>
+      <div style={{display:"inline-flex",alignItems:"center",gap:14,marginBottom:30,animation:"fadeUp .6s ease-out"}}>
+        <div style={{width:54,height:54,borderRadius:10,background:"linear-gradient(135deg,#C49A2C,#C49A2C80)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--serif)",fontWeight:700,fontSize:26,color:"#000",animation:"goldGlow 4s ease-in-out infinite",flexShrink:0}}>R</div>
+        <span className="serif" style={{fontWeight:700,fontSize:28,letterSpacing:"-.3px"}}>Revvyn</span>
       </div>
-      <h1 style={{fontFamily:"var(--sans)",fontSize:"clamp(24px,5vw,48px)",fontWeight:800,lineHeight:1.1,marginBottom:16,animation:"fadeUp .6s ease-out .1s both"}}>
+      <h1 className="serif" style={{fontSize:"clamp(26px,5vw,50px)",fontWeight:700,lineHeight:1.1,marginBottom:16,animation:"fadeUp .6s ease-out .1s both",color:"var(--text)"}}>
         The Governance Layer for{" "}
-        <span style={{background:"linear-gradient(135deg,#06d6a0,#38bdf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Agentic Commerce</span>
+        <span style={{background:"linear-gradient(135deg,#C49A2C,#D4914A)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Agentic Commerce</span>
       </h1>
-      <p style={{fontSize:"clamp(13px,2vw,17px)",color:"#94a3b8",lineHeight:1.6,maxWidth:500,margin:"0 auto 14px",animation:"fadeUp .6s ease-out .2s both"}}>
+      <p style={{fontSize:"clamp(13px,2vw,16px)",color:"var(--muted)",lineHeight:1.7,maxWidth:480,margin:"0 auto 14px",animation:"fadeUp .6s ease-out .2s both"}}>
         When an AI agent wants to spend money, Revvyn decides if it's allowed to.
       </p>
-      <div style={{display:"inline-block",padding:"8px 16px",borderRadius:3,background:"rgba(6,214,160,.06)",border:"1px solid rgba(6,214,160,.2)",marginBottom:28,animation:"fadeUp .6s ease-out .25s both"}}>
-        <span style={{fontFamily:"var(--mono)",fontSize:12,color:"#06d6a0",fontWeight:600}}>$50M+ raised in agentic payments infra. $0 in governance.</span>
+      <div style={{display:"inline-block",padding:"7px 14px",borderRadius:2,background:"rgba(196,154,44,.05)",border:"1px solid rgba(196,154,44,.18)",marginBottom:30,animation:"fadeUp .6s ease-out .25s both"}}>
+        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--gold)",fontWeight:500}}>$50M+ raised in agentic payments infrastructure. $0 in governance.</span>
       </div>
-      <div style={{display:"flex",justifyContent:"center",gap:"clamp(20px,5vw,52px)",marginBottom:32,animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}}>
-        {[{n:"5",l:"Verticals",c:"#06d6a0"},{n:"9",l:"Payment Rails",c:"#38bdf8"},{n:"5",l:"AI Agents",c:"#a78bfa"}].map(s=>(
+      <div style={{display:"flex",justifyContent:"center",gap:"clamp(20px,5vw,56px)",marginBottom:34,animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}}>
+        {[{n:"6",l:"Verticals",c:"var(--gold)"},{n:"9",l:"Payment Rails",c:"#4A9EFF"},{n:"5",l:"AI Agents",c:"#8B72D4"}].map(s=>(
           <div key={s.l} style={{textAlign:"center"}}>
-            <div style={{fontFamily:"var(--sans)",fontSize:"clamp(28px,4vw,40px)",fontWeight:800,color:s.c}}>{s.n}</div>
-            <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",letterSpacing:"1px",textTransform:"uppercase"}}>{s.l}</div>
+            <div className="serif" style={{fontSize:"clamp(32px,4vw,46px)",fontWeight:700,color:s.c,lineHeight:1}}>{s.n}</div>
+            <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)",letterSpacing:"1.2px",textTransform:"uppercase",marginTop:3}}>{s.l}</div>
           </div>
         ))}
       </div>
       <div style={{display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap",animation:"fadeUp .6s ease-out .4s both"}}>
-        <button onClick={onAutoDemo} style={{padding:"13px 28px",borderRadius:3,border:"none",background:"linear-gradient(135deg,#06d6a0,#06d6a0bb)",color:"#000",fontFamily:"var(--sans)",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".06em",boxShadow:"0 4px 24px rgba(6,214,160,.25)"}}>▶ Watch Live Demo</button>
-        <button onClick={onEnter} style={{padding:"13px 28px",borderRadius:3,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"var(--sans)",fontSize:13,fontWeight:600,cursor:"pointer",letterSpacing:".06em"}}>Explore Sandbox</button>
+        <button onClick={onAutoDemo} style={{padding:"12px 26px",borderRadius:2,border:"none",background:"linear-gradient(135deg,#C49A2C,#A8821E)",color:"#000",fontFamily:"var(--mono)",fontSize:11,fontWeight:600,cursor:"pointer",letterSpacing:".1em",boxShadow:"0 4px 28px rgba(196,154,44,.22)",textTransform:"uppercase"}}>▶ Watch Live Demo</button>
+        <button onClick={onEnter} style={{padding:"12px 26px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"var(--mono)",fontSize:11,fontWeight:500,cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>Open Sandbox</button>
+      </div>
+      <div style={{marginTop:18,animation:"fadeUp .6s ease-out .5s both"}}>
+        <button onClick={()=>window.open("mailto:daniel@revvyn.io?subject=Revvyn%20Access%20Request","_blank")} style={{padding:"9px 20px",borderRadius:2,border:"1px solid rgba(196,154,44,.3)",background:"rgba(196,154,44,.06)",color:"var(--gold)",fontFamily:"var(--mono)",fontSize:10,cursor:"pointer",letterSpacing:".12em",textTransform:"uppercase"}}>Request Early Access</button>
       </div>
     </div>
   </div>;
 }
 
-// ─── Demo Narrator ────────────────────────────────────────────────────────────────
-
 const DEMO_SCENES=[
-  {scene:1,total:6,title:"Live Sanctions — SDN Entity Block",desc:"Beneficiary 'Bank Melli Iran' triggers a live OFAC SDN match. Transaction blocked before it reaches the rails.",color:"#ff4560"},
-  {scene:2,total:6,title:"Sanctioned Country Block",desc:"Destination country Iran (IR) hits comprehensive country-level sanctions. Governance layer rejects instantly.",color:"#ff4560"},
-  {scene:3,total:6,title:"Kill Switch",desc:"Global halt activated. All payment processing suspended across every agent and vertical in real time.",color:"#ffb84d"},
-  {scene:4,total:6,title:"Agent HITL — Google UCP Intercepted",desc:"Google UCP agent tries to spend $3,500. Exceeds the AI agent autonomous limit of $2,000. Pipeline pauses — a human must decide.",color:"#a78bfa"},
-  {scene:5,total:6,title:"Live FX + Full Settlement",desc:"Clean cross-border payment with real ECB exchange rates. All 5 agents complete. Full audit trail generated.",color:"#06d6a0"},
-  {scene:6,total:6,title:"Human vs Agent — Different Rules",desc:"ERP agent initiates $250K. Clears human dual-approval limit but hits the agent autonomous threshold. Policy, not amount, governs.",color:"#fbbf24"},
+  {scene:1,total:6,title:"Live Sanctions — SDN Entity Block",desc:"Beneficiary 'Bank Melli Iran' triggers a live OFAC SDN match. Transaction blocked before it reaches the rails.",color:"#E05252"},
+  {scene:2,total:6,title:"Sanctioned Country Block",desc:"Destination country Iran (IR) hits comprehensive country-level sanctions. Governance layer rejects instantly.",color:"#E05252"},
+  {scene:3,total:6,title:"Kill Switch",desc:"Global halt activated. All payment processing suspended across every agent and vertical in real time.",color:"#D4914A"},
+  {scene:4,total:6,title:"Agent HITL — Google UCP Intercepted",desc:"Google UCP agent tries to spend $3,500. Exceeds the AI agent autonomous limit. Pipeline pauses — a human must decide.",color:"#8B72D4"},
+  {scene:5,total:6,title:"Live FX + Full Settlement",desc:"Clean cross-border payment with real ECB exchange rates. All 5 agents complete. Full audit trail generated.",color:"#3DB88A"},
+  {scene:6,total:6,title:"Human vs Agent — Different Rules",desc:"ERP agent initiates $250K. Clears human dual-approval limit but hits the agent autonomous threshold. Policy, not amount, governs.",color:"var(--gold)"},
 ];
 
 function DemoNarrator({scene,onSkip}){
   if(!scene) return null;
-  return <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:900,maxWidth:520,width:"calc(100% - 32px)",animation:"fadeUp .4s ease"}}>
-    <div style={{background:"rgba(6,8,14,.96)",border:`1px solid ${scene.color}40`,borderRadius:4,padding:"12px 16px",backdropFilter:"blur(12px)",boxShadow:`0 8px 40px rgba(0,0,0,.6),0 0 0 1px ${scene.color}15`}}>
-      <div style={{display:"flex",alignItems:"flex-start",gap:12}}>
+  return <div style={{position:"fixed",bottom:18,left:"50%",transform:"translateX(-50%)",zIndex:900,maxWidth:500,width:"calc(100% - 32px)",animation:"fadeUp .4s ease"}}>
+    <div style={{background:"rgba(7,13,24,.96)",border:`1px solid ${scene.color}35`,borderRadius:3,padding:"11px 14px",backdropFilter:"blur(14px)",boxShadow:`0 8px 40px rgba(0,0,0,.7)`}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
         <div style={{flexShrink:0,marginTop:1}}>
-          <div style={{width:28,height:28,borderRadius:4,background:scene.color+"14",border:`1px solid ${scene.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--mono)",fontSize:10,fontWeight:700,color:scene.color}}>{scene.scene}/{scene.total}</div>
+          <div style={{width:26,height:26,borderRadius:3,background:scene.color+"12",border:`1px solid ${scene.color}35`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--mono)",fontSize:9,fontWeight:700,color:scene.color}}>{scene.scene}/{scene.total}</div>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div style={{fontFamily:"var(--sans)",fontSize:12,fontWeight:700,color:scene.color,marginBottom:3}}>{scene.title}</div>
-          <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",lineHeight:1.5}}>{scene.desc}</div>
+          <div className="serif" style={{fontSize:12,fontWeight:700,color:scene.color,marginBottom:3}}>{scene.title}</div>
+          <div style={{fontSize:10,color:"var(--muted)",lineHeight:1.5}}>{scene.desc}</div>
         </div>
-        <button onClick={onSkip} style={{flexShrink:0,padding:"3px 8px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:8,cursor:"pointer",whiteSpace:"nowrap",marginTop:1}}>Skip demo</button>
-      </div>
-      <div style={{marginTop:10,height:2,background:"var(--border)",borderRadius:1,overflow:"hidden"}}>
-        <div style={{height:"100%",background:scene.color,borderRadius:1,width:`${(scene.scene/scene.total)*100}%`,transition:"width .6s ease"}}/>
+        <button onClick={onSkip} style={{padding:"3px 7px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:8,cursor:"pointer",flexShrink:0}}>✕ Skip</button>
       </div>
     </div>
   </div>;
 }
 
-// ─── App ───────────────────────────────────────────────────────────────────────────
-
+// ─── App ──────────────────────────────────────────────────────────────────────────
 function App(){
+  const [theme,setTheme]=useState("dark");
   const [showHero,setShowHero]=useState(true);
   const [vertical,setVertical]=useState("treasury");
-  const [policies,setPolicies]=useState(VERTICALS.treasury.policies);
+  const [policies,setPolicies]=useState({...VERTICALS.treasury.policies});
   const [payments,setPayments]=useState([]);
-  const [isProcessing,setIsProcessing]=useState(false);
-  const [killActive,setKillActive]=useState(false);
   const [agentStatuses,setAgentStatuses]=useState({});
   const [agentResults,setAgentResults]=useState({});
-  const [selectedAgent,setSelectedAgent]=useState(null);
   const [auditEntries,setAuditEntries]=useState([]);
-  const [selectedRail,setSelectedRail]=useState(null);
+  const [isProcessing,setIsProcessing]=useState(false);
+  const [killActive,setKillActive]=useState(false);
+  const [selectedAgent,setSelectedAgent]=useState(null);
   const [txState,setTxState]=useState(null);
+  const [selectedRail,setSelectedRail]=useState(null);
+  const [intentSource,setIntentSource]=useState("erp");
+  const [hitl,setHitl]=useState(null);
   const [leftTab,setLeftTab]=useState("payment");
   const [rightTab,setRightTab]=useState("pipeline");
-  const [hitl,setHitl]=useState(null);
-  const [intentSource,setIntentSource]=useState("human");
-  const [sanctionsState,setSanctionsState]=useState({status:"loading",count:0,source:"Loading...",feeds:{ofac:"loading",eu:"loading",un:"loading"}});
-  const [fxState,setFxState]=useState({status:"loading"});
+  const [fxState,setFxState]=useState(null);
+  const [sanctionsState,setSanctionsState]=useState(SANCTIONS_STATE);
   const [demoScene,setDemoScene]=useState(null);
-  const demoAbortRef=useRef(false);
+  const [kyaRegistry,setKyaRegistry]=useState(loadKYA());
   const escRef=useRef(null);
+  const demoAbortRef=useRef(false);
+
+  useEffect(()=>{document.documentElement.setAttribute("data-theme",theme);},[theme]);
+
+  useEffect(()=>{
+    loadFXRates(setFxState);
+  },[]);
+
   const v=VERTICALS[vertical];
 
-  // Load live data on mount — parallel
-  useEffect(()=>{
-    loadSanctionsData(state=>{setSanctionsState(state);SANCTIONS_STATE=state;});
-    loadFXRates(state=>{setFxState(state);FX_STATE=state;});
+  const addAudit=useCallback((agent,message,status)=>{
+    setAuditEntries(p=>[...p,{agent,message,status,time:now()}]);
   },[]);
 
-  useEffect(()=>{setPolicies(VERTICALS[vertical].policies)},[vertical]);
-
-  const addAudit=useCallback((agent,msg,status)=>{
-    setAuditEntries(p=>[...p,{agent,message:msg,status,time:now()}]);
+  const updateKYA=useCallback((payment,blocked)=>{
+    setKyaRegistry(prev=>{
+      const existing=prev[payment.intentSource];
+      const updated=buildKYARecord(payment,existing);
+      if(blocked) updated.blockedCount=(updated.blockedCount||0)+1;
+      const next={...prev,[payment.intentSource]:updated};
+      saveKYA(next);
+      return next;
+    });
   },[]);
 
-  const processPayment=useCallback(async(payment,_vertOverride,_polOverride)=>{
-    if(isProcessing) return;
-    const activeVert=_vertOverride||vertical;
-    const activePol=_polOverride||policies;
+  const processPayment=useCallback(async(paymentData,vertOverride,polOverride)=>{
+    if(isProcessing||killActive) return;
+    const pol=polOverride||policies;
+    const vert=vertOverride||vertical;
+    const payment={...paymentData,id:paymentData.id||genId(),timestamp:paymentData.timestamp||new Date().toISOString(),vertical:vert};
+    setIntentSource(payment.intentSource);
     setIsProcessing(true);
-    setAgentStatuses({});setAgentResults({});setSelectedAgent(null);setAuditEntries([]);setSelectedRail(null);setTxState("Created");
-    setIntentSource(payment.intentSource||"human");
-    setRightTab("pipeline");
-    const rec={id:payment.id,payment,finalStatus:"processing",results:{},vertical:activeVert,wasEscalated:false,sdnBlocked:false};
-    setPayments(p=>[rec,...p]);
-
-    const pol=activePol;
-    const sdn=SANCTIONS_STATE;
-    let aborted=false;
+    setAgentStatuses({});setAgentResults({});setSelectedRail(null);setTxState("Created");
+    setPayments(p=>[...p,{id:payment.id,payment,vertical:vert,finalStatus:"pending"}]);
     const allResults={};
-
-    for(let ai=0;ai<AGENTS.length;ai++){
-      const agent=AGENTS[ai];
-      if(aborted||killActive){setAgentStatuses(p=>({...p,[agent.id]:"skipped"}));continue;}
+    let aborted=false;
+    for(const agent of AGENTS){
+      if(killActive){aborted=true;break;}
+      await new Promise(r=>setTimeout(r,600+Math.random()*400));
       setAgentStatuses(p=>({...p,[agent.id]:"running"}));
-      setSelectedAgent(agent.id);
-      addAudit(agent.id,`${agent.name} activated`,null);
-
-      if(agent.id==="governance") setTxState("Validated");
-      if(agent.id==="control")    setTxState("Risk Assessed");
-      if(agent.id==="execution")  setTxState("Routed");
-
-      await new Promise(r=>setTimeout(r,600+Math.random()*700));
-
-      const result=simulate(agent.id,payment,activeVert,pol,sdn);
+      if(agent.id==="orchestrator") setTxState("Validated");
+      if(agent.id==="governance") setTxState("Risk Assessed");
+      if(agent.id==="control") setTxState("Routed");
+      const result=computeResult(agent.id,payment,vert,pol,sanctionsState);
       allResults[agent.id]=result;
       setAgentResults(p=>({...p,[agent.id]:result}));
-
-      if(agent.id==="governance"){
-        if(result.approved===false){
+      if(result.approved===false){
+        setAgentStatuses(p=>({...p,[agent.id]:"failed"}));
+        addAudit(agent.id,`REJECTED — ${result.summary}`,"fail");
+        result.checks?.filter(c=>c.status==="fail").forEach(c=>addAudit(agent.id,`✗ ${c.name}: ${c.detail}`,"fail"));
+        if(result.sdnHit) addAudit(agent.id,`⬡ SDN MATCH: "${result.sdnHit.entity}" · ${result.sdnHit.source}`,"fail");
+        aborted=true;
+        setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",sdnBlocked:!!result.sdnHit,results:allResults}:x));
+        setTxState(null);
+        updateKYA(payment,true);
+        continue;
+      }
+      if(result.escalationRequired&&pol.hitl){
+        addAudit(agent.id,"ESCALATION: "+result.escalationReason,"warning");
+        setHitl({payment,reason:result.escalationReason,checks:result.checks?.filter(c=>c.status==="pass").slice(0,3).map(c=>({label:c.name,detail:c.detail.slice(0,60)+"..."}))||[]});
+        const approved=await new Promise(res=>{escRef.current=res;});
+        setHitl(null);
+        setPayments(p=>p.map(x=>x.id===payment.id?{...x,wasEscalated:true}:x));
+        if(!approved){
+          addAudit(agent.id,"REJECTED by human reviewer","fail");
           setAgentStatuses(p=>({...p,[agent.id]:"failed"}));
-          const isSdnHit=!!result.sdnHit;
-          addAudit(agent.id,`REJECTED — ${result.summary}`,"fail");
-          result.checks?.filter(c=>c.status==="fail").forEach(c=>addAudit(agent.id,`✗ ${c.name}: ${c.detail}`,"fail"));
-          if(isSdnHit) addAudit(agent.id,`⬡ LIVE OFAC MATCH: "${result.sdnHit.entity}" · ${result.sdnHit.source}`,"fail");
           aborted=true;
-          setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",sdnBlocked:isSdnHit,results:allResults}:x));
+          setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",results:allResults}:x));
           setTxState(null);
+          updateKYA(payment,true);
           continue;
         }
-        if(result.escalationRequired&&pol.hitl){
-          addAudit(agent.id,"ESCALATION: "+result.escalationReason,"warning");          setHitl({payment,reason:result.escalationReason,checks:result.checks?.filter(c=>c.status==="pass").slice(0,3).map(c=>({label:c.name,detail:c.detail.slice(0,60)+"..."}))||[]});
-          const approved=await new Promise(res=>{escRef.current=res});
-          setHitl(null);
-          setPayments(p=>p.map(x=>x.id===payment.id?{...x,wasEscalated:true}:x));
-          if(!approved){
-            addAudit(agent.id,"REJECTED by human reviewer","fail");
-            setAgentStatuses(p=>({...p,[agent.id]:"failed"}));
-            aborted=true;
-            setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",results:allResults}:x));
-            setTxState(null);
-            continue;
-          }
-          addAudit(agent.id,"APPROVED by human reviewer — continuing pipeline","pass");
-          setTxState("Approved");
-        }
-        result.checks?.forEach(c=>addAudit(agent.id,`${c.live?"[LIVE] ":""}${c.name}: ${c.detail}`,c.status));
+        addAudit(agent.id,"APPROVED by human reviewer — continuing pipeline","pass");
+        setTxState("Approved");
       }
-
+      result.checks?.forEach(c=>addAudit(agent.id,`${c.live?"[LIVE] ":""}${c.name}: ${c.detail}`,c.status));
       if(agent.id==="control"&&result.recommendedRail){
         setSelectedRail(result.recommendedRail.id);
         addAudit(agent.id,`Rail: ${result.recommendedRail.name} — ${result.recommendedRail.reason}`,"pass");
-        addAudit(agent.id,`Risk score: ${result.riskScore}/100 (${result.riskLevel})`,result.riskLevel==="low"?"pass":"warning");
+        addAudit(agent.id,`Risk: ${result.riskScore}/100 (${result.riskLevel})`,result.riskLevel==="low"?"pass":"warning");
       }
       if(agent.id==="execution"){
         setTxState("Settled");
@@ -1338,183 +1161,81 @@ function App(){
       if(agent.id==="audit"){
         setTxState("Reconciled");
         result.decisionChain?.forEach(d=>addAudit(agent.id,`[${d.reasonCode}] ${d.agent}: ${d.decision}`,null));
-        addAudit(agent.id,`SDN data: ${result.sanctionsSource||"reference list"}`,null);
       }
-
       setAgentStatuses(p=>({...p,[agent.id]:"complete"}));
       addAudit(agent.id,result.summary||"Complete","pass");
     }
-
     if(!aborted){
-      const final={};AGENTS.forEach(a=>{final[a.id]="complete"});
-      setAgentStatuses(final);
+      const final={};AGENTS.forEach(a=>{final[a.id]="complete";});setAgentStatuses(final);
       setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"settled",results:allResults}:x));
+      updateKYA(payment,false);
     }
     setIsProcessing(false);
-  },[vertical,policies,killActive,isProcessing,addAudit]);
+  },[vertical,policies,killActive,isProcessing,addAudit,sanctionsState,updateKYA]);
 
-  const stopDemo=useCallback(()=>{
-    demoAbortRef.current=true;
-    setDemoScene(null);
-    setKillActive(false);
-  },[]);
+  const stopDemo=useCallback(()=>{demoAbortRef.current=true;setDemoScene(null);setKillActive(false);},[]);
 
   const runAutoDemo=useCallback(async()=>{
-    setShowHero(false);
-    demoAbortRef.current=false;
-    setPayments([]);
-    setKillActive(false);
-
+    setShowHero(false);demoAbortRef.current=false;setPayments([]);setKillActive(false);
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
     const aborted=()=>demoAbortRef.current;
-
-    // Helper: switch vertical + reset UI
-    const switchTo=(vert)=>{
-      setVertical(vert);
-      setLeftTab("payment");
-      setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null);
-    };
-
-    // Helper: submit and wait for processing to finish
+    const switchTo=(vert)=>{setVertical(vert);setLeftTab("payment");setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null);};
     const submit=async(payment,vertOverride,polOverride)=>{
       await new Promise(async resolve=>{
-        const startLen=Date.now();
         processPayment(payment,vertOverride,polOverride);
-        // poll isProcessing — wait until done (max 15s)
-        const check=setInterval(()=>{
-          if(Date.now()-startLen>15000||!document.getElementById("root")) {clearInterval(check);resolve();}
-        },200);
-        // resolve when processing finishes (approximate — processing sets isProcessing false)
-        setTimeout(()=>{clearInterval(check);resolve();},12000);
+        setTimeout(()=>resolve(),12000);
       });
       await sleep(600);
     };
-
     await sleep(300);
-
-    // ── Scene 1: OFAC SDN Entity Block ──────────────────────────────────────────
     if(aborted()) return;
-    setDemoScene(DEMO_SCENES[0]);
-    switchTo("treasury");
-    await sleep(800);
-    await submit({
-      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
-      amount:45000,currency:"USD",fromCountry:"US",toCountry:"AE",toCurrency:"USD",
-      beneficiary:"Bank Melli Iran",purpose:"Vendor payment",urgency:"standard",intentSource:"erp"
-    },"treasury",VERTICALS.treasury.policies);
+    setDemoScene(DEMO_SCENES[0]);switchTo("treasury");await sleep(800);
+    await submit({id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",amount:45000,currency:"USD",fromCountry:"US",toCountry:"AE",toCurrency:"USD",beneficiary:"Bank Melli Iran",purpose:"Vendor payment",urgency:"standard",intentSource:"erp"},"treasury",VERTICALS.treasury.policies);
     await sleep(2000);
-
-    // ── Scene 2: Sanctioned Country Block ───────────────────────────────────────
     if(aborted()) return;
-    setDemoScene(DEMO_SCENES[1]);
-    await sleep(600);
-    await submit({
-      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
-      amount:120000,currency:"USD",fromCountry:"US",toCountry:"IR",toCurrency:"USD",
-      beneficiary:"Tehran Trade LLC",purpose:"Supply chain payment",urgency:"standard",intentSource:"erp"
-    },"treasury",VERTICALS.treasury.policies);
+    setDemoScene(DEMO_SCENES[1]);await sleep(600);
+    await submit({id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",amount:120000,currency:"USD",fromCountry:"US",toCountry:"IR",toCurrency:"USD",beneficiary:"Tehran Trade LLC",purpose:"Supply chain payment",urgency:"standard",intentSource:"erp"},"treasury",VERTICALS.treasury.policies);
     await sleep(2000);
-
-    // ── Scene 3: Kill Switch ─────────────────────────────────────────────────────
     if(aborted()) return;
-    setDemoScene(DEMO_SCENES[2]);
-    setKillActive(true);
-    addAudit("orchestrator","⬛ KILL SWITCH ACTIVATED — all transactions halted globally","fail");
-    setLeftTab("payment");
-    await sleep(3500);
-    setKillActive(false);
-    addAudit("orchestrator","System resumed — kill switch deactivated","pass");
-    await sleep(800);
-
-    // ── Scene 4: Agent HITL — Google UCP intercepted ────────────────────────────
+    setDemoScene(DEMO_SCENES[2]);setKillActive(true);addAudit("orchestrator","■ KILL SWITCH ACTIVATED — all transactions halted globally","fail");setLeftTab("payment");await sleep(3500);setKillActive(false);addAudit("orchestrator","System resumed","pass");await sleep(800);
     if(aborted()) return;
-    setDemoScene(DEMO_SCENES[3]);
-    switchTo("ai_commerce");
-    setLeftTab("policy"); // show the policy panel so viewer sees the thresholds
-    await sleep(1500);
-    setLeftTab("payment");
-    await sleep(500);
-    // Google UCP agent at $3,500 — above the $2,000 agent threshold, triggers HITL
+    setDemoScene(DEMO_SCENES[3]);switchTo("ai_commerce");setLeftTab("policy");await sleep(1500);setLeftTab("payment");await sleep(500);
     const agentHitlPol={...VERTICALS.ai_commerce.policies,agentHitlThreshold:2000,hitl:true};
-    const agentHitlPayment={
-      id:genId(),timestamp:new Date().toISOString(),vertical:"ai_commerce",
-      amount:3500,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",
-      beneficiary:"Compute-Broker-9z",purpose:"Autonomous procurement — GPU burst capacity",urgency:"urgent",intentSource:"google_ucp"
-    };
-    processPayment(agentHitlPayment,"ai_commerce",agentHitlPol);
-    // Wait for HITL modal then auto-approve
-    await sleep(4500);
-    if(!aborted()&&escRef.current) escRef.current(true);
-    await sleep(7000);
-    await sleep(1000);
-
-    // ── Scene 5: Live FX + Full Settlement ──────────────────────────────────────
+    processPayment({id:genId(),timestamp:new Date().toISOString(),vertical:"ai_commerce",amount:3500,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",beneficiary:"Compute-Broker-9z",purpose:"Autonomous procurement — GPU burst capacity",urgency:"urgent",intentSource:"google_ucp"},"ai_commerce",agentHitlPol);
+    await sleep(4500);if(!aborted()&&escRef.current) escRef.current(true);await sleep(7000);
     if(aborted()) return;
-    setDemoScene(DEMO_SCENES[4]);
-    switchTo("treasury");
-    setLeftTab("payment");
-    await sleep(800);
-    await submit({
-      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
-      amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",
-      beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"human"
-    },"treasury",VERTICALS.treasury.policies);
-    setRightTab("audit");
-    await sleep(3000);
-
-    // ── Scene 6: Human vs Agent — Same Amount, Different Rules ──────────────────
+    setDemoScene(DEMO_SCENES[4]);switchTo("treasury");setLeftTab("payment");await sleep(800);
+    await submit({id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"human"},"treasury",VERTICALS.treasury.policies);
+    setRightTab("audit");await sleep(3000);
     if(aborted()) return;
-    setDemoScene(DEMO_SCENES[5]);
-    switchTo("treasury");
-    setLeftTab("policy"); // show the policy panel — viewer sees human vs agent thresholds side by side
-    await sleep(2000);
-    setLeftTab("payment");
-    await sleep(500);
-    // Same $250K but ERP-initiated — hits agent threshold (50K), not human dual-approval (250K)
+    setDemoScene(DEMO_SCENES[5]);switchTo("treasury");setLeftTab("policy");await sleep(2000);setLeftTab("payment");await sleep(500);
     const agentTreasuryPol={...VERTICALS.treasury.policies,agentHitlThreshold:50000,dualApproval:500000,hitl:true};
-    const agentTreasuryPayment={
-      id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",
-      amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",
-      beneficiary:"Siemens AG",purpose:"ERP-initiated vendor payment",urgency:"standard",intentSource:"erp"
-    };
-    processPayment(agentTreasuryPayment,"treasury",agentTreasuryPol);
-    await sleep(4500);
-    if(!aborted()&&escRef.current) escRef.current(true);
-    await sleep(7000);
-    setLeftTab("analytics");
-    await sleep(2000);
-
-    // End
+    processPayment({id:genId(),timestamp:new Date().toISOString(),vertical:"treasury",amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",purpose:"ERP-initiated vendor payment",urgency:"standard",intentSource:"erp"},"treasury",agentTreasuryPol);
+    await sleep(4500);if(!aborted()&&escRef.current) escRef.current(true);await sleep(7000);setLeftTab("analytics");await sleep(2000);
     if(!aborted()) setDemoScene(null);
   },[processPayment,addAudit]);
 
-  if(showHero) return <Hero onEnter={()=>setShowHero(false)} onAutoDemo={runAutoDemo}/>;
+  if(showHero) return <><StyleInjector/><Hero onEnter={()=>setShowHero(false)} onAutoDemo={runAutoDemo}/></>;
 
-  const leftTabs=[{id:"payment",label:"Payment"},{id:"policy",label:"Governance"},{id:"landscape",label:"Landscape"},{id:"analytics",label:"Analytics"}];
+  const leftTabs=[{id:"payment",label:"Payment"},{id:"policy",label:"Governance"},{id:"analytics",label:"Analytics"},{id:"kya",label:"KYA"}];
   const rightTabs=[{id:"pipeline",label:"Agent Detail"},{id:"audit",label:`Audit (${auditEntries.length})`}];
 
   return <div style={{height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
     <StyleInjector/>
-    <style>{`
-      input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:3px;cursor:pointer;border:none;padding:0}
-      input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent,#06d6a0);cursor:pointer}
-      details summary{outline:none;user-select:none;list-style:none}
-    `}</style>
-    <Header vertical={vertical} killActive={killActive} onKillToggle={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed":"⬛ KILL SWITCH — all transactions halted",killActive?"pass":"fail")}} onHero={()=>setShowHero(true)} sanctionsState={sanctionsState} fxState={fxState}/>
-    <VerticalTabs active={vertical} onChange={v=>{setVertical(v);setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null)}}/>
-    <AgentPipeline statuses={agentStatuses} selected={selectedAgent} onSelect={id=>{setSelectedAgent(id);setRightTab("pipeline")}}/>
+    <Header vertical={vertical} killActive={killActive} onKillToggle={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed":"■ KILL SWITCH — all transactions halted",killActive?"pass":"fail");}} onHero={()=>setShowHero(true)} sanctionsState={sanctionsState} fxState={fxState} theme={theme} onThemeToggle={()=>setTheme(t=>t==="dark"?"light":"dark")}/>
+    <VerticalTabs active={vertical} onChange={v=>{setVertical(v);setPolicies({...VERTICALS[v].policies});setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null);}}/>
+    <AgentPipeline statuses={agentStatuses} selected={selectedAgent} onSelect={id=>{setSelectedAgent(id);setRightTab("pipeline");}}/>
     {txState&&<LifecycleBar current={txState}/>}
     <StackDiagram selectedRail={selectedRail} intentSource={intentSource} vertical={vertical}/>
     <MetricsBar payments={payments}/>
-
     <div style={{flex:1,display:"flex",overflow:"hidden",minHeight:0}}>
       <div style={{flex:"0 0 400px",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
         <TabBar tabs={leftTabs} active={leftTab} onChange={setLeftTab} accent={v.accent}/>
         <div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}>
           {leftTab==="payment"&&<PaymentForm vertical={vertical} policies={policies} onSubmit={processPayment} isProcessing={isProcessing} killActive={killActive}/>}
           {leftTab==="policy"&&<PolicyPanel vertical={vertical} policies={policies} onChange={setPolicies}/>}
-          {leftTab==="landscape"&&<div style={{flex:1,overflowY:"auto"}}><Landscape/></div>}
           {leftTab==="analytics"&&<div style={{flex:1,overflowY:"auto"}}><Analytics payments={payments} vertical={vertical}/></div>}
+          {leftTab==="kya"&&<div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}><KYAPanel kyaRegistry={kyaRegistry} onClear={()=>{setKyaRegistry({});saveKYA({});}}/></div>}
         </div>
       </div>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0}}>
@@ -1525,8 +1246,7 @@ function App(){
         </div>
       </div>
     </div>
-
-    {hitl&&<HITLModal payment={hitl.payment} reason={hitl.reason} checks={hitl.checks} onApprove={()=>{setHitl(null);if(escRef.current)escRef.current(true)}} onReject={()=>{setHitl(null);if(escRef.current)escRef.current(false)}}/>}
+    {hitl&&<HITLModal payment={hitl.payment} reason={hitl.reason} checks={hitl.checks} onApprove={()=>{setHitl(null);if(escRef.current)escRef.current(true);}} onReject={()=>{setHitl(null);if(escRef.current)escRef.current(false);}}/>}
     {demoScene&&<DemoNarrator scene={demoScene} onSkip={stopDemo}/>}
   </div>;
 }
