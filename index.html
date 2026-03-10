@@ -8,7 +8,7 @@
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
 /* ── Palette ──────────────────────────────────────────────── */
 :root{
@@ -16,19 +16,19 @@
   --border:#1A2840;--border2:#243858;
   --text:#E8EDF5;--muted:#5E7494;--dim:#253548;
   --gold:#C49A2C;--gold2:#A8821E;--gold-glow:rgba(196,154,44,.15);
-  --serif:'Cormorant Garamond',serif;--mono:'DM Mono',monospace;
+  --sans:'Inter',sans-serif;--mono:'DM Mono',monospace;
   --red:#E05252;--green:#3DB88A;--blue:#4A9EFF;--amber:#D4914A;--violet:#8B72D4;--rose:#C46E8A;
 }
 html[data-theme="light"]{
-  --bg:#F4EFE3;--surface:#EDE7D8;--surface2:#E6DFCE;--card:#E9E3D2;
-  --border:#C9BFA6;--border2:#B8AE94;
-  --text:#18202E;--muted:#7A6E5A;--dim:#B8AE94;
-  --gold:#9A7818;--gold2:#7D6010;--gold-glow:rgba(154,120,24,.12);
+  --bg:#F0EBE0;--surface:#E8E2D5;--surface2:#E0D9CA;--card:#EAE4D8;
+  --border:#C0B49C;--border2:#A89880;
+  --text:#0F1520;--muted:#4A3D2E;--dim:#8A7A65;
+  --gold:#7A5C0A;--gold2:#5E4608;--gold-glow:rgba(122,92,10,.12);
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--mono);-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
 
 /* ── Grain overlay ──────────────────────────────────────────── */
 body::after{
@@ -352,21 +352,22 @@ const PRESETS={
 
 // ─── CSS injection ────────────────────────────────────────────────────────────────
 const CSS=`
-.inp{width:100%;padding:8px 10px;border-radius:2px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px;outline:none;transition:border-color .15s;box-sizing:border-box}
+.inp{width:100%;padding:9px 11px;border-radius:2px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;box-sizing:border-box}
 .inp:focus{border-color:var(--gold)}
-.lbl{display:block;font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;font-family:var(--mono)}
+.lbl{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-family:var(--sans);font-weight:600}
 .panel{background:var(--surface);border:1px solid var(--border);border-radius:2px;overflow:hidden}
-.tag{padding:2px 6px;border-radius:2px;font-size:8px;font-family:var(--mono);letter-spacing:.08em;font-weight:500}
-.btn-kill{padding:6px 11px;border-radius:2px;border:1px solid rgba(224,82,82,.3);background:rgba(224,82,82,.06);color:#E05252;font-family:var(--mono);font-size:8px;letter-spacing:.12em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.tag{padding:2px 7px;border-radius:2px;font-size:9px;font-family:var(--mono);letter-spacing:.06em;font-weight:500}
+.btn-kill{padding:7px 13px;border-radius:2px;border:1px solid rgba(224,82,82,.3);background:rgba(224,82,82,.06);color:#E05252;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .15s;text-transform:uppercase}
 .btn-kill:hover{background:rgba(224,82,82,.12)}
 .btn-kill.halted{border-color:rgba(212,145,74,.4);background:rgba(212,145,74,.08);color:#D4914A;animation:borderPulse 1.5s infinite}
-.btn-access{padding:6px 13px;border-radius:2px;border:1px solid var(--gold);background:rgba(196,154,44,.08);color:var(--gold);font-family:var(--mono);font-size:8px;letter-spacing:.12em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn-access{padding:7px 14px;border-radius:2px;border:1px solid var(--gold);background:rgba(196,154,44,.08);color:var(--gold);font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .15s;text-transform:uppercase}
 .btn-access:hover{background:rgba(196,154,44,.15)}
 .live-dot{width:5px;height:5px;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
-input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:2px;cursor:pointer;border:none;padding:0}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--gold);cursor:pointer}
+input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:3px;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
 details summary{outline:none;user-select:none;list-style:none}
-.serif{font-family:var(--serif)}
+html[data-theme="light"] .inp{background:var(--card);color:var(--text);border-color:var(--border)}
+html[data-theme="light"] select{background:var(--card);color:var(--text)}
 `;
 
 function StyleInjector(){
@@ -424,8 +425,8 @@ function Inp({label,children}){
 
 function Badge({label,value,color}){
   return <div style={{padding:"7px 10px",borderRadius:2,background:color+"12",border:`1px solid ${color}22`}}>
-    <div style={{fontSize:8,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:2}}>{label}</div>
-    <div style={{fontFamily:"var(--mono)",fontSize:15,fontWeight:500,color,lineHeight:1}}>{value}</div>
+    <div style={{fontSize:10,color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:2}}>{label}</div>
+    <div style={{fontFamily:"var(--mono)",fontSize:17,fontWeight:600,color,lineHeight:1}}>{value}</div>
   </div>;
 }
 
@@ -444,15 +445,15 @@ function LiveDataStatus({sanctionsState,fxState}){
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:2,background:liveSdn>0?"rgba(61,184,138,.05)":"rgba(100,116,139,.05)",border:`1px solid ${liveSdn>0?"rgba(61,184,138,.18)":"rgba(100,116,139,.12)"}`}}>
       <div className="live-dot" style={{background:liveSdn>0?"#3DB88A":"#5E7494",boxShadow:liveSdn>0?"0 0 5px #3DB88A":"none"}}/>
       <div>
-        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:500,color:liveSdn>0?"#3DB88A":"#5E7494",letterSpacing:".1em",whiteSpace:"nowrap"}}>{liveSdn>0?`LIVE SDN · ${total.toLocaleString()} ENTITIES`:"CACHED SDN"}</div>
-        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",whiteSpace:"nowrap"}}>OFAC{feeds.ofac==="live"?" ✓":""} EU{feeds.eu==="live"?" ✓":""} UN{feeds.un==="live"?" ✓":""}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:9,fontWeight:600,color:liveSdn>0?"#3DB88A":"#5E7494",letterSpacing:".1em",whiteSpace:"nowrap"}}>{liveSdn>0?`LIVE SDN · ${total.toLocaleString()} ENTITIES`:"CACHED SDN"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--muted)",whiteSpace:"nowrap"}}>OFAC{feeds.ofac==="live"?" ✓":""} EU{feeds.eu==="live"?" ✓":""} UN{feeds.un==="live"?" ✓":""}</div>
       </div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:2,background:fxLive?"rgba(74,158,255,.05)":"rgba(100,116,139,.05)",border:`1px solid ${fxLive?"rgba(74,158,255,.18)":"rgba(100,116,139,.12)"}`}}>
       <div className="live-dot" style={{background:fxLive?"#4A9EFF":"#5E7494",boxShadow:fxLive?"0 0 5px #4A9EFF":"none"}}/>
       <div>
-        <div style={{fontFamily:"var(--mono)",fontSize:7,fontWeight:500,color:fxLive?"#4A9EFF":"#5E7494",letterSpacing:".1em",whiteSpace:"nowrap"}}>{fxLive?"LIVE FX RATES":"CACHED FX"}</div>
-        <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",whiteSpace:"nowrap"}}>{fxLive?`ECB · ${fxState.timestamp}`:"ECB reference"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:9,fontWeight:600,color:fxLive?"#4A9EFF":"#5E7494",letterSpacing:".1em",whiteSpace:"nowrap"}}>{fxLive?"LIVE FX RATES":"CACHED FX"}</div>
+        <div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--muted)",whiteSpace:"nowrap"}}>{fxLive?`ECB · ${fxState.timestamp}`:"ECB reference"}</div>
       </div>
     </div>
   </div>;
@@ -462,10 +463,10 @@ function Header({vertical,killActive,onKillToggle,onHero,sanctionsState,fxState,
   const v=VERTICALS[vertical];
   return <div style={{height:50,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",borderBottom:"1px solid var(--border)",background:"var(--bg)",flexShrink:0,gap:12}}>
     <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={onHero}>
-      <div style={{width:28,height:28,borderRadius:4,background:`linear-gradient(135deg,${v.accent},${v.accent}80)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--serif)",fontWeight:700,fontSize:15,color:"#000",animation:"goldGlow 4s ease-in-out infinite",flexShrink:0}}>R</div>
+      <div style={{width:28,height:28,borderRadius:4,background:`linear-gradient(135deg,${v.accent},${v.accent}80)`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:700,fontSize:15,color:"#000",animation:"goldGlow 4s ease-in-out infinite",flexShrink:0}}>R</div>
       <div>
-        <div className="serif" style={{fontSize:17,fontWeight:700,letterSpacing:"-.2px",lineHeight:1,color:"var(--text)"}}>Revvyn</div>
-        <div style={{fontSize:7,color:"var(--muted)",letterSpacing:".14em",textTransform:"uppercase",marginTop:1}}>Governance Sandbox</div>
+        <div className="sans" style={{fontSize:19,fontWeight:700,letterSpacing:"-.2px",lineHeight:1,color:"var(--text)"}}>Revvyn</div>
+        <div style={{fontSize:10,color:"var(--muted)",letterSpacing:".08em",textTransform:"uppercase",marginTop:1}}>Governance Sandbox</div>
       </div>
     </div>
     <div style={{flex:1,display:"flex",justifyContent:"center"}}>
@@ -484,7 +485,7 @@ function VerticalTabs({active,onChange}){
     {Object.values(VERTICALS).map(v=><button key={v.id} onClick={()=>onChange(v.id)} style={{
       padding:"4px 11px",borderRadius:2,border:`1px solid ${active===v.id?v.accent+"60":"transparent"}`,
       background:active===v.id?v.accent+"0D":"transparent",cursor:"pointer",
-      fontFamily:"var(--mono)",fontSize:9,fontWeight:active===v.id?600:400,color:active===v.id?v.accent:"var(--muted)",
+      fontFamily:"var(--mono)",fontSize:11,fontWeight:active===v.id?600:400,color:active===v.id?v.accent:"var(--muted)",
       whiteSpace:"nowrap",letterSpacing:".06em",transition:"all .15s"
     }}>{v.icon} {v.label}</button>)}
   </div>;
@@ -504,11 +505,11 @@ function AgentPipeline({statuses,selected,onSelect}){
         }}>
           {st==="running"&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${a.color},transparent)`,animation:"shimmer 1.5s infinite"}}/>}
           <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
-            <span style={{fontSize:10,color:a.color}}>{a.icon}</span>
-            <span style={{fontFamily:"var(--serif)",fontSize:10,fontWeight:700,color:a.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
+            <span style={{fontSize:13,color:a.color}}>{a.icon}</span>
+            <span style={{fontFamily:"var(--sans)",fontSize:10,fontWeight:700,color:a.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name}</span>
             <div style={{marginLeft:"auto",width:4,height:4,borderRadius:"50%",flexShrink:0,background:st==="complete"?a.color:st==="failed"?"#E05252":st==="running"?a.color:"var(--border)",boxShadow:st==="running"?`0 0 5px ${a.color}`:"none",animation:st==="running"?"pulse 1s infinite":"none"}}/>
           </div>
-          <div style={{fontSize:7,color:"var(--muted)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:".05em"}}>
+          <div style={{fontSize:10,color:"var(--muted)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",letterSpacing:".05em"}}>
             {st==="running"?"Processing...":st==="complete"?"Complete ✓":st==="failed"?"Blocked ✗":a.role}
           </div>
         </div>
@@ -522,7 +523,7 @@ function LifecycleBar({current}){
   const idx=TX_STATES.indexOf(current);
   return <div style={{display:"flex",alignItems:"center",padding:"4px 12px",background:"var(--card)",borderBottom:"1px solid var(--border)",flexShrink:0,overflowX:"auto",gap:0}}>
     {TX_STATES.map((s,i)=><React.Fragment key={s}>
-      <span style={{padding:"2px 6px",borderRadius:2,fontSize:7,fontFamily:"var(--mono)",fontWeight:i===idx?600:400,letterSpacing:".1em",whiteSpace:"nowrap",transition:"all .3s",background:i===idx?"rgba(196,154,44,.1)":i<idx?"rgba(61,184,138,.05)":"transparent",color:i===idx?"var(--gold)":i<idx?"#3DB88A":"var(--dim)",border:i===idx?"1px solid rgba(196,154,44,.22)":"1px solid transparent"}}>{s.toUpperCase()}</span>
+      <span style={{padding:"2px 6px",borderRadius:2,fontSize:10,fontFamily:"var(--mono)",fontWeight:i===idx?600:400,letterSpacing:".1em",whiteSpace:"nowrap",transition:"all .3s",background:i===idx?"rgba(196,154,44,.1)":i<idx?"rgba(61,184,138,.05)":"transparent",color:i===idx?"var(--gold)":i<idx?"#3DB88A":"var(--dim)",border:i===idx?"1px solid rgba(196,154,44,.22)":"1px solid transparent"}}>{s.toUpperCase()}</span>
       {i<TX_STATES.length-1&&<span style={{color:i<idx?"rgba(61,184,138,.4)":"var(--dim)",fontSize:7,padding:"0 1px"}}>→</span>}
     </React.Fragment>)}
   </div>;
@@ -542,8 +543,8 @@ function MetricsBar({payments}){
   ];
   return <div style={{display:"flex",borderBottom:"1px solid var(--border)",background:"var(--card)",flexShrink:0}}>
     {items.map(m=><div key={m.label} style={{flex:1,padding:"7px 11px",borderRight:"1px solid var(--border)"}}>
-      <div className="serif" style={{fontSize:20,fontWeight:700,color:m.color,lineHeight:1}}>{m.value}</div>
-      <div style={{fontSize:7,color:"var(--muted)",marginTop:2,letterSpacing:".1em",textTransform:"uppercase"}}>{m.label}</div>
+      <div className="sans" style={{fontSize:24,fontWeight:700,color:m.color,lineHeight:1}}>{m.value}</div>
+      <div style={{fontSize:10,color:"var(--muted)",marginTop:2,letterSpacing:".1em",textTransform:"uppercase"}}>{m.label}</div>
     </div>)}
   </div>;
 }
@@ -551,7 +552,7 @@ function MetricsBar({payments}){
 function StackDiagram({selectedRail,intentSource,vertical}){
   const v=VERTICALS[vertical];
   return <div style={{padding:"7px 12px 3px",flexShrink:0,display:"flex",flexDirection:"column",gap:2}}>
-    <div style={{fontFamily:"var(--mono)",fontSize:6,color:"var(--dim)",letterSpacing:"1.5px",marginBottom:2}}>ARCHITECTURE STACK</div>
+    <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--dim)",letterSpacing:"1px",marginBottom:2}}>ARCHITECTURE STACK</div>
     <div style={{display:"flex",alignItems:"center",gap:5}}>
       <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".08em"}}>INTENT</div>
       <div style={{flex:1,display:"flex",gap:2}}>
@@ -584,20 +585,20 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
   const [form,setForm]=useState({...v.defaults});
   useEffect(()=>setForm({...VERTICALS[vertical].defaults}),[vertical]);
   const u=(k,val)=>setForm(f=>({...f,[k]:val}));
-  const s={width:"100%",padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--mono)",fontSize:11,outline:"none",boxSizing:"border-box"};
+  const s={width:"100%",padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--mono)",fontSize:13,outline:"none",boxSizing:"border-box"};
   const isCross=form.fromCountry!==form.toCountry;
   const fx=FX[form.toCurrency]||1;
   const converted=form.currency!==form.toCurrency?Math.round(form.amount*fx*100)/100:null;
   const presets=PRESETS[vertical]||[];
   return <div style={{display:"flex",flexDirection:"column",gap:9,padding:"11px 14px",overflowY:"auto",flex:1}}>
     <div style={{padding:"8px 10px",borderRadius:2,background:v.accent+"07",border:`1px solid ${v.accent}18`}}>
-      <div className="serif" style={{fontSize:13,fontWeight:700,color:v.accent,marginBottom:2}}>{v.icon} {v.label}</div>
-      <div style={{fontSize:9,color:"var(--muted)"}}>{v.desc}</div>
+      <div className="sans" style={{fontSize:15,fontWeight:700,color:v.accent,marginBottom:2}}>{v.icon} {v.label}</div>
+      <div style={{fontSize:11,color:"var(--muted)"}}>{v.desc}</div>
     </div>
     {presets.length>0&&<div>
       <div className="lbl" style={{marginBottom:4}}>Quick Scenarios</div>
       <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
-        {presets.map((p,i)=><button key={i} onClick={()=>setForm(f=>({...f,...p.data}))} style={{padding:"3px 8px",borderRadius:2,border:"1px solid var(--border)",background:"var(--card)",fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)",cursor:"pointer",transition:"all .15s",whiteSpace:"nowrap"}}
+        {presets.map((p,i)=><button key={i} onClick={()=>setForm(f=>({...f,...p.data}))} style={{padding:"3px 8px",borderRadius:2,border:"1px solid var(--border)",background:"var(--card)",fontFamily:"var(--mono)",fontSize:11,color:"var(--muted)",cursor:"pointer",transition:"all .15s",whiteSpace:"nowrap"}}
           onMouseOver={e=>{e.currentTarget.style.borderColor=v.accent;e.currentTarget.style.color=v.accent}}
           onMouseOut={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.color="var(--muted)"}}
         >{p.label}</button>)}
@@ -605,7 +606,7 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
     </div>}
     <Inp label="Intent Source">
       <div style={{display:"flex",gap:2,flexWrap:"wrap"}}>
-        {INTENT_SOURCES.map(src=><button key={src.id} onClick={()=>u("intentSource",src.id)} style={{flex:"1 0 0",minWidth:54,padding:"4px 2px",borderRadius:2,cursor:"pointer",border:`1px solid ${form.intentSource===src.id?src.color:"var(--border)"}`,background:form.intentSource===src.id?src.color+"10":"var(--card)",fontFamily:"var(--mono)",fontSize:7,fontWeight:600,color:form.intentSource===src.id?src.color:"var(--muted)"}}>{src.name}</button>)}
+        {INTENT_SOURCES.map(src=><button key={src.id} onClick={()=>u("intentSource",src.id)} style={{flex:"1 0 0",minWidth:54,padding:"4px 2px",borderRadius:2,cursor:"pointer",border:`1px solid ${form.intentSource===src.id?src.color:"var(--border)"}`,background:form.intentSource===src.id?src.color+"10":"var(--card)",fontFamily:"var(--mono)",fontSize:10,fontWeight:600,color:form.intentSource===src.id?src.color:"var(--muted)"}}>{src.name}</button>)}
       </div>
     </Inp>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
@@ -617,7 +618,7 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
       <Inp label="To"><select value={form.toCountry} onChange={e=>u("toCountry",e.target.value)} style={s}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
       <Inp label="To Ccy"><select value={form.toCurrency} onChange={e=>u("toCurrency",e.target.value)} style={s}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></Inp>
     </div>
-    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"5px 9px",borderRadius:2,background:"rgba(74,158,255,.05)",border:"1px solid rgba(74,158,255,.18)",fontSize:10,color:"#4A9EFF",fontFamily:"var(--mono)"}}>
+    {isCross&&converted&&form.currency!==form.toCurrency&&<div style={{padding:"5px 9px",borderRadius:2,background:"rgba(74,158,255,.05)",border:"1px solid rgba(74,158,255,.18)",fontSize:12,color:"#4A9EFF",fontFamily:"var(--mono)"}}>
       {FX_STATE.status==="live"?"◉ LIVE":"○"} FX: {fmtAmt(form.amount)} {form.currency} → {Number(converted).toLocaleString()} {form.toCurrency} @ {fx} {FX_STATE.status==="live"?`· ${FX_STATE.timestamp}`:""}
     </div>}
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
@@ -634,7 +635,7 @@ function PaymentForm({vertical,policies,onSubmit,isProcessing,killActive}){
       style={{padding:"11px",borderRadius:2,border:`1px solid ${killActive?"rgba(224,82,82,.3)":isProcessing?"var(--border)":`${v.accent}40`}`,cursor:isProcessing||killActive?"not-allowed":"pointer",
         background:killActive?"rgba(224,82,82,.06)":isProcessing?"var(--card)":v.accent+"14",
         color:killActive?"#E05252":isProcessing?"var(--muted)":v.accent,
-        fontFamily:"var(--mono)",fontSize:10,fontWeight:600,letterSpacing:".12em",transition:"all .2s",textTransform:"uppercase"
+        fontFamily:"var(--mono)",fontSize:12,fontWeight:600,letterSpacing:".08em",transition:"all .2s",textTransform:"uppercase"
       }}>
       {killActive?"■ HALTED":isProcessing?"Processing...":"▶ Submit Payment Intent"}
     </button>
@@ -667,7 +668,7 @@ function PolicyPanel({vertical,policies,onChange}){
       <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]} onChange={e=>upd(s.key,Number(e.target.value))} style={{width:"100%"}}/>
     </div>)}
     <div style={{padding:"11px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.15)"}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"#8B72D4",fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>◎ Intent-Based Escalation</div>
+      <div style={{fontFamily:"var(--mono)",fontSize:11,color:"#8B72D4",fontWeight:600,letterSpacing:".08em",textTransform:"uppercase",marginBottom:8}}>◎ Intent-Based Escalation</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:9}}>
         <div style={{padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
           <div style={{fontSize:7,color:"var(--muted)",letterSpacing:".1em",textTransform:"uppercase",marginBottom:2}}>Human Initiated</div>
@@ -687,7 +688,7 @@ function PolicyPanel({vertical,policies,onChange}){
     </div>
     {/* Trust Signals */}
     <div style={{padding:"11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.14)"}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--gold)",fontWeight:600,letterSpacing:".12em",textTransform:"uppercase",marginBottom:8}}>◈ Trust Signal Inputs</div>
+      <div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--gold)",fontWeight:600,letterSpacing:".08em",textTransform:"uppercase",marginBottom:8}}>◈ Trust Signal Inputs</div>
       {TRUST_SIGNALS.map(ts=><div key={ts.id} style={{padding:"7px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:5}}>
         <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
           <div style={{width:4,height:4,borderRadius:"50%",background:ts.color,flexShrink:0}}/>
@@ -696,14 +697,14 @@ function PolicyPanel({vertical,policies,onChange}){
         </div>
         <div style={{fontSize:9,color:"var(--dim)",lineHeight:1.4}}>{ts.desc}</div>
       </div>)}
-      <div style={{padding:"7px 9px",borderRadius:2,background:"rgba(196,154,44,.06)",border:"1px solid rgba(196,154,44,.18)",fontSize:9,color:"var(--muted)",lineHeight:1.5,marginTop:2}}>
+      <div style={{padding:"7px 9px",borderRadius:2,background:"rgba(196,154,44,.06)",border:"1px solid rgba(196,154,44,.18)",fontSize:11,color:"var(--muted)",lineHeight:1.5,marginTop:2}}>
         <span style={{color:"var(--gold)",fontWeight:600}}>Revvyn position: </span>MVI proves intent. ERC-8004 scores the agent. Visa TAP validates the credential. <strong style={{color:"var(--text)"}}>Revvyn decides whether the payment is permitted.</strong>
       </div>
     </div>
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
       {toggles.map(t=><div key={t.key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"8px 10px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
         <div>
-          <div style={{fontFamily:"var(--mono)",fontSize:10,fontWeight:500,color:"var(--text)",marginBottom:1}}>{t.label}</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:12,fontWeight:500,color:"var(--text)",marginBottom:1}}>{t.label}</div>
           <div style={{fontSize:8,color:"var(--muted)"}}>{t.sub}</div>
         </div>
         <button onClick={()=>upd(t.key,!policies[t.key])} style={{width:36,height:20,borderRadius:10,border:`1px solid ${policies[t.key]?v.accent+"40":"var(--border)"}`,background:policies[t.key]?v.accent+"14":"var(--card)",cursor:"pointer",position:"relative",transition:"all .2s",flexShrink:0}}>
@@ -722,11 +723,11 @@ function AgentDetail({agentId,results}){
     <div style={{display:"flex",alignItems:"center",gap:9}}>
       <span style={{fontSize:14,color:agent.color}}>{agent.icon}</span>
       <div>
-        <div className="serif" style={{fontSize:14,fontWeight:700,color:agent.color}}>{agent.name}</div>
-        <div style={{fontSize:9,color:"var(--muted)"}}>{agent.role}</div>
+        <div className="sans" style={{fontSize:16,fontWeight:700,color:agent.color}}>{agent.name}</div>
+        <div style={{fontSize:11,color:"var(--muted)"}}>{agent.role}</div>
       </div>
     </div>
-    {result.summary&&<div style={{padding:"9px 11px",borderRadius:2,background:agent.color+"07",border:`1px solid ${agent.color}18`,fontSize:11,color:"#CBD5E1",lineHeight:1.6}}>{result.summary}</div>}
+    {result.summary&&<div style={{padding:"9px 11px",borderRadius:2,background:agent.color+"07",border:`1px solid ${agent.color}18`,fontSize:13,color:"#CBD5E1",lineHeight:1.6}}>{result.summary}</div>}
     {result.sdnHit&&<div style={{padding:"9px 11px",borderRadius:2,background:"rgba(139,114,212,.07)",border:"1px solid rgba(139,114,212,.25)",fontSize:11,lineHeight:1.5}}>
       <div style={{fontFamily:"var(--mono)",fontSize:8,color:"#8B72D4",fontWeight:600,letterSpacing:".1em",marginBottom:3}}>⬡ SANCTIONS MATCH — {result.sdnHit.list||"OFAC SDN"}</div>
       <div style={{color:"var(--text)"}}>Matched: <strong style={{color:"#E05252"}}>{result.sdnHit.entity}</strong></div>
@@ -742,7 +743,7 @@ function AgentDetail({agentId,results}){
     </div>
     {/* Trust signals in Governance agent */}
     {agentId==="governance"&&result.trustSignals&&<div style={{padding:"9px 11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.15)"}}>
-      <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--gold)",fontWeight:600,letterSpacing:".12em",marginBottom:7}}>◈ TRUST SIGNAL STATUS</div>
+      <div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--gold)",fontWeight:600,letterSpacing:".08em",marginBottom:7}}>◈ TRUST SIGNAL STATUS</div>
       <div style={{display:"flex",flex:1,gap:5,flexWrap:"wrap"}}>
         {TRUST_SIGNALS.map(ts=>{
           const active=result.trustSignals[ts.id];
@@ -755,7 +756,7 @@ function AgentDetail({agentId,results}){
           </div>;
         })}
       </div>
-      <div style={{fontSize:9,color:"var(--muted)",marginTop:6,lineHeight:1.4}}>Trust signals are <em>inputs</em> to Revvyn. They prove identity and intent — Revvyn enforces the policy.</div>
+      <div style={{fontSize:11,color:"var(--muted)",marginTop:6,lineHeight:1.4}}>Trust signals are <em>inputs</em> to Revvyn. They prove identity and intent — Revvyn enforces the policy.</div>
     </div>}
     {result.checks&&<div>
       <div className="lbl" style={{marginBottom:4}}>Compliance Checks</div>
@@ -768,22 +769,22 @@ function AgentDetail({agentId,results}){
     {result.recommendedRail&&<div>
       <div className="lbl" style={{marginBottom:4}}>Rail Selection</div>
       <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(61,184,138,.05)",border:"1px solid rgba(61,184,138,.18)",marginBottom:4}}>
-        <div style={{fontSize:11,fontWeight:600,color:"#3DB88A",marginBottom:2}}>✓ {result.recommendedRail.name}</div>
+        <div style={{fontSize:13,fontWeight:600,color:"#3DB88A",marginBottom:2}}>✓ {result.recommendedRail.name}</div>
         <div style={{fontSize:10,color:"var(--muted)"}}>{result.recommendedRail.reason}</div>
       </div>
       {result.alternativeRails?.map((r,i)=><div key={i} style={{padding:"5px 8px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:2,fontSize:10,color:"var(--muted)"}}>
         Alt {i+1}: <span style={{color:"#4A9EFF"}}>{r.name}</span> — {r.reason}
       </div>)}
     </div>}
-    {result.fxOptimization?.applicable&&<div style={{padding:"8px 10px",borderRadius:2,background:"rgba(74,158,255,.05)",border:"1px solid rgba(74,158,255,.18)",fontSize:10,color:"var(--muted)",lineHeight:1.5}}>
+    {result.fxOptimization?.applicable&&<div style={{padding:"8px 10px",borderRadius:2,background:"rgba(74,158,255,.05)",border:"1px solid rgba(74,158,255,.18)",fontSize:12,color:"var(--muted)",lineHeight:1.5}}>
       <span style={{color:"#4A9EFF",fontWeight:600}}>FX Optimisation: </span>{result.fxOptimization.strategy}
     </div>}
     {result.decisionChain&&<div>
       <div className="lbl" style={{marginBottom:4}}>Decision Chain</div>
       {result.decisionChain.map((d,i)=><div key={i} style={{display:"flex",gap:6,fontSize:10,marginBottom:2,padding:"4px 6px",borderRadius:2,background:"var(--card)"}}>
-        <span style={{fontFamily:"var(--mono)",fontSize:7,color:"#4A9EFF",fontWeight:600,whiteSpace:"nowrap"}}>[{d.reasonCode}]</span>
+        <span style={{fontFamily:"var(--mono)",fontSize:10,color:"#4A9EFF",fontWeight:600,whiteSpace:"nowrap"}}>[{d.reasonCode}]</span>
         <span style={{color:"#94A3B8",flex:1}}><strong style={{color:"#CBD5E1"}}>{d.agent}:</strong> {d.decision}</span>
-        <span style={{fontSize:8,color:"var(--dim)",whiteSpace:"nowrap"}}>{d.confidence}%</span>
+        <span style={{fontSize:10,color:"var(--dim)",whiteSpace:"nowrap"}}>{d.confidence}%</span>
       </div>)}
     </div>}
     {result.regulatoryTags&&<div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
@@ -805,10 +806,10 @@ function AuditTrail({entries}){
       const ag=AGENTS.find(a=>a.id===e.agent);
       return <div key={i} style={{padding:"4px 7px",borderRadius:2,background:"var(--card)",borderLeft:`2px solid ${ag?ag.color+"60":"var(--border)"}`,animation:"fadeUp .2s ease"}}>
         <div style={{display:"flex",justifyContent:"space-between",marginBottom:1}}>
-          <span className="serif" style={{fontSize:8,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{e.agent}</span>
+          <span className="sans" style={{fontSize:11,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{e.agent}</span>
           <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)"}}>{e.time}</span>
         </div>
-        <div style={{fontSize:10,color:"#94A3B8",lineHeight:1.4}}>{e.message}</div>
+        <div style={{fontSize:12,color:"#94A3B8",lineHeight:1.4}}>{e.message}</div>
         {e.status&&<span className="tag" style={{display:"inline-block",marginTop:2,background:e.status==="pass"?"rgba(61,184,138,.08)":e.status==="fail"?"rgba(224,82,82,.08)":"rgba(212,145,74,.08)",color:e.status==="pass"?"#3DB88A":e.status==="fail"?"#E05252":"#D4914A"}}>{e.status.toUpperCase()}</span>}
       </div>;
     })}
@@ -862,7 +863,7 @@ function KYAPanel({kyaRegistry,onClear}){
   const [selected,setSelected]=useState(null);
   const sel=selected?kyaRegistry[selected]:null;
   if(entries.length===0) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:11,lineHeight:1.7}}>
-    <div style={{fontFamily:"var(--serif)",fontSize:16,color:"var(--muted)",marginBottom:8}}>Know Your Agent</div>
+    <div style={{fontFamily:"var(--sans)",fontSize:16,color:"var(--muted)",marginBottom:8}}>Know Your Agent</div>
     <div>Agent identities populate as transactions are submitted.</div>
     <div style={{marginTop:4}}>Each unique intent source generates a KYA record with mandate scope, trust signal history, and risk scoring.</div>
   </div>;
@@ -899,7 +900,7 @@ function KYAPanel({kyaRegistry,onClear}){
             <div style={{width:12,height:12,borderRadius:"50%",background:INTENT_SOURCES.find(s=>s.id===sel.intentSource)?.color||"var(--gold)"}}/>
           </div>
           <div>
-            <div className="serif" style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>{sel.origin}</div>
+            <div className="sans" style={{fontSize:16,fontWeight:700,color:"var(--text)"}}>{sel.origin}</div>
             <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)"}}>{sel.agentId}</div>
           </div>
         </div>
@@ -911,7 +912,7 @@ function KYAPanel({kyaRegistry,onClear}){
         </div>
         <div style={{padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
           <div className="lbl" style={{marginBottom:4}}>Mandate Scope</div>
-          <div style={{fontSize:10,color:"#94A3B8",lineHeight:1.5}}>{sel.mandateScope}</div>
+          <div style={{fontSize:12,color:"#94A3B8",lineHeight:1.5}}>{sel.mandateScope}</div>
         </div>
         <div style={{padding:"9px 11px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.14)"}}>
           <div className="lbl" style={{marginBottom:6}}>◈ Trust Signal History</div>
@@ -920,7 +921,7 @@ function KYAPanel({kyaRegistry,onClear}){
             return <div key={ts.id} style={{display:"flex",alignItems:"center",gap:7,padding:"5px 0",borderBottom:"1px solid var(--border)"}}>
               <div style={{width:5,height:5,borderRadius:"50%",background:active?ts.color:"var(--dim)",flexShrink:0}}/>
               <span style={{fontFamily:"var(--mono)",fontSize:8,fontWeight:600,color:active?ts.color:"var(--muted)",minWidth:34}}>{ts.short}</span>
-              <span style={{fontSize:9,color:"var(--muted)",flex:1}}>{ts.label}</span>
+              <span style={{fontSize:11,color:"var(--muted)",flex:1}}>{ts.label}</span>
               <span className="tag" style={{background:active?"rgba(61,184,138,.08)":"rgba(100,116,139,.08)",color:active?"#3DB88A":"var(--dim)"}}>{active?"PRESENT":"ABSENT"}</span>
             </div>;
           })}
@@ -944,7 +945,7 @@ function KYAPanel({kyaRegistry,onClear}){
             <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--muted)"}}><span>Blocked count</span><span style={{fontFamily:"var(--mono)",fontSize:9,color:sel.blockedCount>0?"#E05252":"#3DB88A"}}>{sel.blockedCount}</span></div>
           </div>
         </div>
-        <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.15)",fontSize:9,color:"var(--muted)",lineHeight:1.5}}>
+        <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(139,114,212,.05)",border:"1px solid rgba(139,114,212,.15)",fontSize:11,color:"var(--muted)",lineHeight:1.5}}>
           <span style={{color:"#8B72D4",fontWeight:600}}>KYA principle: </span>KYC was built for humans. KYA is built for agents. AgentProof scores the agent — Revvyn decides whether it's permitted to act.
         </div>
       </>}
@@ -958,8 +959,8 @@ function HITLModal({payment,reason,checks,onApprove,onReject}){
       <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:14}}>
         <div style={{width:32,height:32,borderRadius:4,background:"rgba(212,145,74,.08)",border:"1px solid rgba(212,145,74,.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15}}>⚠</div>
         <div>
-          <div className="serif" style={{fontSize:14,fontWeight:700,color:"#D4914A"}}>Human Review Required</div>
-          <div style={{fontSize:9,color:"var(--muted)"}}>Pipeline paused — awaiting decision</div>
+          <div className="sans" style={{fontSize:16,fontWeight:700,color:"#D4914A"}}>Human Review Required</div>
+          <div style={{fontSize:11,color:"var(--muted)"}}>Pipeline paused — awaiting decision</div>
         </div>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:9,fontSize:11}}>
@@ -979,7 +980,7 @@ function HITLModal({payment,reason,checks,onApprove,onReject}){
 
 function TabBar({tabs,active,onChange,accent}){
   return <div style={{display:"flex",gap:0,borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
-    {tabs.map(t=><button key={t.id} onClick={()=>onChange(t.id)} style={{padding:"8px 13px",border:"none",background:"transparent",fontFamily:"var(--mono)",fontSize:9,fontWeight:600,letterSpacing:".1em",color:active===t.id?accent:"var(--muted)",cursor:"pointer",whiteSpace:"nowrap",borderBottom:`2px solid ${active===t.id?accent:"transparent"}`,transition:"all .15s",textTransform:"uppercase"}}>{t.label}</button>)}
+    {tabs.map(t=><button key={t.id} onClick={()=>onChange(t.id)} style={{padding:"8px 13px",border:"none",background:"transparent",fontFamily:"var(--mono)",fontSize:11,fontWeight:600,letterSpacing:".08em",color:active===t.id?accent:"var(--muted)",cursor:"pointer",whiteSpace:"nowrap",borderBottom:`2px solid ${active===t.id?accent:"transparent"}`,transition:"all .15s",textTransform:"uppercase"}}>{t.label}</button>)}
   </div>;
 }
 
@@ -989,10 +990,10 @@ function Hero({onEnter,onAutoDemo}){
     <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 70% 50% at 50% -10%,rgba(196,154,44,.06) 0%,transparent 60%)"}}/>
     <div style={{textAlign:"center",maxWidth:680,position:"relative",zIndex:1}}>
       <div style={{display:"inline-flex",alignItems:"center",gap:14,marginBottom:30,animation:"fadeUp .6s ease-out"}}>
-        <div style={{width:54,height:54,borderRadius:10,background:"linear-gradient(135deg,#C49A2C,#C49A2C80)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--serif)",fontWeight:700,fontSize:26,color:"#000",animation:"goldGlow 4s ease-in-out infinite",flexShrink:0}}>R</div>
-        <span className="serif" style={{fontWeight:700,fontSize:28,letterSpacing:"-.3px"}}>Revvyn</span>
+        <div style={{width:54,height:54,borderRadius:10,background:"linear-gradient(135deg,#C49A2C,#C49A2C80)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--sans)",fontWeight:700,fontSize:26,color:"#000",animation:"goldGlow 4s ease-in-out infinite",flexShrink:0}}>R</div>
+        <span className="sans" style={{fontWeight:700,fontSize:28,letterSpacing:"-.3px"}}>Revvyn</span>
       </div>
-      <h1 className="serif" style={{fontSize:"clamp(26px,5vw,50px)",fontWeight:700,lineHeight:1.1,marginBottom:16,animation:"fadeUp .6s ease-out .1s both",color:"var(--text)"}}>
+      <h1 className="sans" style={{fontSize:"clamp(26px,5vw,50px)",fontWeight:700,lineHeight:1.1,marginBottom:16,animation:"fadeUp .6s ease-out .1s both",color:"var(--text)"}}>
         The Governance Layer for{" "}
         <span style={{background:"linear-gradient(135deg,#C49A2C,#D4914A)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Agentic Commerce</span>
       </h1>
@@ -1005,7 +1006,7 @@ function Hero({onEnter,onAutoDemo}){
       <div style={{display:"flex",justifyContent:"center",gap:"clamp(20px,5vw,56px)",marginBottom:34,animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}}>
         {[{n:"6",l:"Verticals",c:"var(--gold)"},{n:"9",l:"Payment Rails",c:"#4A9EFF"},{n:"5",l:"AI Agents",c:"#8B72D4"}].map(s=>(
           <div key={s.l} style={{textAlign:"center"}}>
-            <div className="serif" style={{fontSize:"clamp(32px,4vw,46px)",fontWeight:700,color:s.c,lineHeight:1}}>{s.n}</div>
+            <div className="sans" style={{fontSize:"clamp(32px,4vw,46px)",fontWeight:700,color:s.c,lineHeight:1}}>{s.n}</div>
             <div style={{fontFamily:"var(--mono)",fontSize:8,color:"var(--muted)",letterSpacing:"1.2px",textTransform:"uppercase",marginTop:3}}>{s.l}</div>
           </div>
         ))}
@@ -1039,8 +1040,8 @@ function DemoNarrator({scene,onSkip}){
           <div style={{width:26,height:26,borderRadius:3,background:scene.color+"12",border:`1px solid ${scene.color}35`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"var(--mono)",fontSize:9,fontWeight:700,color:scene.color}}>{scene.scene}/{scene.total}</div>
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <div className="serif" style={{fontSize:12,fontWeight:700,color:scene.color,marginBottom:3}}>{scene.title}</div>
-          <div style={{fontSize:10,color:"var(--muted)",lineHeight:1.5}}>{scene.desc}</div>
+          <div className="sans" style={{fontSize:12,fontWeight:700,color:scene.color,marginBottom:3}}>{scene.title}</div>
+          <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{scene.desc}</div>
         </div>
         <button onClick={onSkip} style={{padding:"3px 7px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--dim)",fontFamily:"var(--mono)",fontSize:8,cursor:"pointer",flexShrink:0}}>✕ Skip</button>
       </div>
