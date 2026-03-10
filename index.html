@@ -859,10 +859,8 @@ function Analytics({payments,vertical}){
   </div>;
 }
 
-function KYAPanel({kyaRegistry,onClear,suspendedAgents,onToggleSuspend}){
+function KYAPanel({kyaRegistry,onClear,suspendedAgents,onToggleSuspend,selected,onSelect}){
   const entries=Object.values(kyaRegistry);
-  // Auto-select first entry; persist selection even when registry updates
-  const [selected,setSelected]=useState(null);
   const effectiveSel=selected&&kyaRegistry[selected]?selected:entries.length>0?entries[0].intentSource:null;
   const sel=effectiveSel?kyaRegistry[effectiveSel]:null;
 
@@ -898,7 +896,7 @@ function KYAPanel({kyaRegistry,onClear,suspendedAgents,onToggleSuspend}){
         const src=INTENT_SOURCES.find(s=>s.id===e.intentSource)||{color:"var(--gold)"};
         const isSel=effectiveSel===e.intentSource;
         const susp=suspendedAgents?.includes(e.intentSource);
-        return <div key={e.intentSource} onClick={()=>setSelected(e.intentSource)} style={{padding:"10px 11px",borderBottom:"1px solid var(--border)",cursor:"pointer",background:isSel?"rgba(196,154,44,.05)":"transparent",borderLeft:`3px solid ${isSel?src.color:susp?"#E05252":"transparent"}`,transition:"all .15s"}}>
+        return <div key={e.intentSource} onClick={()=>onSelect(e.intentSource)} style={{padding:"10px 11px",borderBottom:"1px solid var(--border)",cursor:"pointer",background:isSel?"rgba(196,154,44,.05)":"transparent",borderLeft:`3px solid ${isSel?src.color:susp?"#E05252":"transparent"}`,transition:"all .15s"}}>
           <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
             <div style={{width:6,height:6,borderRadius:"50%",background:susp?"#E05252":src.color,flexShrink:0}}/>
             <span style={{fontSize:11,fontWeight:600,color:isSel?src.color:susp?"#E05252":"var(--text)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.origin}</span>
@@ -1139,6 +1137,7 @@ function App(){
   const [demoScene,setDemoScene]=useState(null);
   const [kyaRegistry,setKyaRegistry]=useState(loadKYA());
   const [suspendedAgents,setSuspendedAgents]=useState([]);
+  const [selectedKYAAgent,setSelectedKYAAgent]=useState(null);
   const escRef=useRef(null);
   const demoAbortRef=useRef(false);
 
@@ -1163,6 +1162,8 @@ function App(){
       saveKYA(next);
       return next;
     });
+    // Auto-select first agent seen
+    setSelectedKYAAgent(s=>s||payment.intentSource);
   },[]);
 
   const processPayment=useCallback(async(paymentData,vertOverride,polOverride)=>{
@@ -1308,7 +1309,7 @@ function App(){
           {leftTab==="payment"&&<PaymentForm vertical={vertical} policies={policies} onSubmit={processPayment} isProcessing={isProcessing} killActive={killActive}/>}
           {leftTab==="policy"&&<PolicyPanel vertical={vertical} policies={policies} onChange={setPolicies}/>}
           {leftTab==="analytics"&&<div style={{flex:1,overflowY:"auto"}}><Analytics payments={payments} vertical={vertical}/></div>}
-          {leftTab==="kya"&&<div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}><KYAPanel kyaRegistry={kyaRegistry} onClear={()=>{setKyaRegistry({});saveKYA({});}} suspendedAgents={suspendedAgents} onToggleSuspend={id=>setSuspendedAgents(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id])}/></div>}
+          {leftTab==="kya"&&<div style={{flex:1,overflow:"hidden",display:"flex",flexDirection:"column",minHeight:0}}><KYAPanel kyaRegistry={kyaRegistry} onClear={()=>{setKyaRegistry({});saveKYA({});setSelectedKYAAgent(null);}} suspendedAgents={suspendedAgents} onToggleSuspend={id=>setSuspendedAgents(p=>p.includes(id)?p.filter(x=>x!==id):[...p,id])} selected={selectedKYAAgent} onSelect={setSelectedKYAAgent}/></div>}
         </div>
       </div>
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0}}>
