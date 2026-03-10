@@ -1,581 +1,758 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Revvyn — The Governance Layer for Agentic Commerce</title>
-<meta name="description" content="AI-powered policy enforcement, risk scoring and rail optimization for autonomous payments.">
-<meta property="og:title" content="Revvyn — The Governance Layer for Agentic Commerce">
-<meta property="og:description" content="When an AI agent wants to spend money, Revvyn decides if it is allowed to.">
-<meta property="og:type" content="website">
+<title>Revvyn — Governance Simulator</title>
+<meta name="description" content="AI-powered policy enforcement, risk scoring and rail optimisation for autonomous payments.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>◈</text></svg>">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
-:root{--m:'IBM Plex Mono',monospace;--b:'Outfit',sans-serif;--bg:#06080e;--surface:#0c1019;--surface2:#111827;--border:#1e293b;--text:#e2e8f0;--muted:#64748b;--dim:#334155}
+:root{
+  --bg:#070D18;--surface:#0B1220;--surface2:#0F1829;--card:#0D1624;
+  --border:#1A2840;--border2:#243858;
+  --text:#E8EDF5;--muted:#5E7494;--dim:#253548;
+  --gold:#C49A2C;--gold2:#A8821E;--gold-glow:rgba(196,154,44,.15);
+  --sans:'Inter',sans-serif;--mono:'DM Mono',monospace;
+  --red:#E05252;--green:#3DB88A;--blue:#4A9EFF;--amber:#D4914A;--violet:#8B72D4;--rose:#C46E8A;
+}
+html[data-theme="light"]{
+  --bg:#F0EBE0;--surface:#E8E2D5;--surface2:#E0D9CA;--card:#EAE4D8;
+  --border:#C0B49C;--border2:#A89880;
+  --text:#0F1520;--muted:#4A3D2E;--dim:#8A7A65;
+  --gold:#7A5C0A;--gold2:#5E4608;--gold-glow:rgba(122,92,10,.12);
+}
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--b);-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
-select option{background:var(--surface);color:var(--text)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:200px 200px;}
+html[data-theme="light"] body::after{opacity:.035}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(6,214,160,.1)}50%{box-shadow:0 0 40px rgba(6,214,160,.25)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px var(--gold-glow)}50%{box-shadow:0 0 44px var(--gold-glow)}}
+@keyframes borderPulse{0%,100%{border-color:rgba(196,154,44,.3)}50%{border-color:rgba(196,154,44,.7)}}
+select option{background:var(--surface);color:var(--text)}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const{useState,useEffect,useRef,useCallback}=React;
+const {useState,useEffect,useRef,useCallback}=React;
 
+// ─── Data ───────────────────────────────────────────────────────────────────
 const AGENTS=[
-  {id:"orchestrator",name:"Orchestrator",icon:"\u25C9",color:"#06d6a0",role:"Intent classification"},
-  {id:"governance",name:"Governance",icon:"\u2B21",color:"#a78bfa",role:"Policy & compliance"},
-  {id:"control",name:"Control",icon:"\u25C6",color:"#fbbf24",role:"Risk & rail selection"},
-  {id:"execution",name:"Execution",icon:"\u25B8",color:"#38bdf8",role:"Settlement"},
-  {id:"audit",name:"Audit",icon:"\u25EB",color:"#f472b6",role:"Explainability"},
+  {id:"orchestrator",name:"Orchestrator",icon:"◉",color:"#C49A2C",role:"Intent classification"},
+  {id:"governance",  name:"Governance",  icon:"⬡",color:"#8B72D4",role:"Policy & compliance"},
+  {id:"control",     name:"Control",     icon:"◆",color:"#4A9EFF",role:"Risk & rail selection"},
+  {id:"execution",   name:"Execution",   icon:"▸",color:"#3DB88A",role:"Settlement"},
+  {id:"audit",       name:"Audit",       icon:"◫",color:"#C46E8A",role:"Explainability"},
 ];
 
 const VERTICALS={
-  treasury:{id:"treasury",label:"Enterprise Treasury",icon:"\u25C8",accent:"#06d6a0",desc:"Cross-border vendor payments, FX optimization, multi-bank routing",defaults:{amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard"},policies:{maxSingle:500000,maxDaily:2000000,requireApproval:100000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true,dualApproval:250000}},
-  marketplace:{id:"marketplace",label:"Marketplace",icon:"\u25C7",accent:"#38bdf8",desc:"Seller payouts, split settlements, multi-currency disbursements",defaults:{amount:3200,currency:"USD",fromCountry:"US",toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",purpose:"Weekly payout",urgency:"standard"},policies:{maxSingle:50000,maxDaily:500000,requireApproval:25000,sanctions:["KP","IR","SY"],kycRequired:true,dualApproval:50000}},
-  ai_commerce:{id:"ai_commerce",label:"AI-to-AI Commerce",icon:"\u25CE",accent:"#a78bfa",desc:"Autonomous agent transactions, programmatic spend governance",defaults:{amount:890,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",purpose:"Autonomous procurement - cloud compute",urgency:"urgent"},policies:{maxSingle:10000,maxDaily:100000,requireApproval:5000,sanctions:["KP","IR","SY","CU"],kycRequired:false,dualApproval:10000}},
-  enterprise:{id:"enterprise",label:"Enterprise Direct",icon:"\u25D0",accent:"#fbbf24",desc:"Complex multi-entity payments, ERP integration, global compliance",defaults:{amount:1200000,currency:"USD",fromCountry:"US",toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",purpose:"Strategic supplier - Q1 manufacturing",urgency:"standard"},policies:{maxSingle:5000000,maxDaily:20000000,requireApproval:500000,sanctions:["KP","IR","SY","CU","RU","BY"],kycRequired:true,dualApproval:1000000}},
-  consumer:{id:"consumer",label:"Consumer AI Finance",icon:"\u25CD",accent:"#f472b6",desc:"Personal AI agents - yield-only spending, DeFi governance",defaults:{amount:85,currency:"USDC",fromCountry:"US",toCountry:"US",toCurrency:"USDC",beneficiary:"Self - Spending Card",purpose:"Yield-funded purchase",urgency:"standard"},policies:{maxSingle:500,maxDaily:2000,requireApproval:200,sanctions:["KP","IR","SY"],kycRequired:false,dualApproval:500}},
+  treasury:{id:"treasury",label:"Enterprise Treasury",icon:"◈",accent:"#C49A2C",
+    desc:"Cross-border vendor payments, FX optimisation, multi-bank routing",
+    defaults:{amount:250000,currency:"USD",fromCountry:"US",toCountry:"DE",toCurrency:"EUR",beneficiary:"Siemens AG",purpose:"Vendor invoice #INV-2026-4471",urgency:"standard",intentSource:"erp"},
+    policies:{maxSingle:500000,maxDaily:2000000,requireApproval:100000,dualApproval:250000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true}},
+  marketplace:{id:"marketplace",label:"Marketplace",icon:"◇",accent:"#4A9EFF",
+    desc:"Seller payouts, split settlements, multi-currency disbursements",
+    defaults:{amount:3200,currency:"USD",fromCountry:"US",toCountry:"IN",toCurrency:"INR",beneficiary:"Seller #SKU-88912",purpose:"Weekly payout",urgency:"standard",intentSource:"human"},
+    policies:{maxSingle:50000,maxDaily:500000,requireApproval:25000,dualApproval:50000,sanctions:["KP","IR","SY"],kycRequired:true}},
+  ai_commerce:{id:"ai_commerce",label:"AI-to-AI Commerce",icon:"◎",accent:"#8B72D4",
+    desc:"Autonomous agent transactions, programmatic spend governance",
+    defaults:{amount:890,currency:"USD",fromCountry:"US",toCountry:"SG",toCurrency:"USD",beneficiary:"Agent-API-7x9k2",purpose:"Autonomous procurement — cloud compute",urgency:"urgent",intentSource:"openai"},
+    policies:{maxSingle:10000,maxDaily:100000,requireApproval:5000,dualApproval:10000,sanctions:["KP","IR","SY","CU"],kycRequired:false}},
+  insurance:{id:"insurance",label:"Insurance",icon:"◉",accent:"#D4914A",
+    desc:"Claims settlement, liability payouts, reinsurance, agent-driven claim decisions",
+    defaults:{amount:47500,currency:"USD",fromCountry:"US",toCountry:"UK",toCurrency:"GBP",beneficiary:"Claimant #CLM-2026-881",purpose:"Motor claim settlement",urgency:"standard",intentSource:"erp"},
+    policies:{maxSingle:500000,maxDaily:5000000,requireApproval:25000,dualApproval:100000,sanctions:["KP","IR","SY","CU","RU"],kycRequired:true}},
+  enterprise:{id:"enterprise",label:"Enterprise Direct",icon:"◐",accent:"#3DB88A",
+    desc:"Complex multi-entity payments, ERP integration, global compliance",
+    defaults:{amount:1200000,currency:"USD",fromCountry:"US",toCountry:"JP",toCurrency:"JPY",beneficiary:"Toyota Motor Corp",purpose:"Strategic supplier — Q1 manufacturing",urgency:"standard",intentSource:"erp"},
+    policies:{maxSingle:5000000,maxDaily:20000000,requireApproval:500000,dualApproval:1000000,sanctions:["KP","IR","SY","CU","RU","BY"],kycRequired:true}},
+  consumer:{id:"consumer",label:"Consumer AI Finance",icon:"◍",accent:"#C46E8A",
+    desc:"Personal AI agents — yield-only spending, DeFi governance",
+    defaults:{amount:85,currency:"USDC",fromCountry:"US",toCountry:"US",toCurrency:"USDC",beneficiary:"Self — Spending Card",purpose:"Yield-funded purchase",urgency:"standard",intentSource:"defi_agent"},
+    policies:{maxSingle:500,maxDaily:2000,requireApproval:200,dualApproval:500,sanctions:["KP","IR","SY"],kycRequired:false}},
 };
 
 const RAILS=[
-  {id:"visa",name:"Visa Intelligent Commerce",speed:"Instant",cost:"2.4%",icon:"\uD83D\uDCB3",provider:"Visa",type:"card"},
-  {id:"mastercard",name:"Mastercard Agent Pay",speed:"Instant",cost:"2.5%",icon:"\uD83D\uDD34",provider:"Mastercard",type:"card"},
-  {id:"swift",name:"SWIFT gpi",speed:"2-5 days",cost:"$25-50",icon:"\uD83C\uDFE6",provider:"SWIFT",type:"bank"},
-  {id:"sepa",name:"SEPA Instant",speed:"Seconds",cost:"\u20AC0.20",icon:"\uD83C\uDDEA\uD83C\uDDFA",provider:"SEPA",type:"bank"},
-  {id:"wooshpay",name:"WooshPay API",speed:"Minutes",cost:"1.2%",icon:"\uD83C\uDF10",provider:"WooshPay",type:"api"},
-  {id:"stablecoin",name:"USDC / USDT",speed:"Minutes",cost:"$0.01",icon:"\u2B21",provider:"Circle",type:"crypto"},
-  {id:"rtp",name:"RTP / FedNow",speed:"Seconds",cost:"$0.50",icon:"\u26A1",provider:"TCH/Fed",type:"instant"},
-  {id:"defi",name:"DeFi / Aave",speed:"Seconds",cost:"Gas only",icon:"\uD83D\uDD2E",provider:"Aave",type:"defi"},
-  {id:"selfcustody",name:"Self-Custody Card",speed:"Instant",cost:"$0.02",icon:"\uD83D\uDD10",provider:"Wirex",type:"self-custody"},
+  {id:"visa",       name:"Visa Intelligent Commerce", speed:"Instant",  cost:"2.4%",   provider:"Visa",      type:"card"},
+  {id:"mastercard", name:"Mastercard Agent Pay",      speed:"Instant",  cost:"2.5%",   provider:"Mastercard",type:"card"},
+  {id:"swift",      name:"SWIFT gpi",                speed:"T+2",      cost:"$25–50",  provider:"SWIFT",     type:"bank"},
+  {id:"sepa",       name:"SEPA Instant",             speed:"~8s",      cost:"€0.20",   provider:"SEPA",      type:"bank"},
+  {id:"wooshpay",   name:"WooshPay API",             speed:"~4 min",   cost:"1.2%",    provider:"WooshPay",  type:"api"},
+  {id:"stablecoin", name:"USDC / USDT",              speed:"~2 min",   cost:"$0.01",   provider:"Circle",    type:"crypto"},
+  {id:"rtp",        name:"RTP / FedNow",             speed:"~3s",      cost:"$0.50",   provider:"TCH/Fed",   type:"instant"},
+  {id:"defi",       name:"DeFi / Aave",              speed:"~12s",     cost:"Gas",     provider:"Aave",      type:"defi"},
+  {id:"selfcustody",name:"Self-Custody Card",        speed:"Instant",  cost:"$0.02",   provider:"Wirex",     type:"self"},
 ];
 
 const INTENT_SOURCES=[
-  {id:"google_ucp",name:"Google UCP",color:"#4285f4"},
-  {id:"openai",name:"OpenAI Agent",color:"#10b981"},
-  {id:"erp",name:"ERP System",color:"#fbbf24"},
-  {id:"human",name:"Human User",color:"#f472b6"},
-  {id:"custom_agent",name:"Custom AI",color:"#a78bfa"},
-  {id:"defi_agent",name:"DeFi Agent",color:"#f472b6"},
+  {id:"google_ucp",  name:"Google UCP",   color:"#4A9EFF"},
+  {id:"openai",      name:"OpenAI Agent", color:"#3DB88A"},
+  {id:"erp",         name:"ERP System",   color:"#C49A2C"},
+  {id:"human",       name:"Human User",   color:"#C46E8A"},
+  {id:"custom_agent",name:"Custom AI",    color:"#8B72D4"},
+  {id:"defi_agent",  name:"DeFi Agent",   color:"#4A9EFF"},
 ];
 
-const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH"];
+const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH","KP","IR","SY","CU","RU","BY","VE","MM"];
 const CURRENCIES=["USD","EUR","GBP","JPY","SGD","BRL","NGN","AED","INR","AUD","CHF","CAD","USDC","USDT"];
-const SANCTIONED=["KP","IR","SY","CU"];
-const STATES=["Created","Validated","Risk Assessed","Approved","Routed","Settled","Reconciled"];
+const TX_STATES=["Created","Validated","Risk Assessed","Approved","Routed","Settled","Reconciled"];
+
+const FX={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
 
 const COMPS=[
   {name:"Circuit & Chisel",raised:"$19.2M",lead:"Primary VC, ParaFi, Stripe",what:"ATXP protocol for agent-to-agent payments",gap:"No policy engine, no compliance, no multi-rail governance"},
   {name:"Natural",raised:"$9.8M",lead:"Abstract, Human Capital",what:"B2B agentic payment automation",gap:"No governance, no risk scoring, no audit trail"},
-  {name:"Nekuda",raised:"$5M",lead:"Madrona, Visa, Amex Ventures",what:"Agent checkout & credential management",gap:"No policy enforcement, no rail optimization, no DeFi"},
+  {name:"Nekuda",raised:"$5M",lead:"Madrona, Visa, Amex Ventures",what:"Agent checkout & credential management",gap:"No policy enforcement, no rail optimisation, no DeFi"},
   {name:"t54 Labs",raised:"$5M",lead:"Anagram, Franklin Templeton, Ripple",what:"Know Your Agent identity & compliance",gap:"No payment governance, no rail selection, no policy engine"},
   {name:"Based",raised:"$11.5M",lead:"Pantera, Coinbase Ventures",what:"Consumer agentic commerce on Hyperliquid",gap:"No enterprise governance, no multi-rail, no compliance"},
+  {name:"Certen Protocol",raised:"Unknown",lead:"Chain-first",what:"On-chain payment policy",gap:"Minimal traction, no enterprise rails, no cross-chain governance"},
 ];
 
-function genId(){return "PAY-"+Math.random().toString(36).substr(2,8).toUpperCase()}
-function genTx(){return "TX-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase()}
+function genId(){return "PAY-"+Math.random().toString(36).substr(2,8).toUpperCase();}
+function genTx(){return "RVN-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase();}
+function fmtAmt(n){return Number(n).toLocaleString();}
+function now(){const d=new Date();return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' · '+d.toTimeString().slice(0,8);}
 
-// ═══════════════════════════════════════════════════════════
-// SIMULATION ENGINE — replaces API calls
-// ═══════════════════════════════════════════════════════════
-
-var FX_RATES={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
-
+// ─── Simulation Engine ───────────────────────────────────────────────────────
 function pickRail(payment,vertical){
-  var to=payment.toCountry;var ccy=payment.toCurrency;var amt=payment.amount;var urg=payment.urgency;
-  if(vertical==="consumer") return {id:"selfcustody",name:"Self-Custody Card",provider:"Wirex/Gnosis Pay",reason:"Yield-funded self-custody wallet minimizes counterparty risk and preserves principal protection"};
-  if(ccy==="USDC"||ccy==="USDT") return {id:"stablecoin",name:"USDC / USDT",provider:"Circle",reason:"Stablecoin settlement offers near-zero cost with sub-minute finality"};
-  if(to==="DE"||to==="FR"||to==="NL"||to==="CH") return {id:"sepa",name:"SEPA Instant",provider:"SEPA",reason:"EUR-zone destination qualifies for SEPA Instant \u2014 sub-second settlement at \u20AC0.20 flat"};
-  if(urg==="critical"&&amt<50000) return {id:"rtp",name:"RTP / FedNow",provider:"TCH/Fed",reason:"Critical urgency with moderate amount \u2014 RTP delivers seconds settlement at $0.50"};
-  if(amt>100000) return {id:"swift",name:"SWIFT gpi",provider:"SWIFT",reason:"High-value cross-border transfer \u2014 SWIFT gpi offers end-to-end tracking with correspondent banking network"};
-  if(to==="IN"||to==="SG"||to==="NG") return {id:"wooshpay",name:"WooshPay API",provider:"WooshPay",reason:"Emerging market corridor optimized via WooshPay local rails \u2014 1.2% with fast settlement"};
-  if(amt<5000) return {id:"visa",name:"Visa Intelligent Commerce",provider:"Visa",reason:"Sub-$5K transaction on supported corridor \u2014 Visa TAP-enabled instant settlement at 2.4%"};
-  return {id:"swift",name:"SWIFT gpi",provider:"SWIFT",reason:"Default high-value cross-border routing via SWIFT gpi with end-to-end tracking"};
-}
-
-function altRails(primary,payment,vertical){
-  var alts=[];
-  if(primary.id!=="visa") alts.push({id:"visa",name:"Visa Intelligent Commerce",reason:"Card-rail fallback with Visa TAP agent authentication"});
-  if(primary.id!=="stablecoin") alts.push({id:"stablecoin",name:"USDC / USDT",reason:"Stablecoin alternative for near-zero settlement cost"});
-  if(primary.id!=="swift"&&payment.amount>10000) alts.push({id:"swift",name:"SWIFT gpi",reason:"Traditional correspondent banking with gpi tracking"});
-  return alts.slice(0,2);
+  const {toCountry,toCurrency,amount,urgency}=payment;
+  if(vertical==="consumer") return {id:"selfcustody",name:"Self-Custody Card",provider:"Wirex/Gnosis Pay",reason:"Yield-funded self-custody wallet minimises counterparty risk and preserves principal protection."};
+  if(toCurrency==="USDC"||toCurrency==="USDT") return {id:"stablecoin",name:"USDC / USDT",provider:"Circle",reason:"Stablecoin settlement offers near-zero cost with sub-minute finality."};
+  if(["DE","FR","NL","CH","BE","AT"].includes(toCountry)) return {id:"sepa",name:"SEPA Instant",provider:"SEPA",reason:"EUR-zone destination qualifies for SEPA Instant — sub-second settlement at €0.20 flat."};
+  if(urgency==="critical"&&amount<50000) return {id:"rtp",name:"RTP / FedNow",provider:"TCH/Fed",reason:"Critical urgency with moderate amount — RTP delivers seconds settlement at $0.50."};
+  if(amount>100000) return {id:"swift",name:"SWIFT gpi",provider:"SWIFT",reason:"High-value cross-border transfer — SWIFT gpi offers end-to-end tracking with correspondent banking network."};
+  if(["IN","SG","NG","AE"].includes(toCountry)) return {id:"wooshpay",name:"WooshPay API",provider:"WooshPay",reason:"Emerging market corridor optimised via WooshPay local rails — 1.2% with fast settlement."};
+  if(amount<5000) return {id:"visa",name:"Visa Intelligent Commerce",provider:"Visa",reason:"Sub-$5K transaction on supported corridor — Visa TAP-enabled instant settlement at 2.4%."};
+  return {id:"swift",name:"SWIFT gpi",provider:"SWIFT",reason:"Default high-value cross-border routing via SWIFT gpi with end-to-end tracking."};
 }
 
 function simulateAgent(agentId,payment,vert,policies){
-  var v=VERTICALS[vert];
-  var isSanctioned=policies.sanctions.indexOf(payment.toCountry)>=0;
-  var overMax=payment.amount>policies.maxSingle;
-  var needsApproval=payment.amount>=policies.requireApproval;
-  var needsDual=payment.amount>=policies.dualApproval;
-  var isCrossBorder=payment.fromCountry!==payment.toCountry;
-  var isCrossCurrency=payment.currency!==payment.toCurrency;
-  var isHighValue=payment.amount>100000;
-  var riskBase=isSanctioned?95:isCrossBorder?(isHighValue?42:28):(isHighValue?22:15);
-  var riskJitter=Math.floor(Math.random()*10)-5;
-  var riskScore=Math.max(5,Math.min(95,riskBase+riskJitter));
-  var rail=pickRail(payment,vert);
-  var fxRate=FX_RATES[payment.toCurrency]||1;
-  var converted=payment.currency!==payment.toCurrency?Math.round(payment.amount*fxRate*100)/100:null;
-  var feeRate=payment.amount>500000?0.0008:payment.amount>100000?0.0015:payment.amount>10000?0.003:0.024;
-  var totalFee=Math.max(0.50,Math.round(payment.amount*feeRate*100)/100);
-  var txId=genTx();
+  const v=VERTICALS[vert];
+  const isSanctionedCountry=policies.sanctions.includes(payment.toCountry);
+  const overMax=payment.amount>policies.maxSingle;
+  const needsDual=payment.amount>=policies.dualApproval;
+  const isCross=payment.fromCountry!==payment.toCountry;
+  const isCrossCcy=payment.currency!==payment.toCurrency;
+  const isHV=payment.amount>100000;
+  const riskScore=Math.max(5,Math.min(95,
+    (isSanctionedCountry?95:isCross?(isHV?44:30):(isHV?22:15))+Math.floor(Math.random()*10)-5));
+  const rail=pickRail(payment,vert);
+  const fxRate=FX[payment.toCurrency]||1;
+  const converted=isCrossCcy?Math.round(payment.amount*fxRate*100)/100:null;
+  const feeRate=payment.amount>500000?0.0008:payment.amount>100000?0.0015:payment.amount>10000?0.003:0.024;
+  const totalFee=Math.max(0.50,Math.round(payment.amount*feeRate*100)/100);
+  const txId=genTx();
 
-  var results={
-    orchestrator:{
-      classification:isHighValue?"high-value":isCrossBorder?"cross-border":payment.urgency==="urgent"?"urgent":"standard",
-      intentSource:payment.intentSource||"human",
-      priority:isHighValue?"high":payment.urgency==="urgent"?"high":"medium",
-      requiredChecks:["sanctions_screening","amount_validation","kyc_verification","corridor_check","beneficiary_verification"].concat(isCrossBorder?["fx_optimization","correspondent_check"]:[]),
-      routingHints:isCrossBorder?["cross_border_corridor","fx_hedge_eligible","multi_rail_candidate"]:["domestic_fast_rail","low_cost_priority"],
-      estimatedComplexity:isHighValue?"high":isCrossBorder?"medium":"low",
-      summary:"Classified as "+( isHighValue?"high-value":"")+(isCrossBorder?" cross-border":"")+" "+v.label.toLowerCase()+" payment. "+(needsApproval?"Approval required. ":"")+"Routing to governance for policy enforcement."
-    },
-    governance:(function(){
-      if(isSanctioned) return {
-        approved:false,
-        checks:[
-          {name:"OFAC Sanctions Screening",status:"fail",detail:"Destination country "+payment.toCountry+" is on the sanctioned entities list. Transaction blocked under OFAC/EU sanctions regime."},
-          {name:"Amount Validation",status:"pass",detail:"Amount "+payment.currency+" "+Number(payment.amount).toLocaleString()+" within single transaction limit of $"+Number(policies.maxSingle).toLocaleString()},
-          {name:"Beneficiary Verification",status:"warning",detail:"Beneficiary verification suspended \u2014 sanctions block takes precedence"}
-        ],
-        complianceScore:12,
-        escalationRequired:false,escalationReason:null,escalationType:"none",
-        regulatoryFrameworks:["OFAC","EU-Sanctions","FATF-R6","PSD2"],
-        summary:"REJECTED \u2014 Destination country "+payment.toCountry+" is sanctioned. Transaction blocked at governance layer."
-      };
-      if(overMax) return {
-        approved:false,
-        checks:[
-          {name:"Amount Validation",status:"fail",detail:"Amount "+payment.currency+" "+Number(payment.amount).toLocaleString()+" exceeds maximum single payment limit of $"+Number(policies.maxSingle).toLocaleString()},
-          {name:"OFAC Sanctions Screening",status:"pass",detail:"Destination "+payment.toCountry+" cleared against OFAC, EU, and UN sanctions databases"},
-          {name:"Daily Volume Check",status:"warning",detail:"Amount would consume "+(Math.round(payment.amount/policies.maxDaily*100))+"% of daily limit"}
-        ],
-        complianceScore:35,
-        escalationRequired:false,escalationReason:null,escalationType:"none",
-        regulatoryFrameworks:["SOC2","PCI-DSS","ISO20022"],
-        summary:"REJECTED \u2014 Amount exceeds maximum single payment policy threshold."
-      };
-      var checks=[
-        {name:"OFAC Sanctions Screening",status:"pass",detail:"Destination "+payment.toCountry+" cleared against OFAC, EU, and UN consolidated sanctions databases. No matches found."},
-        {name:"Amount Validation",status:"pass",detail:"Amount "+payment.currency+" "+Number(payment.amount).toLocaleString()+" within single transaction limit of $"+Number(policies.maxSingle).toLocaleString()+" ("+(Math.round(payment.amount/policies.maxSingle*100))+"% utilization)"},
-        {name:"Beneficiary Verification",status:"pass",detail:"Beneficiary \""+payment.beneficiary+"\" verified against KYC registry. No adverse media or PEP flags."},
-        {name:"Daily Volume Check",status:payment.amount>policies.maxDaily*0.5?"warning":"pass",detail:"Daily volume at "+(Math.round(payment.amount/policies.maxDaily*100))+"% of $"+Number(policies.maxDaily).toLocaleString()+" limit"+(payment.amount>policies.maxDaily*0.5?". Approaching threshold.":".")}
-      ];
-      if(isCrossBorder) checks.push({name:"Corridor Compliance",status:"pass",detail:payment.fromCountry+" \u2192 "+payment.toCountry+" corridor cleared. No capital control restrictions. AML/CFT requirements met."});
-      if(policies.kycRequired) checks.push({name:"KYC/AML Verification",status:"pass",detail:"Enhanced due diligence completed. Identity verified via "+( vert==="consumer"?"DeFi wallet attestation":"corporate registry")+". Risk rating: standard."});
-      if(vert==="consumer") checks.push({name:"Principal Protection",status:"pass",detail:"Transaction amount $"+payment.amount+" funded from accrued DeFi yield ($"+( Math.round(payment.amount*1.8))+  " available). Principal remains untouched."});
-      var esc=needsDual&&!overMax;
-      return {
-        approved:true,
-        checks:checks,
-        complianceScore:isCrossBorder?87:94,
-        escalationRequired:esc,
-        escalationReason:esc?"Amount of "+payment.currency+" "+Number(payment.amount).toLocaleString()+" meets dual approval threshold ($"+Number(policies.dualApproval).toLocaleString()+"). Human authorization required under governance policy.":null,
-        escalationType:esc?"dual_approval":"none",
-        regulatoryFrameworks:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCrossBorder?["GDPR","MiCA"]:[]),
-        summary:"APPROVED \u2014 All "+checks.length+" compliance checks passed."+(esc?" Dual approval escalation triggered.":"")+" Compliance score: "+(isCrossBorder?87:94)+"%."
-      };
-    })(),
-    control:{
-      riskScore:riskScore,
-      riskLevel:riskScore<30?"low":riskScore<60?"medium":riskScore<80?"high":"critical",
-      fraudIndicators:[
-        {indicator:"Velocity Check",severity:"low",detail:"Transaction frequency within normal patterns for "+v.label+" vertical. No anomalies detected."},
-        {indicator:"Beneficiary Pattern",severity:isCrossBorder?"medium":"low",detail:isCrossBorder?"First transaction to "+payment.toCountry+" corridor this period. Enhanced monitoring applied.":"Recurring beneficiary with established payment history."},
-        {indicator:"Amount Deviation",severity:isHighValue?"medium":"low",detail:isHighValue?"Amount is "+(Math.round(payment.amount/50000))+"x above median for this vertical. Within policy but flagged for monitoring.":"Amount within expected range for "+v.label+" payments."}
-      ],
-      recommendedRail:rail,
-      alternativeRails:altRails(rail,payment,vert),
-      fxOptimization:{
-        applicable:isCrossCurrency,
-        strategy:isCrossCurrency?"Mid-market rate lock with 15-minute execution window. Estimated savings vs retail rate: "+(Math.round(payment.amount*0.003)).toLocaleString()+" "+payment.currency+".":"N/A \u2014 same-currency settlement",
-        estimatedSavings:isCrossCurrency?"$"+(Math.round(payment.amount*0.003)).toLocaleString():"$0"
-      },
-      humanReviewRequired:false,
-      summary:"Risk score "+riskScore+"/100 ("+( riskScore<30?"low":riskScore<60?"medium":"high")+"). Recommended rail: "+rail.name+" via "+rail.provider+". "+(isCrossCurrency?"FX optimization saves ~$"+(Math.round(payment.amount*0.003)).toLocaleString()+".":"Same-currency settlement.")
-    },
-    execution:{
-      status:"settled",
-      selectedRail:rail.name,
-      provider:rail.provider,
-      transactionId:txId,
-      settlementTime:rail.id==="swift"?"T+2 (48 hours estimated)":rail.id==="sepa"?"8.2 seconds":rail.id==="rtp"?"3.1 seconds":rail.id==="visa"||rail.id==="mastercard"?"Instant (sub-second)":rail.id==="stablecoin"?"2 minutes 14 seconds":rail.id==="defi"?"12.4 seconds (2 block confirmations)":rail.id==="selfcustody"?"Instant":rail.id==="wooshpay"?"4 minutes 38 seconds":"Processing",
-      fees:{total:totalFee,currency:"USD",breakdown:{network:Math.round(totalFee*0.45*100)/100,fx:isCrossCurrency?Math.round(totalFee*0.3*100)/100:0,processing:Math.round(totalFee*0.2*100)/100,compliance:Math.round(totalFee*0.05*100)/100}},
-      fxRate:isCrossCurrency?fxRate:null,
-      convertedAmount:converted,
-      ledgerEntries:[
-        {type:"debit",account:"Operating \u2014 "+payment.fromCountry,amount:payment.amount,currency:payment.currency},
-        {type:"credit",account:"Beneficiary \u2014 "+payment.beneficiary,amount:converted||payment.amount,currency:payment.toCurrency}
-      ],
-      networkResponse:{code:"200",message:"Settlement confirmed. Reference: "+txId},
-      summary:"Settled "+payment.currency+" "+Number(payment.amount).toLocaleString()+" via "+rail.name+" ("+rail.provider+"). "+(converted?"Converted to "+payment.toCurrency+" "+Number(converted).toLocaleString()+" at "+fxRate+". ":"")+"Fees: $"+totalFee+". Settlement: "+( rail.id==="swift"?"T+2":"sub-minute")+"."
-    },
-    audit:{
-      auditId:"AUD-"+Date.now().toString(36).toUpperCase(),
-      decisionChain:[
-        {agent:"Orchestrator",decision:"Classified as "+(isHighValue?"high-value ":"")+(isCrossBorder?"cross-border ":"")+"payment. Priority: "+(isHighValue?"high":"medium"),reasonCode:"ORCH-CLF-001",confidence:97},
-        {agent:"Governance",decision:"All compliance checks passed. "+(needsDual?"Dual approval obtained.":"Standard approval.")+" Score: "+(isCrossBorder?87:94)+"%",reasonCode:"GOV-APR-"+(needsDual?"DAP":"STD"),confidence:94},
-        {agent:"Control",decision:"Risk "+riskScore+"/100. Selected "+rail.name+" for optimal cost/speed."+(isCrossCurrency?" FX optimized.":""),reasonCode:"CTL-RSK-"+( riskScore<30?"LOW":"MED"),confidence:91},
-        {agent:"Execution",decision:"Settled via "+rail.provider+". "+txId+". Fees: $"+totalFee,reasonCode:"EXE-STL-OK",confidence:99},
-        {agent:"Audit",decision:"Full regulatory trail generated. 7-year retention. All frameworks satisfied.",reasonCode:"AUD-CMP-FUL",confidence:96}
-      ],
-      complianceStatus:"compliant",
-      riskClassification:riskScore<30?"low":riskScore<60?"medium":"high",
-      regulatoryTags:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCrossBorder?["GDPR","MiCA"]:[]).concat(vert==="consumer"?["DeFi-Governance"]:[]),
-      railProvider:rail.provider,
-      dataRetention:"7 years",
-      recommendations:[
-        isCrossBorder?"Consider pre-funded FX positions for recurring "+payment.fromCountry+"\u2192"+payment.toCountry+" corridor":"Domestic rail performing within SLA",
-        isHighValue?"Implement scheduled batch processing for high-value payments to reduce per-transaction overhead":"Current transaction volume within optimal parameters",
-        "Next review: Quarterly compliance audit scheduled per SOC2 Type II requirements"
-      ],
-      summary:"Audit complete. Full decision chain recorded across 5 agents with "+( ["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].length+(isCrossBorder?2:0))+" regulatory frameworks. Classification: compliant. Data retained for 7 years per regulatory requirements."
-    }
+  if(agentId==="orchestrator") return {
+    classification:isHV?"high-value":isCross?"cross-border":payment.urgency==="urgent"?"urgent":"standard",
+    intentSource:payment.intentSource,priority:isHV||payment.urgency==="urgent"?"high":"medium",
+    requiredChecks:["sanctions_screening","amount_validation","kyc_verification","corridor_check"],
+    summary:`Classified ${isHV?"high-value ":""}${isCross?"cross-border ":""}${v.label.toLowerCase()} payment. ${needsDual?"Dual approval threshold met. ":""}Routing to governance.`
   };
-  return results[agentId];
+
+  if(agentId==="governance"){
+    if(isSanctionedCountry) return {
+      approved:false,
+      checks:[
+        {name:"OFAC Sanctions Screening",status:"fail",detail:`Destination country ${payment.toCountry} is on the OFAC/EU consolidated sanctions list. Transaction blocked.`},
+        {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within single transaction limit of $${fmtAmt(policies.maxSingle)}.`},
+        {name:"Beneficiary Verification",status:"warning",detail:"Verification suspended — sanctions block takes precedence."}
+      ],
+      complianceScore:12,escalationRequired:false,
+      regulatoryFrameworks:["OFAC","EU-Sanctions","FATF-R6","PSD2"],
+      summary:`REJECTED — Destination country ${payment.toCountry} is sanctioned. Blocked at governance layer.`
+    };
+    if(overMax) return {
+      approved:false,
+      checks:[
+        {name:"Amount Validation",status:"fail",detail:`${payment.currency} ${fmtAmt(payment.amount)} exceeds maximum single payment limit of $${fmtAmt(policies.maxSingle)}.`},
+        {name:"OFAC Sanctions Screening",status:"pass",detail:`Destination ${payment.toCountry} cleared against OFAC, EU, and UN sanctions databases.`},
+      ],
+      complianceScore:35,escalationRequired:false,
+      regulatoryFrameworks:["SOC2","PCI-DSS","ISO20022"],
+      summary:`REJECTED — Amount exceeds maximum single payment policy threshold of $${fmtAmt(policies.maxSingle)}.`
+    };
+    const checks=[
+      {name:"OFAC Sanctions Screening",status:"pass",detail:`Destination ${payment.toCountry} cleared against OFAC, EU, and UN consolidated sanctions databases. No matches found.`},
+      {name:"Amount Validation",status:"pass",detail:`${payment.currency} ${fmtAmt(payment.amount)} within limit of $${fmtAmt(policies.maxSingle)} (${Math.round(payment.amount/policies.maxSingle*100)}% utilisation).`},
+      {name:"Beneficiary Verification",status:"pass",detail:`"${payment.beneficiary}" verified against KYC registry. No adverse media or PEP flags.`},
+      {name:"Daily Volume Check",status:payment.amount>policies.maxDaily*0.5?"warning":"pass",detail:`Daily volume at ${Math.round(payment.amount/policies.maxDaily*100)}% of $${fmtAmt(policies.maxDaily)} limit.`},
+      {name:"AP2 Mandate Validation",status:["google_ucp","openai","erp","custom_agent"].includes(payment.intentSource)?"pass":"warning",detail:["google_ucp","openai","erp","custom_agent"].includes(payment.intentSource)?`Google AP2 Intent + Cart Mandate verified. Cryptographic proof of user authorisation confirmed. Revvyn enforcing whether acting on it is permitted.`:`No AP2 Mandate present for ${payment.intentSource} source. Revvyn applying enhanced policy scrutiny.`},
+    ];
+    if(isCross) checks.push({name:"Corridor Compliance",status:"pass",detail:`${payment.fromCountry} → ${payment.toCountry} corridor cleared. No capital control restrictions.`});
+    if(policies.kycRequired) checks.push({name:"KYC/AML Verification",status:"pass",detail:`Enhanced due diligence completed. Risk rating: standard.`});
+    if(["google_ucp","openai","erp","custom_agent"].includes(payment.intentSource)) checks.push({name:"AP2 Mandate Verification",status:"pass",detail:`Google Agent Payments Protocol mandate verified. Cryptographically-signed Intent Mandate confirms user authorised this agent action. AP2 proves authorisation — Revvyn enforces whether the payment is permitted.`});
+    if(vert==="insurance") checks.push({name:"Claims Authorisation",status:"pass",detail:`Claim #${payment.purpose.slice(-8)} verified against policy register. Settlement within authorised limit.`});
+    const esc=needsDual&&!overMax;
+    return {
+      approved:true,checks,complianceScore:isCross?87:94,
+      escalationRequired:esc,
+      escalationReason:esc?`Amount of ${payment.currency} ${fmtAmt(payment.amount)} meets dual approval threshold ($${fmtAmt(policies.dualApproval)}). Human authorisation required.`:null,
+      escalationType:esc?"dual_approval":"none",
+      regulatoryFrameworks:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]).concat(vert==="insurance"?["Solvency II","IAIS"]:[]),
+      summary:`APPROVED — All ${checks.length} compliance checks passed.${esc?" Dual approval escalation triggered.":""} Score: ${isCross?87:94}%.`
+    };
+  }
+
+  if(agentId==="control") return {
+    riskScore,riskLevel:riskScore<30?"low":riskScore<60?"medium":riskScore<80?"high":"critical",
+    fraudIndicators:[
+      {indicator:"Velocity Check",severity:"low",detail:"Transaction frequency within normal patterns. No anomalies."},
+      {indicator:"Beneficiary Pattern",severity:isCross?"medium":"low",detail:isCross?`First transaction to ${payment.toCountry} corridor this period. Enhanced monitoring applied.`:"Recurring beneficiary with established payment history."},
+      {indicator:"Amount Deviation",severity:isHV?"medium":"low",detail:isHV?`Amount is ${Math.round(payment.amount/50000)}x above median for this vertical. Within policy.`:`Amount within expected range for ${v.label} payments.`},
+    ],
+    recommendedRail:rail,
+    alternativeRails:[
+      rail.id!=="visa"?{id:"visa",name:"Visa Intelligent Commerce",reason:"Card-rail fallback with Visa TAP agent authentication"}:null,
+      rail.id!=="stablecoin"?{id:"stablecoin",name:"USDC / USDT",reason:"Near-zero cost stablecoin alternative"}:null,
+    ].filter(Boolean).slice(0,2),
+    fxOptimization:{
+      applicable:isCrossCcy,
+      strategy:isCrossCcy?`Mid-market rate lock with 15-minute execution window. Estimated savings vs retail: $${Math.round(payment.amount*0.003).toLocaleString()} ${payment.currency}.`:"N/A — same-currency settlement.",
+    },
+    summary:`Risk score ${riskScore}/100 (${riskScore<30?"low":riskScore<60?"medium":"high"}). Rail: ${rail.name} via ${rail.provider}.${isCrossCcy?` FX savings ~$${Math.round(payment.amount*0.003).toLocaleString()}.`:""}`
+  };
+
+  if(agentId==="execution") return {
+    status:"settled",selectedRail:rail.name,provider:rail.provider,transactionId:txId,
+    settlementTime:rail.id==="swift"?"T+2 (48h est.)":rail.id==="sepa"?"8.2 seconds":rail.id==="rtp"?"3.1 seconds":rail.id==="visa"||rail.id==="mastercard"?"Instant (sub-second)":rail.id==="stablecoin"?"2 min 14 sec":rail.id==="defi"?"12.4 sec (2 blocks)":"4 min 38 sec",
+    fees:{total:totalFee,currency:"USD",breakdown:{network:Math.round(totalFee*.45*100)/100,fx:isCrossCcy?Math.round(totalFee*.3*100)/100:0,processing:Math.round(totalFee*.2*100)/100,compliance:Math.round(totalFee*.05*100)/100}},
+    fxRate:isCrossCcy?fxRate:null,convertedAmount:converted,
+    ledgerEntries:[
+      {type:"debit",account:`Operating — ${payment.fromCountry}`,amount:payment.amount,currency:payment.currency},
+      {type:"credit",account:`Beneficiary — ${payment.beneficiary}`,amount:converted||payment.amount,currency:payment.toCurrency},
+    ],
+    summary:`Settled ${payment.currency} ${fmtAmt(payment.amount)} via ${rail.name}.${converted?` Converted to ${payment.toCurrency} ${fmtAmt(converted)} @ ${fxRate}.`:""} Fees: $${totalFee}.`
+  };
+
+  if(agentId==="audit") return {
+    auditId:"AUD-"+Date.now().toString(36).toUpperCase(),
+    decisionChain:[
+      {agent:"Orchestrator",decision:`Classified ${isHV?"high-value ":""}${isCross?"cross-border ":""}intent`,reasonCode:"ORCH-CLF-001",confidence:97},
+      {agent:"Governance",decision:`All compliance checks passed. Score: ${isCross?87:94}%`,reasonCode:`GOV-APR-${needsDual?"DAP":"STD"}`,confidence:94},
+      {agent:"Control",decision:`Risk ${riskScore}/100. Selected ${rail.name}`,reasonCode:`CTL-RSK-${riskScore<30?"LOW":"MED"}`,confidence:91},
+      {agent:"Execution",decision:`Settled via ${rail.provider}. ${txId}. Fees: $${totalFee}`,reasonCode:"EXE-STL-OK",confidence:99},
+      {agent:"Audit",decision:"Full regulatory trail. 7-year retention. All frameworks satisfied.",reasonCode:"AUD-CMP-FUL",confidence:96},
+    ],
+    complianceStatus:"compliant",
+    riskClassification:riskScore<30?"low":riskScore<60?"medium":"high",
+    regulatoryTags:["PSD2","FATF","SOC2","PCI-DSS","ISO20022"].concat(isCross?["GDPR","MiCA"]:[]).concat(vert==="insurance"?["Solvency II","IAIS"]:[]),
+    dataRetention:"7 years",
+    summary:`Audit complete. 5-agent decision chain recorded. All frameworks satisfied.`
+  };
 }
 
-// ═══════════════════════════════════════════════════════════
-// UI COMPONENTS
-// ═══════════════════════════════════════════════════════════
+// ─── CSS Injection ───────────────────────────────────────────────────────────
+const CSS=`
+.inp{width:100%;padding:9px 11px;border-radius:2px;background:var(--card);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .15s;box-sizing:border-box}
+.inp:focus{border-color:var(--gold)}
+.lbl{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:600}
+.tag{padding:2px 7px;border-radius:2px;font-size:9px;font-family:var(--mono);letter-spacing:.06em;font-weight:500}
+.btn-kill{padding:7px 13px;border-radius:2px;border:1px solid rgba(224,82,82,.3);background:rgba(224,82,82,.06);color:#E05252;font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn-kill:hover{background:rgba(224,82,82,.12)}
+.btn-kill.halted{border-color:rgba(212,145,74,.4);background:rgba(212,145,74,.08);color:#D4914A}
+.btn-access{padding:7px 14px;border-radius:2px;border:1px solid var(--gold);background:rgba(196,154,44,.08);color:var(--gold);font-family:var(--sans);font-size:10px;font-weight:600;letter-spacing:.06em;cursor:pointer;transition:all .15s;text-transform:uppercase}
+.btn-access:hover{background:rgba(196,154,44,.15)}
+input[type=range]{-webkit-appearance:none;appearance:none;background:var(--border);border-radius:2px;height:3px;cursor:pointer;border:none;padding:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--gold);cursor:pointer}
+details summary{outline:none;user-select:none;list-style:none;cursor:pointer}
+html[data-theme="light"] .inp{background:var(--card);color:var(--text);border-color:var(--border)}
+html[data-theme="light"] select{background:var(--card);color:var(--text)}
+`;
+function StyleInjector(){useEffect(()=>{const s=document.createElement("style");s.textContent=CSS;document.head.appendChild(s);return()=>document.head.removeChild(s);},[]);return null;}
 
-function Tabs({tabs,active,onChange,accent}){
-  return React.createElement("div",{style:{display:"flex",gap:"2px",borderBottom:"1px solid var(--border)",overflow:"auto",flexShrink:0,background:"var(--surface)",padding:"0 8px"}},
-    tabs.map(function(t){return React.createElement("button",{key:t.id,onClick:function(){onChange(t.id)},style:{padding:"11px 14px",border:"none",background:"transparent",fontFamily:"var(--m)",fontSize:"11px",fontWeight:600,color:active===t.id?accent:"var(--muted)",cursor:"pointer",letterSpacing:".5px",whiteSpace:"nowrap",borderBottom:"2px solid "+(active===t.id?accent:"transparent"),transition:"all .15s"}},t.label)})
-  );
-}
-
+// ─── Components ──────────────────────────────────────────────────────────────
 function Badge({label,value,color}){
-  return React.createElement("div",{style:{padding:"5px 8px",borderRadius:"6px",background:color+"10",border:"1px solid "+color+"20"}},
-    React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"7px",color:"var(--muted)"}},label),
-    React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"12px",fontWeight:700,color:color}},value)
-  );
+  return <div style={{padding:"7px 9px",borderRadius:2,background:color+"10",border:`1px solid ${color}22`,minWidth:0}}>
+    <div className="lbl" style={{margin:0,marginBottom:3,fontSize:9}}>{label}</div>
+    <div style={{fontFamily:"var(--mono)",fontSize:14,fontWeight:700,color,lineHeight:1}}>{value}</div>
+  </div>;
 }
 
-function SC({label,value,sub,color}){
-  return React.createElement("div",{style:{padding:"12px",borderRadius:"8px",background:"var(--surface)",border:"1px solid var(--border)"}},
-    React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)",letterSpacing:".5px"}},label.toUpperCase()),
-    React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"24px",fontWeight:700,color:color,lineHeight:1.1}},value),
-    React.createElement("div",{style:{fontSize:"10px",color:"var(--muted)",marginTop:"2px"}},sub)
-  );
+function TabBar({tabs,active,onChange,accent}){
+  return <div style={{display:"flex",gap:1,borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
+    {tabs.map(t=><button key={t.id} onClick={()=>onChange(t.id)} style={{padding:"11px 16px",border:"none",background:"transparent",fontFamily:"var(--sans)",fontSize:11,fontWeight:600,color:active===t.id?(accent||"var(--gold)"):"var(--muted)",cursor:"pointer",letterSpacing:".06em",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:`2px solid ${active===t.id?(accent||"var(--gold)"):"transparent"}`,transition:"all .15s"}}>{t.label}</button>)}
+  </div>;
 }
 
-function Fld({label,children}){
-  return React.createElement("div",null,
-    React.createElement("label",{style:{display:"block",fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",letterSpacing:".8px",marginBottom:"4px",fontWeight:600}},label),children);
+function AgentPipeline({statuses,selected,onSelect}){
+  return <div style={{display:"flex",gap:5,padding:"10px 14px",flexShrink:0,overflowX:"auto",borderBottom:"1px solid var(--border)",background:"var(--surface)"}}>
+    {AGENTS.map((a,i)=>{
+      const st=statuses[a.id]||"pending",sel=selected===a.id;
+      return <div key={a.id} style={{display:"flex",alignItems:"center",gap:4,flex:"1 0 0",minWidth:0}}>
+        <div onClick={()=>onSelect(a.id)} style={{flex:1,padding:"8px 7px",borderRadius:2,cursor:"pointer",minWidth:0,background:sel?a.color+"12":st==="running"?a.color+"06":"var(--card)",border:`1.5px solid ${sel?a.color:st==="running"?a.color+"50":"var(--border)"}`,transition:"all .2s",position:"relative",overflow:"hidden"}}>
+          {st==="running"&&<div style={{position:"absolute",top:0,left:0,right:0,height:1,background:`linear-gradient(90deg,transparent,${a.color},transparent)`,animation:"shimmer 1.5s infinite"}}/>}
+          <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:2}}>
+            <span style={{fontFamily:"var(--mono)",fontSize:11,color:a.color}}>{a.icon}</span>
+            <span style={{fontSize:10,fontWeight:700,color:a.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{a.name}</span>
+            <div style={{width:6,height:6,borderRadius:"50%",flexShrink:0,background:st==="complete"?"#3DB88A":st==="failed"?"#E05252":st==="running"?a.color:"var(--border)",boxShadow:st==="running"?`0 0 8px ${a.color}`:"none",animation:st==="running"?"pulse 1s infinite":"none"}}/>
+          </div>
+          <div style={{fontSize:9,color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{st==="running"?"Processing…":st==="complete"?"Complete ✓":st==="failed"?"Blocked ✗":a.role}</div>
+        </div>
+        {i<AGENTS.length-1&&<span style={{color:st==="complete"?"#3DB88A":"var(--border)",fontFamily:"var(--mono)",fontSize:8,flexShrink:0}}>▸</span>}
+      </div>;
+    })}
+  </div>;
 }
 
-function PipelineRow({statuses,selected,onSelect,isMobile}){
-  return React.createElement("div",{style:{display:"flex",gap:isMobile?"4px":"6px",padding:isMobile?"8px 10px":"10px 16px",overflowX:"auto",flexShrink:0}},
-    AGENTS.map(function(a,i){
-      var st=statuses[a.id]||"pending";var sel=selected===a.id;
-      return React.createElement("div",{key:a.id,style:{display:"flex",alignItems:"center",gap:"4px",flex:"1 0 0",minWidth:0}},
-        React.createElement("div",{onClick:function(){onSelect(a.id)},style:{flex:1,padding:isMobile?"7px 5px":"9px 7px",borderRadius:"8px",cursor:"pointer",minWidth:0,background:sel?a.color+"12":st==="running"?a.color+"06":"var(--surface)",border:"1.5px solid "+(sel?a.color:st==="running"?a.color+"50":"var(--border)"),transition:"all .2s",position:"relative",overflow:"hidden"}},
-          st==="running"?React.createElement("div",{style:{position:"absolute",top:0,left:0,right:0,height:"2px",background:"linear-gradient(90deg,transparent,"+a.color+",transparent)",animation:"shimmer 1.5s infinite"}}):null,
-          React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"4px",marginBottom:"2px"}},
-            React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:isMobile?"10px":"11px",color:a.color}},a.icon),
-            React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:isMobile?"7px":"8px",fontWeight:700,color:a.color,letterSpacing:".3px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},a.name.toUpperCase()),
-            React.createElement("div",{style:{marginLeft:"auto",width:"6px",height:"6px",borderRadius:"50%",flexShrink:0,background:st==="complete"?"#10b981":st==="failed"?"#ef4444":st==="running"?a.color:"var(--border)",boxShadow:st==="running"?"0 0 8px "+a.color:"none",animation:st==="running"?"pulse 1s infinite":"none"}})
-          ),
-          React.createElement("div",{style:{fontSize:isMobile?"8px":"9px",color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},st==="running"?"Processing...":st==="complete"?"Done":st==="failed"?"Blocked":a.role)
-        ),
-        i<AGENTS.length-1?React.createElement("span",{style:{color:st==="complete"?"#06d6a0":"var(--border)",fontFamily:"var(--m)",fontSize:"8px",flexShrink:0}},"\u25B8"):null
-      );
-    })
-  );
-}
-
-function StateMachine({current}){
-  var idx=STATES.indexOf(current);
-  return React.createElement("div",{style:{display:"flex",gap:"3px",padding:"0 16px 8px",flexWrap:"wrap",flexShrink:0}},
-    STATES.map(function(s,i){return React.createElement("div",{key:s,style:{display:"flex",alignItems:"center",gap:"2px"}},
-      React.createElement("span",{style:{padding:"2px 6px",borderRadius:"4px",fontFamily:"var(--m)",fontSize:"10px",fontWeight:600,background:i<=idx?"#10b98115":"var(--surface)",color:i<=idx?"#10b981":"var(--dim)",border:i===idx?"1px solid #10b98140":"1px solid transparent"}},s.toUpperCase()),
-      i<STATES.length-1?React.createElement("span",{style:{color:i<idx?"#10b981":"var(--border)",fontSize:"9px"}},"\u2192"):null
-    )})
-  );
-}
-
-function StackDiagram({selectedRail,intentSource,isMobile}){
-  if(isMobile) return null;
-  return React.createElement("div",{style:{padding:"10px 16px",flexShrink:0}},
-    React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",letterSpacing:"1px",marginBottom:"6px"}},"ARCHITECTURE STACK"),
-    React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:"2px"}},
-      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
-        React.createElement("div",{style:{width:"60px",fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",textAlign:"right"}},"INTENT"),
-        React.createElement("div",{style:{flex:1,display:"flex",gap:"3px"}},INTENT_SOURCES.map(function(s){return React.createElement("div",{key:s.id,style:{flex:1,padding:"5px 4px",borderRadius:"4px",textAlign:"center",background:intentSource===s.id?s.color+"15":"var(--surface)",border:"1px solid "+(intentSource===s.id?s.color:"var(--border)")}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",fontWeight:600,color:intentSource===s.id?s.color:"var(--muted)"}},s.name))}))
-      ),
-      React.createElement("div",{style:{textAlign:"center",fontFamily:"var(--m)",fontSize:"9px",color:"#06d6a0",padding:"1px 0"}},"\u2193"),
-      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
-        React.createElement("div",{style:{width:"60px",fontFamily:"var(--m)",fontSize:"9px",color:"#06d6a0",textAlign:"right",fontWeight:700}},"REVVYN"),
-        React.createElement("div",{style:{flex:1,padding:"6px 10px",borderRadius:"6px",background:"linear-gradient(135deg,#06d6a008,#a78bfa08)",border:"1.5px solid #06d6a040",textAlign:"center"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",fontWeight:700,color:"#06d6a0",letterSpacing:".5px"}},"GOVERNANCE \u00B7 CONTROL \u00B7 EXECUTION"))
-      ),
-      React.createElement("div",{style:{textAlign:"center",fontFamily:"var(--m)",fontSize:"9px",color:"#38bdf8",padding:"1px 0"}},"\u2193"),
-      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},
-        React.createElement("div",{style:{width:"60px",fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",textAlign:"right"}},"RAILS"),
-        React.createElement("div",{style:{flex:1,display:"flex",gap:"2px",flexWrap:"wrap"}},RAILS.map(function(r){return React.createElement("div",{key:r.id,style:{flex:"1 0 0",minWidth:"50px",padding:"3px 2px",borderRadius:"4px",textAlign:"center",background:selectedRail===r.id?"#10b98110":"var(--surface)",border:"1px solid "+(selectedRail===r.id?"#10b981":"var(--border)")}},React.createElement("div",{style:{fontSize:"12px"}},r.icon),React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",fontWeight:600,color:selectedRail===r.id?"#10b981":"#94a3b8"}},r.provider))}))
-      )
-    )
-  );
+function TxStateBar({current}){
+  const idx=TX_STATES.indexOf(current);
+  return <div style={{display:"flex",gap:2,padding:"6px 14px",flexShrink:0,flexWrap:"wrap",borderBottom:"1px solid var(--border)",background:"var(--surface)"}}>
+    {TX_STATES.map((s,i)=><div key={s} style={{display:"flex",alignItems:"center",gap:2}}>
+      <span style={{padding:"2px 7px",borderRadius:2,fontFamily:"var(--mono)",fontSize:9,fontWeight:600,background:i<=idx?"rgba(61,184,138,.08)":"var(--card)",color:i<=idx?"#3DB88A":"var(--dim)",border:i===idx?"1px solid rgba(61,184,138,.3)":"1px solid transparent"}}>{s.toUpperCase()}</span>
+      {i<TX_STATES.length-1&&<span style={{color:i<idx?"#3DB88A":"var(--border)",fontSize:8}}>→</span>}
+    </div>)}
+  </div>;
 }
 
 function PaymentForm({vertical,onSubmit,isProcessing,killActive}){
-  var v=VERTICALS[vertical];
-  var _s=useState(Object.assign({},v.defaults,{intentSource:"human"}));var form=_s[0],setForm=_s[1];
-  useEffect(function(){setForm(Object.assign({},VERTICALS[vertical].defaults,{intentSource:vertical==="consumer"?"defi_agent":"human"}))},[vertical]);
-  var u=function(k,val){setForm(function(f){var n=Object.assign({},f);n[k]=val;return n})};
-  var inp={width:"100%",padding:"9px 10px",borderRadius:"7px",background:"var(--surface)",border:"1px solid var(--border)",color:"var(--text)",fontFamily:"var(--m)",fontSize:"12px",outline:"none",boxSizing:"border-box"};
-  return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:"12px",padding:"14px 16px"}},
-    React.createElement("div",{style:{padding:"12px",borderRadius:"8px",background:v.accent+"08",border:"1px solid "+v.accent+"20"}},
-      React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"13px",fontWeight:700,color:v.accent}},v.icon+" "+v.label),
-      React.createElement("div",{style:{fontSize:"12px",color:"var(--muted)",marginTop:"3px"}},v.desc)),
-    React.createElement(Fld,{label:"INTENT SOURCE"},React.createElement("div",{style:{display:"flex",gap:"4px",flexWrap:"wrap"}},INTENT_SOURCES.map(function(s){return React.createElement("button",{key:s.id,onClick:function(){u("intentSource",s.id)},style:{flex:"1 0 0",minWidth:"60px",padding:"6px 4px",borderRadius:"6px",border:"1px solid "+(form.intentSource===s.id?s.color:"var(--border)"),background:form.intentSource===s.id?s.color+"12":"var(--surface)",cursor:"pointer",textAlign:"center"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"8px",fontWeight:600,color:form.intentSource===s.id?s.color:"var(--muted)"}},s.name))}))),
-    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}},
-      React.createElement(Fld,{label:"AMOUNT"},React.createElement("input",{type:"number",value:form.amount,onChange:function(e){u("amount",Number(e.target.value))},style:inp})),
-      React.createElement(Fld,{label:"CURRENCY"},React.createElement("select",{value:form.currency,onChange:function(e){u("currency",e.target.value)},style:inp},CURRENCIES.map(function(c){return React.createElement("option",{key:c},c)})))),
-    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:"8px"}},
-      React.createElement(Fld,{label:"FROM"},React.createElement("select",{value:form.fromCountry,onChange:function(e){u("fromCountry",e.target.value)},style:inp},COUNTRIES.map(function(c){return React.createElement("option",{key:c},c)}))),
-      React.createElement(Fld,{label:"TO"},React.createElement("select",{value:form.toCountry,onChange:function(e){u("toCountry",e.target.value)},style:inp},COUNTRIES.concat(SANCTIONED).map(function(c){return React.createElement("option",{key:c},c)}))),
-      React.createElement(Fld,{label:"TO CCY"},React.createElement("select",{value:form.toCurrency,onChange:function(e){u("toCurrency",e.target.value)},style:inp},CURRENCIES.map(function(c){return React.createElement("option",{key:c},c)})))),
-    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"8px"}},
-      React.createElement(Fld,{label:"BENEFICIARY"},React.createElement("input",{value:form.beneficiary,onChange:function(e){u("beneficiary",e.target.value)},style:inp})),
-      React.createElement(Fld,{label:"URGENCY"},React.createElement("select",{value:form.urgency,onChange:function(e){u("urgency",e.target.value)},style:inp},React.createElement("option",{value:"standard"},"Standard"),React.createElement("option",{value:"urgent"},"Urgent"),React.createElement("option",{value:"critical"},"Critical")))),
-    React.createElement(Fld,{label:"PURPOSE"},React.createElement("input",{value:form.purpose,onChange:function(e){u("purpose",e.target.value)},style:inp})),
-    React.createElement("button",{onClick:function(){onSubmit(Object.assign({},form,{id:genId(),timestamp:new Date().toISOString(),vertical:vertical}))},disabled:isProcessing||killActive,style:{padding:"13px",borderRadius:"8px",border:"none",background:killActive?"#ef444420":isProcessing?"var(--border)":"linear-gradient(135deg,"+v.accent+","+v.accent+"bb)",color:killActive?"#ef4444":isProcessing?"var(--muted)":"#000",fontFamily:"var(--m)",fontSize:"12px",fontWeight:700,cursor:(isProcessing||killActive)?"not-allowed":"pointer",letterSpacing:"1px",transition:"all .2s"}},killActive?"\u26D4 HALTED":isProcessing?"\u23F3 AGENTS PROCESSING...":"\u25B6 SUBMIT PAYMENT INTENT")
-  );
+  const v=VERTICALS[vertical];
+  const [form,setForm]=useState({...v.defaults});
+  useEffect(()=>setForm({...VERTICALS[vertical].defaults}),[vertical]);
+  const u=(k,val)=>setForm(f=>({...f,[k]:val}));
+  const isCross=form.fromCountry!==form.toCountry;
+  const fxRate=FX[form.toCurrency]||1;
+  const converted=form.currency!==form.toCurrency?Math.round(form.amount*fxRate*100)/100:null;
+
+  return <div style={{display:"flex",flexDirection:"column",gap:11,padding:"14px 16px"}}>
+    <div style={{padding:"11px 13px",borderRadius:2,background:v.accent+"08",border:`1px solid ${v.accent}22`}}>
+      <div style={{fontSize:14,fontWeight:700,color:v.accent,marginBottom:2}}>{v.icon} {v.label}</div>
+      <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>{v.desc}</div>
+    </div>
+    <div>
+      <label className="lbl">Intent Source</label>
+      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+        {INTENT_SOURCES.map(s=><button key={s.id} onClick={()=>u("intentSource",s.id)} style={{flex:"1 0 0",minWidth:55,padding:"6px 3px",borderRadius:2,border:`1px solid ${form.intentSource===s.id?s.color:"var(--border)"}`,background:form.intentSource===s.id?s.color+"12":"var(--card)",cursor:"pointer",textAlign:"center"}}>
+          <div style={{fontSize:10,fontWeight:600,color:form.intentSource===s.id?s.color:"var(--muted)",fontFamily:"var(--mono)"}}>{s.name}</div>
+        </button>)}
+      </div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><label className="lbl">Amount</label><input type="number" className="inp" value={form.amount} onChange={e=>u("amount",Number(e.target.value))}/></div>
+      <div><label className="lbl">Currency</label><select className="inp" value={form.currency} onChange={e=>u("currency",e.target.value)}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+      <div><label className="lbl">From</label><select className="inp" value={form.fromCountry} onChange={e=>u("fromCountry",e.target.value)}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></div>
+      <div><label className="lbl">To</label><select className="inp" value={form.toCountry} onChange={e=>u("toCountry",e.target.value)}>{COUNTRIES.map(c=><option key={c}>{c}</option>)}</select></div>
+      <div><label className="lbl">To CCY</label><select className="inp" value={form.toCurrency} onChange={e=>u("toCurrency",e.target.value)}>{CURRENCIES.map(c=><option key={c}>{c}</option>)}</select></div>
+    </div>
+    {isCross&&converted&&<div style={{padding:"6px 10px",borderRadius:2,background:"rgba(74,158,255,.06)",border:"1px solid rgba(74,158,255,.2)",fontFamily:"var(--mono)",fontSize:11,color:"#4A9EFF"}}>
+      ◆ FX: {form.currency} {fmtAmt(form.amount)} → {form.toCurrency} {fmtAmt(converted)} @ {fxRate} (ECB reference)
+    </div>}
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+      <div><label className="lbl">Beneficiary</label><input className="inp" value={form.beneficiary} onChange={e=>u("beneficiary",e.target.value)}/></div>
+      <div><label className="lbl">Urgency</label><select className="inp" value={form.urgency} onChange={e=>u("urgency",e.target.value)}><option value="standard">Standard</option><option value="urgent">Urgent</option><option value="critical">Critical</option></select></div>
+    </div>
+    <div><label className="lbl">Purpose</label><input className="inp" value={form.purpose} onChange={e=>u("purpose",e.target.value)}/></div>
+    <button onClick={()=>onSubmit({...form,id:genId(),timestamp:new Date().toISOString()})} disabled={isProcessing||killActive} style={{padding:"13px",borderRadius:2,border:"none",background:killActive?"rgba(224,82,82,.08)":isProcessing?"var(--border)":v.accent,color:killActive?"#E05252":isProcessing?"var(--muted)":v.accent==="#C49A2C"||v.accent==="#3DB88A"||v.accent==="#D4914A"?"#000":"#fff",fontFamily:"var(--mono)",fontSize:12,fontWeight:700,cursor:(isProcessing||killActive)?"not-allowed":"pointer",letterSpacing:".08em",textTransform:"uppercase",transition:"all .2s"}}>
+      {killActive?"⛔ HALTED":isProcessing?"⏳ AGENTS PROCESSING…":"▶ SUBMIT PAYMENT INTENT"}
+    </button>
+  </div>;
 }
 
 function PolicyEditor({vertical,policies,onChange}){
-  var v=VERTICALS[vertical];var fmt=function(n){return "$"+Number(n).toLocaleString()};
-  var sliders=[{key:"maxSingle",label:"MAX SINGLE PAYMENT",max:vertical==="consumer"?5000:10000000},{key:"maxDaily",label:"DAILY LIMIT",max:vertical==="consumer"?20000:50000000},{key:"requireApproval",label:"APPROVAL THRESHOLD",max:vertical==="consumer"?2000:5000000},{key:"dualApproval",label:"DUAL APPROVAL",max:vertical==="consumer"?5000:10000000}];
-  return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:"14px",padding:"14px 16px"}},
-    React.createElement("div",{style:{fontSize:"13px",color:"#94a3b8"}},"Active governance rules for ",React.createElement("span",{style:{color:v.accent,fontWeight:600}},v.label)),
-    sliders.map(function(s){return React.createElement("div",{key:s.key},React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"4px"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",letterSpacing:".5px",fontWeight:600}},s.label),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"12px",color:v.accent,fontWeight:600}},fmt(policies[s.key]))),React.createElement("input",{type:"range",min:0,max:s.max,step:vertical==="consumer"?50:50000,value:policies[s.key],onChange:function(e){var p=Object.assign({},policies);p[s.key]=Number(e.target.value);onChange(p)},style:{width:"100%",accentColor:v.accent,height:"3px"}}))}),
-    React.createElement("div",{style:{padding:"10px",borderRadius:"6px",background:"var(--surface)",border:"1px solid var(--border)"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)",marginBottom:"5px"}},"SANCTIONED COUNTRIES"),React.createElement("div",{style:{display:"flex",gap:"4px",flexWrap:"wrap"}},policies.sanctions.map(function(s){return React.createElement("span",{key:s,style:{padding:"2px 6px",borderRadius:"3px",fontSize:"10px",fontFamily:"var(--m)",fontWeight:600,background:"#ef444415",color:"#ef4444"}},s)}))),
-    vertical==="consumer"?React.createElement("div",{style:{padding:"10px",borderRadius:"6px",background:"#f472b608",border:"1px solid #f472b620"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",color:"#f472b6",marginBottom:"4px",fontWeight:600}},"YIELD GUARDIAN RULES"),React.createElement("div",{style:{fontSize:"12px",color:"#94a3b8",lineHeight:1.5}},"Principal protection: ON. Only accrued DeFi yield may be spent.")):null
-  );
+  const v=VERTICALS[vertical];
+  const sliders=[
+    {key:"maxSingle",label:"Max Single Payment",max:vertical==="consumer"?5000:10000000},
+    {key:"maxDaily",label:"Daily Limit",max:vertical==="consumer"?20000:50000000},
+    {key:"requireApproval",label:"Approval Threshold",max:vertical==="consumer"?2000:5000000},
+    {key:"dualApproval",label:"Dual Approval",max:vertical==="consumer"?5000:10000000},
+  ];
+  return <div style={{display:"flex",flexDirection:"column",gap:14,padding:"14px 16px"}}>
+    <div style={{fontSize:12,color:"var(--muted)"}}>Active governance rules for <span style={{color:v.accent,fontWeight:600}}>{v.label}</span></div>
+    {sliders.map(s=><div key={s.key}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+        <label className="lbl" style={{margin:0}}>{s.label}</label>
+        <span style={{fontFamily:"var(--mono)",fontSize:12,color:v.accent,fontWeight:600}}>${Number(policies[s.key]).toLocaleString()}</span>
+      </div>
+      <input type="range" min={0} max={s.max} step={vertical==="consumer"?50:50000} value={policies[s.key]} onChange={e=>onChange({...policies,[s.key]:Number(e.target.value)})} style={{width:"100%",accentColor:v.accent}}/>
+    </div>)}
+    <div style={{padding:"10px 12px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+      <label className="lbl" style={{marginBottom:6}}>Sanctioned Countries</label>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+        {policies.sanctions.map(s=><span key={s} className="tag" style={{background:"rgba(224,82,82,.08)",color:"#E05252",border:"1px solid rgba(224,82,82,.2)"}}>{s}</span>)}
+      </div>
+    </div>
+    {vertical==="consumer"&&<div style={{padding:"10px 12px",borderRadius:2,background:"rgba(196,110,138,.06)",border:"1px solid rgba(196,110,138,.18)"}}>
+      <label className="lbl" style={{color:"#C46E8A",marginBottom:4}}>Yield Guardian</label>
+      <div style={{fontSize:12,color:"var(--muted)",lineHeight:1.5}}>Principal protection: ON. Only accrued DeFi yield may be spent. Principal remains untouched.</div>
+    </div>}
+  </div>;
 }
 
 function AgentDetail({agentId,results}){
-  var agent=AGENTS.find(function(a){return a.id===agentId});var result=results[agentId];
-  if(!result)return React.createElement("div",{style:{padding:"28px",textAlign:"center",color:"var(--dim)",fontSize:"12px"}},"Click an agent to inspect its decision");
-  return React.createElement("div",{style:{padding:"14px 16px",overflowY:"auto"}},
-    React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px",marginBottom:"12px"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"16px",color:agent.color}},agent.icon),React.createElement("div",null,React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"14px",fontWeight:700,color:agent.color}},agent.name),React.createElement("div",{style:{fontSize:"11px",color:"var(--muted)"}},agent.role))),
-    result.summary?React.createElement("div",{style:{padding:"10px 12px",borderRadius:"7px",background:agent.color+"08",border:"1px solid "+agent.color+"20",marginBottom:"12px",fontSize:"13px",color:"#cbd5e1",lineHeight:1.5}},result.summary):null,
-    React.createElement("div",{style:{display:"flex",gap:"6px",marginBottom:"12px",flexWrap:"wrap"}},
-      result.complianceScore!==undefined?React.createElement(Badge,{label:"Compliance",value:result.complianceScore+"%",color:result.complianceScore>80?"#10b981":"#fbbf24"}):null,
-      result.riskScore!==undefined?React.createElement(Badge,{label:"Risk",value:result.riskScore+"/100",color:result.riskScore<40?"#10b981":result.riskScore<70?"#fbbf24":"#ef4444"}):null,
-      result.approved!==undefined?React.createElement(Badge,{label:"Status",value:result.approved?"APPROVED":"REJECTED",color:result.approved?"#10b981":"#ef4444"}):null,
-      result.fees&&result.fees.total!==undefined?React.createElement(Badge,{label:"Fees",value:"$"+result.fees.total,color:"#38bdf8"}):null,
-      result.status?React.createElement(Badge,{label:"Settlement",value:result.status.toUpperCase(),color:result.status==="settled"?"#10b981":"#fbbf24"}):null,
-      result.provider?React.createElement(Badge,{label:"Provider",value:result.provider,color:"#a78bfa"}):null),
-    result.checks?React.createElement("div",{style:{marginBottom:"12px"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)",marginBottom:"5px"}},"COMPLIANCE CHECKS"),result.checks.map(function(c,i){return React.createElement("div",{key:i,style:{display:"flex",alignItems:"flex-start",gap:"6px",fontSize:"11px",marginBottom:"3px",padding:"5px 7px",borderRadius:"4px",background:"var(--surface)"}},React.createElement("span",{style:{padding:"1px 4px",borderRadius:"2px",fontFamily:"var(--m)",fontSize:"7px",fontWeight:700,flexShrink:0,background:c.status==="pass"?"#10b98115":c.status==="fail"?"#ef444415":"#fbbf2415",color:c.status==="pass"?"#10b981":c.status==="fail"?"#ef4444":"#fbbf24"}},c.status.toUpperCase()),React.createElement("span",{style:{color:"#94a3b8"}},React.createElement("strong",{style:{color:"#cbd5e1"}},c.name+": "),c.detail))})):null,
-    result.decisionChain?React.createElement("div",{style:{marginBottom:"12px"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)",marginBottom:"5px"}},"DECISION CHAIN"),result.decisionChain.map(function(d,i){return React.createElement("div",{key:i,style:{display:"flex",gap:"6px",fontSize:"11px",marginBottom:"2px",padding:"5px 7px",borderRadius:"4px",background:"var(--surface)"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"#38bdf8",fontWeight:600}},"["+d.reasonCode+"]"),React.createElement("span",{style:{color:"#94a3b8",flex:1}},d.agent+": "+d.decision),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"var(--muted)"}},d.confidence+"%"))})):null,
-    React.createElement("details",null,React.createElement("summary",{style:{fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",cursor:"pointer"}},"Raw JSON"),React.createElement("pre",{style:{marginTop:"4px",padding:"10px",borderRadius:"5px",background:"#080a10",fontSize:"9px",color:"var(--muted)",fontFamily:"var(--m)",lineHeight:1.4,border:"1px solid var(--border)",whiteSpace:"pre-wrap",wordBreak:"break-word",overflow:"auto",maxHeight:"250px"}},JSON.stringify(result,null,2)))
-  );
+  const agent=AGENTS.find(a=>a.id===agentId);
+  const result=results[agentId];
+  if(!result) return <div style={{padding:28,textAlign:"center",color:"var(--dim)",fontSize:13}}>Select an agent above to inspect its decision output</div>;
+  return <div style={{padding:"13px 15px",overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:11}}>
+    <div style={{display:"flex",alignItems:"center",gap:9}}>
+      <span style={{fontSize:15,color:agent.color}}>{agent.icon}</span>
+      <div>
+        <div style={{fontSize:16,fontWeight:700,color:agent.color}}>{agent.name}</div>
+        <div style={{fontSize:11,color:"var(--muted)"}}>{agent.role}</div>
+      </div>
+    </div>
+    {result.summary&&<div style={{padding:"9px 11px",borderRadius:2,background:agent.color+"07",border:`1px solid ${agent.color}22`,fontSize:13,color:"var(--text)",lineHeight:1.6,opacity:.9}}>{result.summary}</div>}
+    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+      {result.complianceScore!==undefined&&<Badge label="Compliance" value={result.complianceScore+"%"} color={result.complianceScore>80?"#3DB88A":"#D4914A"}/>}
+      {result.riskScore!==undefined&&<Badge label="Risk Score" value={result.riskScore+"/100"} color={result.riskScore<40?"#3DB88A":result.riskScore<70?"#D4914A":"#E05252"}/>}
+      {result.approved!==undefined&&<Badge label="Decision" value={result.approved?"APPROVED":"REJECTED"} color={result.approved?"#3DB88A":"#E05252"}/>}
+      {result.fees?.total!==undefined&&<Badge label="Fees" value={"$"+result.fees.total} color="#4A9EFF"/>}
+      {result.status&&<Badge label="Settlement" value={result.status.toUpperCase()} color="#3DB88A"/>}
+      {result.provider&&<Badge label="Provider" value={result.provider} color="#8B72D4"/>}
+    </div>
+    {result.checks&&<div>
+      <label className="lbl" style={{marginBottom:5}}>Compliance Checks</label>
+      {result.checks.map((c,i)=><div key={i} style={{display:"flex",alignItems:"flex-start",gap:6,marginBottom:3,padding:"6px 8px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",fontSize:11}}>
+        <span className="tag" style={{flexShrink:0,background:c.status==="pass"?"rgba(61,184,138,.1)":c.status==="fail"?"rgba(224,82,82,.1)":"rgba(212,145,74,.1)",color:c.status==="pass"?"#3DB88A":c.status==="fail"?"#E05252":"#D4914A"}}>{c.status.toUpperCase()}</span>
+        <span style={{color:"var(--muted)",flex:1,lineHeight:1.5}}><strong style={{color:"var(--text)",fontWeight:600}}>{c.name}: </strong>{c.detail}</span>
+      </div>)}
+    </div>}
+    {result.recommendedRail&&<div>
+      <label className="lbl" style={{marginBottom:5}}>Rail Selection</label>
+      <div style={{padding:"8px 10px",borderRadius:2,background:"rgba(61,184,138,.05)",border:"1px solid rgba(61,184,138,.2)",marginBottom:4}}>
+        <div style={{fontSize:13,fontWeight:600,color:"#3DB88A",marginBottom:2}}>✓ {result.recommendedRail.name}</div>
+        <div style={{fontSize:11,color:"var(--muted)"}}>{result.recommendedRail.reason}</div>
+      </div>
+      {result.alternativeRails?.map((r,i)=><div key={i} style={{padding:"5px 8px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:2,fontSize:11,color:"var(--muted)"}}>
+        Alt {i+1}: <span style={{color:"#4A9EFF"}}>{r.name}</span> — {r.reason}
+      </div>)}
+    </div>}
+    {result.decisionChain&&<div>
+      <label className="lbl" style={{marginBottom:5}}>Decision Chain</label>
+      {result.decisionChain.map((d,i)=><div key={i} style={{display:"flex",gap:6,fontSize:11,marginBottom:2,padding:"5px 7px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+        <span style={{fontFamily:"var(--mono)",fontSize:10,color:"#4A9EFF",fontWeight:600,whiteSpace:"nowrap"}}>[{d.reasonCode}]</span>
+        <span style={{color:"var(--muted)",flex:1}}><strong style={{color:"var(--text)",fontWeight:600}}>{d.agent}:</strong> {d.decision}</span>
+        <span style={{fontSize:10,color:"var(--muted)",opacity:.7,whiteSpace:"nowrap"}}>{d.confidence}%</span>
+      </div>)}
+    </div>}
+    {result.regulatoryTags&&<div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+      {result.regulatoryTags.map(t=><span key={t} className="tag" style={{background:"rgba(196,154,44,.08)",color:"var(--gold)",border:"1px solid rgba(196,154,44,.2)"}}>{t}</span>)}
+    </div>}
+    <details>
+      <summary style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)"}}>▸ Raw JSON</summary>
+      <pre style={{marginTop:5,padding:8,borderRadius:2,background:"var(--card)",fontSize:9,color:"var(--muted)",fontFamily:"var(--mono)",lineHeight:1.4,border:"1px solid var(--border)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{JSON.stringify(result,null,2)}</pre>
+    </details>
+  </div>;
 }
 
 function AuditTrail({entries}){
-  var ref=useRef(null);useEffect(function(){if(ref.current)ref.current.scrollTop=ref.current.scrollHeight},[entries]);
-  return React.createElement("div",{ref:ref,style:{display:"flex",flexDirection:"column",gap:"3px",padding:"10px 14px",overflowY:"auto"}},
-    entries.length===0?React.createElement("div",{style:{color:"var(--dim)",fontSize:"12px",textAlign:"center",padding:"20px"}},"Audit trail populates as agents process..."):null,
-    entries.map(function(e,i){var ag=AGENTS.find(function(a){return a.id===e.agent});return React.createElement("div",{key:i,style:{padding:"6px 8px",borderRadius:"5px",background:"var(--surface)",borderLeft:"3px solid "+(ag?ag.color:"var(--border)")}},React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:"1px"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"8px",fontWeight:600,color:ag?ag.color:"var(--muted)",textTransform:"uppercase"}},e.agent),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"8px",color:"var(--dim)"}},e.time)),React.createElement("div",{style:{fontSize:"11px",color:"#94a3b8",lineHeight:1.3}},e.message),e.status?React.createElement("span",{style:{display:"inline-block",marginTop:"2px",padding:"1px 4px",borderRadius:"2px",fontSize:"7px",fontFamily:"var(--m)",fontWeight:700,background:e.status==="pass"?"#10b98115":e.status==="fail"?"#ef444415":"#fbbf2415",color:e.status==="pass"?"#10b981":e.status==="fail"?"#ef4444":"#fbbf24"}},e.status.toUpperCase()):null)})
-  );
+  const ref=useRef();
+  useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},[entries]);
+  return <div ref={ref} style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:2,padding:"10px 14px"}}>
+    {entries.length===0&&<div style={{color:"var(--dim)",fontSize:13,textAlign:"center",padding:24}}>Audit trail populates as agents process transactions</div>}
+    {entries.map((e,i)=>{
+      const ag=AGENTS.find(a=>a.id===e.agent);
+      return <div key={i} style={{padding:"6px 9px",borderRadius:2,background:"var(--card)",borderLeft:`2px solid ${ag?ag.color+"70":"var(--border)"}`,animation:"fadeUp .2s ease"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3,gap:8}}>
+          <span style={{fontSize:11,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em",flexShrink:0}}>{e.agent}</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",whiteSpace:"nowrap"}}>{e.time}</span>
+        </div>
+        <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5,opacity:.85}}>{e.message}</div>
+        {e.status&&<span className="tag" style={{display:"inline-block",marginTop:3,background:e.status==="pass"?"rgba(61,184,138,.09)":e.status==="fail"?"rgba(224,82,82,.09)":"rgba(212,145,74,.09)",color:e.status==="pass"?"#3DB88A":e.status==="fail"?"#E05252":"#D4914A",border:`1px solid ${e.status==="pass"?"rgba(61,184,138,.2)":e.status==="fail"?"rgba(224,82,82,.2)":"rgba(212,145,74,.2)"}`}}>{e.status.toUpperCase()}</span>}
+      </div>;
+    })}
+  </div>;
 }
 
-function Analytics({payments,vertical}){
-  var v=VERTICALS[vertical];var settled=payments.filter(function(p){return p.finalStatus==="settled"});var rejected=payments.filter(function(p){return p.finalStatus==="rejected"});var total=payments.reduce(function(s,p){return s+(p.payment?p.payment.amount||0:0)},0);var avgRisk=settled.length?Math.round(settled.reduce(function(s,p){return s+((p.results&&p.results.control)?p.results.control.riskScore||0:0)},0)/settled.length):0;
-  return React.createElement("div",{style:{padding:"14px 16px",display:"flex",flexDirection:"column",gap:"10px"}},
-    React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px"}},React.createElement(SC,{label:"Processed",value:payments.length,sub:vertical==="consumer"?"$"+total.toLocaleString():"$"+(total/1e6).toFixed(1)+"M",color:v.accent}),React.createElement(SC,{label:"Settled",value:settled.length,sub:(payments.length?Math.round(settled.length/payments.length*100):0)+"%",color:"#10b981"}),React.createElement(SC,{label:"Rejected",value:rejected.length,sub:(payments.length?Math.round(rejected.length/payments.length*100):0)+"%",color:"#ef4444"}),React.createElement(SC,{label:"Avg Risk",value:avgRisk,sub:avgRisk<40?"Low":"Med",color:avgRisk<40?"#10b981":"#fbbf24"})),
-    payments.length===0?React.createElement("div",{style:{textAlign:"center",color:"var(--dim)",fontSize:"12px",padding:"14px"}},"Submit payments to see analytics"):null
-  );
+function Analytics({payments}){
+  const settled=payments.filter(p=>p.finalStatus==="settled");
+  const rejected=payments.filter(p=>p.finalStatus==="rejected");
+  const total=payments.reduce((s,p)=>s+(p.payment?.amount||0),0);
+  const avgRisk=settled.length?Math.round(settled.reduce((s,p)=>s+(p.results?.control?.riskScore||0),0)/settled.length):0;
+  return <div style={{display:"flex",flexDirection:"column",gap:10,padding:"14px 16px"}}>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+      {[["Processed",payments.length,`$${(total/1e6).toFixed(2)}M total`,"var(--gold)"],
+        ["Settled",settled.length,`${payments.length?Math.round(settled.length/payments.length*100):0}% rate`,"#3DB88A"],
+        ["Rejected",rejected.length,`${payments.length?Math.round(rejected.length/payments.length*100):0}% rate`,"#E05252"],
+        ["Avg Risk",avgRisk,avgRisk<40?"Low":"Med",avgRisk<40?"#3DB88A":"#D4914A"],
+      ].map(([label,value,sub,color])=><div key={label} style={{padding:"11px 12px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+        <label className="lbl" style={{margin:0,marginBottom:4,fontSize:9}}>{label}</label>
+        <div style={{fontFamily:"var(--mono)",fontSize:22,fontWeight:700,color,lineHeight:1}}>{value}</div>
+        <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>{sub}</div>
+      </div>)}
+    </div>
+    {payments.length===0&&<div style={{textAlign:"center",color:"var(--dim)",fontSize:13,padding:14}}>Submit payments to see analytics</div>}
+    {payments.length>0&&<div>
+      <label className="lbl" style={{marginBottom:6}}>Transaction History</label>
+      <div style={{display:"flex",flexDirection:"column",gap:2,maxHeight:280,overflowY:"auto"}}>
+        {[...payments].reverse().map(p=><div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 9px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",fontSize:11}}>
+          <div style={{width:6,height:6,borderRadius:"50%",background:p.finalStatus==="settled"?"#3DB88A":p.finalStatus==="rejected"?"#E05252":"#D4914A",flexShrink:0}}/>
+          <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",flexShrink:0}}>{p.id}</span>
+          <span style={{color:"var(--text)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.payment?.beneficiary}</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--gold)",flexShrink:0}}>{p.payment?.currency} {fmtAmt(p.payment?.amount)}</span>
+          <span className="tag" style={{background:p.finalStatus==="settled"?"rgba(61,184,138,.08)":"rgba(224,82,82,.08)",color:p.finalStatus==="settled"?"#3DB88A":"#E05252",flexShrink:0}}>{p.finalStatus?.toUpperCase()}</span>
+        </div>)}
+      </div>
+    </div>}
+  </div>;
 }
 
-function CompetitiveLandscape(){
-  return React.createElement("div",{style:{padding:"14px 16px",display:"flex",flexDirection:"column",gap:"12px"}},
-    React.createElement("div",{style:{fontSize:"13px",color:"#94a3b8",lineHeight:1.5}},React.createElement("span",{style:{color:"#06d6a0",fontWeight:700}},"$50M+ raised")," in agentic payment infrastructure in the last 6 months. Every funded company solves execution, identity, or checkout. ",React.createElement("span",{style:{color:"#06d6a0",fontWeight:600}},"Nobody is building the governance layer. That\u2019s Revvyn.")),
-    COMPS.map(function(c){return React.createElement("div",{key:c.name,style:{padding:"12px",borderRadius:"8px",background:"var(--surface)",border:"1px solid var(--border)"}},React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"13px",fontWeight:700}},c.name),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"11px",fontWeight:700,color:"#06d6a0"}},c.raised)),React.createElement("div",{style:{fontSize:"10px",color:"var(--muted)",marginBottom:"2px"}},c.lead),React.createElement("div",{style:{fontSize:"11px",color:"#94a3b8",marginBottom:"4px"}},c.what),React.createElement("div",{style:{fontSize:"11px",color:"#ef4444",fontFamily:"var(--m)",fontWeight:500}},"Gap: "+c.gap))}),
-    React.createElement("div",{style:{padding:"14px",borderRadius:"10px",background:"linear-gradient(135deg,rgba(6,214,160,.06),rgba(167,139,250,.04))",border:"1.5px solid rgba(6,214,160,.25)"}},React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"4px"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"14px",fontWeight:700,color:"#06d6a0"}},"REVVYN"),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"11px",fontWeight:700,color:"#fbbf24"}},"Raising $1.5M Seed")),React.createElement("div",{style:{fontSize:"12px",color:"var(--text)",lineHeight:1.5}},"Protocol-agnostic governance: policy enforcement, risk scoring, 9-rail optimization, compliance audit trails. 5 verticals. ",React.createElement("strong",{style:{color:"#06d6a0"}},"The only company building the governance layer.")))
-  );
+function Landscape(){
+  return <div style={{display:"flex",flexDirection:"column",gap:11,padding:"14px 16px"}}>
+    <div style={{padding:"11px 13px",borderRadius:2,background:"rgba(196,154,44,.04)",border:"1px solid rgba(196,154,44,.15)",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+      <span style={{color:"var(--gold)",fontWeight:700}}>$50M+ raised</span> in agentic payment infrastructure in the last 6 months. Every funded company solves execution, identity, or checkout. <span style={{color:"var(--gold)",fontWeight:600}}>Nobody is building the governance layer. That's Revvyn.</span>
+    </div>
+    <div style={{padding:"11px 13px",borderRadius:2,background:"rgba(61,184,138,.04)",border:"1px solid rgba(61,184,138,.2)",fontSize:12,color:"var(--muted)",lineHeight:1.6}}>
+      <span style={{color:"#3DB88A",fontWeight:700}}>Google AP2 (Sep 2025)</span> — 60+ organisations building the authorisation layer: mandates, verifiable credentials, intent proof. Explicitly excludes policy enforcement, risk scoring, and kill-switch capability. <span style={{color:"#3DB88A",fontWeight:600}}>AP2 is the passport. Revvyn is border control.</span>
+    </div>
+    {COMPS.map(c=><div key={c.name} style={{padding:"11px 13px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+        <span style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>{c.name}</span>
+        <span style={{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:"#3DB88A"}}>{c.raised}</span>
+      </div>
+      <div style={{fontSize:10,color:"var(--muted)",marginBottom:2}}>{c.lead}</div>
+      <div style={{fontSize:12,color:"var(--text)",opacity:.8,marginBottom:5}}>{c.what}</div>
+      <div style={{fontSize:11,color:"#E05252",fontFamily:"var(--mono)",fontWeight:500}}>Gap: {c.gap}</div>
+    </div>)}
+    <div style={{padding:"14px",borderRadius:2,background:"linear-gradient(135deg,rgba(196,154,44,.06),rgba(139,114,212,.04))",border:"1.5px solid rgba(196,154,44,.25)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:5}}>
+        <span style={{fontSize:15,fontWeight:700,color:"var(--gold)"}}>◈ REVVYN</span>
+        <span style={{fontFamily:"var(--mono)",fontSize:11,fontWeight:700,color:"#D4914A"}}>Raising $1.5M Seed</span>
+      </div>
+      <div style={{fontSize:12,color:"var(--text)",lineHeight:1.6,opacity:.9}}>Protocol-agnostic governance layer: policy enforcement, risk scoring, 9-rail optimisation, compliance audit trails. 6 verticals. Consumes trust signals — <span style={{color:"#E05252"}}>MVI</span>, <span style={{color:"#8B72D4"}}>ERC-8004</span>, <span style={{color:"#4A9EFF"}}>Visa TAP</span>, <span style={{color:"#3DB88A"}}>Google AP2 Mandate</span> — as inputs. <strong style={{color:"var(--gold)"}}>The only company building the governance layer for agentic commerce.</strong></div>
+    </div>
+  </div>;
 }
 
-function EscalationModal({payment,result,onApprove,onReject}){
-  return React.createElement("div",{style:{position:"fixed",inset:0,background:"#000000cc",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:"20px"}},
-    React.createElement("div",{style:{background:"var(--surface2)",border:"1px solid #fbbf2440",borderRadius:"14px",padding:"22px",maxWidth:"420px",width:"100%"}},
-      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"10px",marginBottom:"14px"}},React.createElement("div",{style:{width:"32px",height:"32px",borderRadius:"8px",background:"#fbbf2418",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"16px",border:"1px solid #fbbf2440"}},"\u26A0"),React.createElement("div",null,React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"13px",fontWeight:700,color:"#fbbf24"}},"HUMAN REVIEW REQUIRED"),React.createElement("div",{style:{fontSize:"11px",color:"var(--muted)"}},"Pipeline paused \u2014 awaiting decision"))),
-      React.createElement("div",{style:{padding:"10px",borderRadius:"7px",background:"var(--surface)",border:"1px solid var(--border)",marginBottom:"10px",fontSize:"12px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:"5px"}},React.createElement("div",null,React.createElement("span",{style:{color:"var(--muted)"}},"ID: "),React.createElement("span",{style:{fontFamily:"var(--m)",fontWeight:600}},payment.id)),React.createElement("div",null,React.createElement("span",{style:{color:"var(--muted)"}},"Amount: "),React.createElement("span",{style:{fontFamily:"var(--m)"}},payment.currency+" "+Number(payment.amount).toLocaleString())),React.createElement("div",null,React.createElement("span",{style:{color:"var(--muted)"}},"To: "),payment.beneficiary),React.createElement("div",null,React.createElement("span",{style:{color:"var(--muted)"}},"Route: "),payment.fromCountry+" \u2192 "+payment.toCountry)),
-      result&&result.escalationReason?React.createElement("div",{style:{padding:"8px 10px",borderRadius:"6px",background:"#fbbf2408",border:"1px solid #fbbf2420",marginBottom:"10px",fontSize:"11px",color:"var(--text)",lineHeight:1.4}},result.escalationReason):null,
-      React.createElement("div",{style:{display:"flex",gap:"8px"}},React.createElement("button",{onClick:onReject,style:{flex:1,padding:"11px",borderRadius:"7px",border:"1px solid #ef444440",background:"#ef444410",color:"#ef4444",fontFamily:"var(--m)",fontSize:"11px",fontWeight:700,cursor:"pointer"}},"\u2715 REJECT"),React.createElement("button",{onClick:onApprove,style:{flex:1,padding:"11px",borderRadius:"7px",border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#000",fontFamily:"var(--m)",fontSize:"11px",fontWeight:700,cursor:"pointer"}},"\u2713 APPROVE"))
-    )
-  );
+function HITLModal({payment,reason,onApprove,onReject}){
+  return <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:20}}>
+    <div style={{background:"var(--surface)",border:"1px solid rgba(212,145,74,.35)",borderRadius:3,padding:22,maxWidth:420,width:"100%",animation:"fadeUp .3s ease"}}>
+      <div style={{display:"flex",alignItems:"center",gap:9,marginBottom:14}}>
+        <div style={{width:32,height:32,borderRadius:3,background:"rgba(212,145,74,.08)",border:"1px solid rgba(212,145,74,.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>⚠</div>
+        <div>
+          <div style={{fontSize:15,fontWeight:700,color:"#D4914A"}}>Human Review Required</div>
+          <div style={{fontSize:11,color:"var(--muted)"}}>Pipeline paused — awaiting decision</div>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,padding:"9px 11px",borderRadius:2,background:"var(--card)",border:"1px solid var(--border)",marginBottom:9,fontSize:12}}>
+        <div><span style={{color:"var(--muted)"}}>ID: </span><span style={{fontFamily:"var(--mono)",fontWeight:500}}>{payment.id}</span></div>
+        <div><span style={{color:"var(--muted)"}}>Amount: </span><span style={{fontFamily:"var(--mono)"}}>{payment.currency} {fmtAmt(payment.amount)}</span></div>
+        <div><span style={{color:"var(--muted)"}}>To: </span>{payment.beneficiary}</div>
+        <div><span style={{color:"var(--muted)"}}>Route: </span>{payment.fromCountry} → {payment.toCountry}</div>
+      </div>
+      {reason&&<div style={{padding:"7px 9px",borderRadius:2,background:"rgba(212,145,74,.05)",border:"1px solid rgba(212,145,74,.18)",fontSize:11,color:"var(--text)",lineHeight:1.5,marginBottom:9}}>{reason}</div>}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+        <button onClick={onReject} style={{padding:10,borderRadius:2,border:"1px solid rgba(224,82,82,.3)",background:"rgba(224,82,82,.06)",color:"#E05252",fontFamily:"var(--mono)",fontSize:10,fontWeight:600,cursor:"pointer",letterSpacing:".08em"}}>✗ REJECT</button>
+        <button onClick={onApprove} style={{padding:10,borderRadius:2,border:"none",background:"#3DB88A",color:"#000",fontFamily:"var(--mono)",fontSize:10,fontWeight:700,cursor:"pointer",letterSpacing:".08em"}}>✓ APPROVE</button>
+      </div>
+    </div>
+  </div>;
 }
 
-// HERO
 function Hero({onEnter,onAutoDemo}){
-  return React.createElement("div",{style:{minHeight:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 24px",position:"relative",overflow:"hidden"}},
-    React.createElement("div",{style:{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% -20%,rgba(6,214,160,.08) 0%,transparent 60%)"}}),
-    React.createElement("div",{style:{position:"absolute",inset:0,background:"radial-gradient(ellipse 60% 40% at 80% 80%,rgba(167,139,250,.05) 0%,transparent 50%)"}}),
-    React.createElement("div",{style:{textAlign:"center",maxWidth:"740px",position:"relative",zIndex:1}},
-      React.createElement("div",{style:{display:"inline-flex",alignItems:"center",gap:"12px",marginBottom:"32px",animation:"fadeUp .6s ease-out"}},React.createElement("div",{style:{width:"48px",height:"48px",borderRadius:"14px",background:"linear-gradient(135deg,#06d6a0,#06d6a088)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"22px",fontWeight:800,color:"#000",animation:"glow 3s ease-in-out infinite"}},"R"),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"28px",fontWeight:700,letterSpacing:"3px"}},"REVVYN")),
-      React.createElement("h1",{style:{fontFamily:"var(--b)",fontSize:"clamp(28px,5vw,52px)",fontWeight:800,lineHeight:1.1,marginBottom:"20px",animation:"fadeUp .6s ease-out .1s both"}},"The Governance Layer for ",React.createElement("span",{style:{background:"linear-gradient(135deg,#06d6a0,#38bdf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}},"Agentic Commerce")),
-      React.createElement("p",{style:{fontSize:"clamp(16px,2.2vw,20px)",color:"#94a3b8",lineHeight:1.6,marginBottom:"16px",maxWidth:"560px",margin:"0 auto 16px",animation:"fadeUp .6s ease-out .2s both"}},"When an AI agent wants to spend money, Revvyn decides if it\u2019s allowed to."),
-      React.createElement("div",{style:{display:"inline-block",padding:"10px 20px",borderRadius:"8px",background:"rgba(6,214,160,.06)",border:"1px solid rgba(6,214,160,.2)",marginBottom:"36px",animation:"fadeUp .6s ease-out .25s both"}},React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"clamp(12px,1.5vw,14px)",color:"#06d6a0",fontWeight:600}},"$50M+ raised in agentic payments infra. $0 in governance.")),
-      React.createElement("div",{style:{display:"flex",justifyContent:"center",gap:"clamp(20px,4vw,48px)",marginBottom:"40px",animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}},[{n:"5",label:"Verticals",color:"#06d6a0"},{n:"9",label:"Payment Rails",color:"#38bdf8"},{n:"5",label:"AI Agents",color:"#a78bfa"}].map(function(s){return React.createElement("div",{key:s.label,style:{textAlign:"center"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"clamp(28px,4vw,40px)",fontWeight:700,color:s.color}},s.n),React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"11px",color:"var(--muted)",letterSpacing:"1px"}},s.label.toUpperCase()))})),
-      React.createElement("div",{style:{marginBottom:"40px",animation:"fadeUp .6s ease-out .35s both"}},React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:"6px",maxWidth:"500px",margin:"0 auto"}},React.createElement("div",{style:{padding:"8px 14px",borderRadius:"8px",background:"#1e293b15",border:"1px solid var(--border)"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",letterSpacing:"1px",marginBottom:"2px"}},"INTENT"),React.createElement("div",{style:{fontSize:"12px",color:"#94a3b8"}},"Google UCP \u00B7 OpenAI \u00B7 ERPs \u00B7 DeFi Agents \u00B7 Human Users")),React.createElement("div",{style:{textAlign:"center",fontSize:"14px",color:"#06d6a0"}},"\u2193"),React.createElement("div",{style:{padding:"10px 14px",borderRadius:"10px",background:"linear-gradient(135deg,rgba(6,214,160,.06),rgba(167,139,250,.04))",border:"1.5px solid rgba(6,214,160,.25)"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"12px",fontWeight:700,color:"#06d6a0",letterSpacing:"1px"}},"REVVYN \u2014 GOVERNANCE \u00B7 CONTROL \u00B7 EXECUTION"),React.createElement("div",{style:{fontSize:"11px",color:"var(--muted)",marginTop:"3px"}},"Policy Engine \u2192 Risk Engine \u2192 Rail Optimizer \u2192 Settlement \u2192 Audit")),React.createElement("div",{style:{textAlign:"center",fontSize:"14px",color:"#38bdf8"}},"\u2193"),React.createElement("div",{style:{padding:"8px 14px",borderRadius:"8px",background:"#1e293b15",border:"1px solid var(--border)"}},React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"9px",color:"var(--muted)",letterSpacing:"1px",marginBottom:"2px"}},"RAILS"),React.createElement("div",{style:{fontSize:"12px",color:"#94a3b8"}},"Visa \u00B7 Mastercard \u00B7 SWIFT \u00B7 SEPA \u00B7 WooshPay \u00B7 USDC \u00B7 RTP \u00B7 DeFi \u00B7 Self-Custody")))),
-      React.createElement("div",{style:{display:"flex",gap:"12px",justifyContent:"center",flexWrap:"wrap",animation:"fadeUp .6s ease-out .4s both"}},React.createElement("button",{onClick:onAutoDemo,style:{padding:"14px 36px",borderRadius:"12px",border:"none",background:"linear-gradient(135deg,#06d6a0,#06d6a0bb)",color:"#000",fontFamily:"var(--m)",fontSize:"13px",fontWeight:700,cursor:"pointer",letterSpacing:"1px",boxShadow:"0 4px 24px rgba(6,214,160,.25)",transition:"all .2s"},onMouseOver:function(e){e.target.style.transform="translateY(-2px)"},onMouseOut:function(e){e.target.style.transform="translateY(0)"}},"\u25B6 WATCH LIVE DEMO"),React.createElement("button",{onClick:onEnter,style:{padding:"14px 36px",borderRadius:"12px",border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"var(--m)",fontSize:"13px",fontWeight:600,cursor:"pointer",letterSpacing:"1px"}},"EXPLORE DASHBOARD")),
-      React.createElement("p",{style:{fontFamily:"var(--m)",fontSize:"11px",color:"#334155",marginTop:"16px",animation:"fadeUp .6s ease-out .5s both"}},"5-Agent AI Governance \u00B7 Real-time Policy Enforcement")
-    )
-  );
+  return <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",padding:"40px 24px",position:"relative",overflow:"hidden"}}>
+    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 80% 50% at 50% -10%,rgba(196,154,44,.06),transparent 60%)"}}/>
+    <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse 60% 40% at 80% 90%,rgba(139,114,212,.04),transparent 50%)"}}/>
+    <div style={{textAlign:"center",maxWidth:720,position:"relative",zIndex:1}}>
+      <div style={{display:"inline-flex",alignItems:"center",gap:12,marginBottom:32,animation:"fadeUp .6s ease-out"}}>
+        <div style={{width:48,height:48,borderRadius:3,background:"linear-gradient(135deg,#C49A2C,#A8821E)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:800,color:"#000",animation:"glow 3s ease-in-out infinite"}}>R</div>
+        <div style={{textAlign:"left"}}>
+          <div style={{fontSize:22,fontWeight:800,letterSpacing:"-.3px"}}>Revvyn</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",letterSpacing:".1em"}}>GOVERNANCE SIMULATOR</div>
+        </div>
+      </div>
+      <h1 style={{fontSize:"clamp(28px,5vw,52px)",fontWeight:800,lineHeight:1.1,marginBottom:20,animation:"fadeUp .6s ease-out .1s both"}}>
+        The Governance Layer for{" "}
+        <span style={{background:"linear-gradient(135deg,#C49A2C,#D4914A)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Agentic Commerce</span>
+      </h1>
+      <p style={{fontSize:"clamp(15px,2vw,18px)",color:"var(--muted)",lineHeight:1.6,marginBottom:16,maxWidth:520,margin:"0 auto 24px",animation:"fadeUp .6s ease-out .2s both"}}>When an AI agent wants to spend money, Revvyn decides if it's allowed to.</p>
+      <div style={{display:"inline-block",padding:"9px 18px",borderRadius:2,background:"rgba(196,154,44,.06)",border:"1px solid rgba(196,154,44,.2)",marginBottom:36,animation:"fadeUp .6s ease-out .25s both"}}>
+        <span style={{fontFamily:"var(--mono)",fontSize:13,color:"var(--gold)",fontWeight:600}}>$50M+ raised in agentic payments infra. $0 in governance.</span>
+      </div>
+      <div style={{display:"flex",justifyContent:"center",gap:"clamp(24px,5vw,56px)",marginBottom:40,animation:"fadeUp .6s ease-out .3s both",flexWrap:"wrap"}}>
+        {[["6","Verticals","var(--gold)"],["9","Payment Rails","#4A9EFF"],["5","AI Agents","#8B72D4"]].map(([n,label,color])=><div key={label} style={{textAlign:"center"}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:"clamp(32px,4vw,48px)",fontWeight:700,color,lineHeight:1}}>{n}</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",letterSpacing:"1.2px",marginTop:2}}>{label.toUpperCase()}</div>
+        </div>)}
+      </div>
+      <div style={{display:"flex",gap:11,justifyContent:"center",flexWrap:"wrap",animation:"fadeUp .6s ease-out .4s both"}}>
+        <button onClick={onAutoDemo} style={{padding:"13px 32px",borderRadius:2,border:"none",background:"linear-gradient(135deg,#C49A2C,#A8821E)",color:"#000",fontFamily:"var(--mono)",fontSize:12,fontWeight:700,cursor:"pointer",letterSpacing:".1em",boxShadow:"0 4px 28px rgba(196,154,44,.22)",textTransform:"uppercase"}}>▶ Watch Live Demo</button>
+        <button onClick={onEnter} style={{padding:"13px 32px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--text)",fontFamily:"var(--mono)",fontSize:12,fontWeight:500,cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>Open Simulator</button>
+      </div>
+      <div style={{marginTop:16,animation:"fadeUp .6s ease-out .5s both"}}>
+        <button onClick={()=>window.open("mailto:daniel@revvyn.io?subject=Revvyn%20Access%20Request","_blank")} style={{padding:"8px 18px",borderRadius:2,border:"1px solid rgba(196,154,44,.28)",background:"rgba(196,154,44,.05)",color:"var(--gold)",fontFamily:"var(--mono)",fontSize:10,cursor:"pointer",letterSpacing:".1em",textTransform:"uppercase"}}>Request Early Access</button>
+      </div>
+    </div>
+  </div>;
 }
 
-// ═══════════════════════════════════════════════════════════
-// MAIN APP
-// ═══════════════════════════════════════════════════════════
-
+// ─── App ─────────────────────────────────────────────────────────────────────
 function App(){
-  var _showHero=useState(true),showHero=_showHero[0],setShowHero=_showHero[1];
-  var _vertical=useState("treasury"),vertical=_vertical[0],setVertical=_vertical[1];
-  var _policies=useState(VERTICALS.treasury.policies),policies=_policies[0],setPolicies=_policies[1];
-  var _payments=useState([]),payments=_payments[0],setPayments=_payments[1];
-  var _isProcessing=useState(false),isProcessing=_isProcessing[0],setIsProcessing=_isProcessing[1];
-  var _killActive=useState(false),killActive=_killActive[0],setKillActive=_killActive[1];
-  var _agentStatuses=useState({}),agentStatuses=_agentStatuses[0],setAgentStatuses=_agentStatuses[1];
-  var _agentResults=useState({}),agentResults=_agentResults[0],setAgentResults=_agentResults[1];
-  var _selectedAgent=useState(null),selectedAgent=_selectedAgent[0],setSelectedAgent=_selectedAgent[1];
-  var _auditEntries=useState([]),auditEntries=_auditEntries[0],setAuditEntries=_auditEntries[1];
-  var _selectedRail=useState(null),selectedRail=_selectedRail[0],setSelectedRail=_selectedRail[1];
-  var _paymentState=useState(null),paymentState=_paymentState[0],setPaymentState=_paymentState[1];
-  var _mainTab=useState("payment"),mainTab=_mainTab[0],setMainTab=_mainTab[1];
-  var _escalation=useState(null),escalation=_escalation[0],setEscalation=_escalation[1];
-  var _intentSource=useState("human"),intentSource=_intentSource[0],setIntentSource=_intentSource[1];
-  var _isMobile=useState(window.innerWidth<768),isMobile=_isMobile[0],setIsMobile=_isMobile[1];
-  var _rightTab=useState("pipeline"),rightTab=_rightTab[0],setRightTab=_rightTab[1];
-  var escRef=useRef(null);var v=VERTICALS[vertical];
+  const [theme,setTheme]=useState("dark");
+  const [showHero,setShowHero]=useState(true);
+  const [vertical,setVertical]=useState("treasury");
+  const [policies,setPolicies]=useState({...VERTICALS.treasury.policies});
+  const [payments,setPayments]=useState([]);
+  const [agentStatuses,setAgentStatuses]=useState({});
+  const [agentResults,setAgentResults]=useState({});
+  const [selectedAgent,setSelectedAgent]=useState(null);
+  const [auditEntries,setAuditEntries]=useState([]);
+  const [isProcessing,setIsProcessing]=useState(false);
+  const [killActive,setKillActive]=useState(false);
+  const [txState,setTxState]=useState(null);
+  const [selectedRail,setSelectedRail]=useState(null);
+  const [leftTab,setLeftTab]=useState("payment");
+  const [rightTab,setRightTab]=useState("pipeline");
+  const [hitl,setHitl]=useState(null);
+  const escRef=useRef(null);
 
-  useEffect(function(){var h=function(){setIsMobile(window.innerWidth<768)};window.addEventListener("resize",h);return function(){window.removeEventListener("resize",h)}},[]);
-  useEffect(function(){setPolicies(VERTICALS[vertical].policies)},[vertical]);
+  useEffect(()=>{document.documentElement.setAttribute("data-theme",theme);},[theme]);
+  useEffect(()=>{setPolicies({...VERTICALS[vertical].policies});},[vertical]);
 
-  var addAudit=useCallback(function(agent,msg,st){setAuditEntries(function(p){return p.concat([{agent:agent,message:msg,status:st,time:new Date().toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"})}])})},[]);
+  const v=VERTICALS[vertical];
 
-  var processPayment=useCallback(function(payment){
-    if(killActive)return;
-    setIsProcessing(true);setAgentStatuses({});setAgentResults({});setSelectedAgent(null);setAuditEntries([]);setSelectedRail(null);setPaymentState("Created");
-    if(isMobile)setMainTab("pipeline"); setRightTab("pipeline");setIntentSource(payment.intentSource||"human");
-    var rec={id:payment.id,payment:payment,finalStatus:"processing",results:{},vertical:vertical};
-    setPayments(function(p){return [rec].concat(p)});
+  const addAudit=useCallback((agent,message,status)=>{
+    setAuditEntries(p=>[...p,{agent,message,status,time:now()}]);
+  },[]);
 
-    var runAgents=async function(){
-      var aborted=false;var allResults={};
-      for(let ai=0;ai<AGENTS.length;ai++){
-        let agent=AGENTS[ai];
-        if(aborted||killActive){setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="skipped";return n});continue}
-        setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="running";return n});
-        setSelectedAgent(agent.id);addAudit(agent.id,agent.name+" activated",null);
-        if(agent.id==="governance")setPaymentState("Validated");
-        if(agent.id==="control")setPaymentState("Risk Assessed");
-        if(agent.id==="execution")setPaymentState("Routed");
-
-        // Staggered delay to feel real
-        await new Promise(function(r){setTimeout(r,800+Math.random()*700)});
-
-        var result=simulateAgent(agent.id,payment,vertical,policies);
-        allResults[agent.id]=result;
-        setAgentResults(function(p){var n=Object.assign({},p);n[agent.id]=result;return n});
-
-        if(agent.id==="governance"){
-          if(result.approved===false){
-            setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="failed";return n});
-            addAudit(agent.id,"REJECTED \u2014 "+result.summary,"fail");
-            if(result.checks)result.checks.filter(function(c){return c.status==="fail"}).forEach(function(c){addAudit(agent.id,"\u2717 "+c.name+": "+c.detail,"fail")});
-            aborted=true;setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"rejected",results:allResults}):x})});continue;
-          }
-          if(result.escalationRequired){
-            addAudit(agent.id,"ESCALATION: "+result.escalationReason,"warning");
-            setEscalation({payment:payment,result:result});
-            var approved=await new Promise(function(res){escRef.current=res});
-            setEscalation(null);
-            if(!approved){addAudit(agent.id,"REJECTED by human","fail");setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="failed";return n});aborted=true;setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"rejected",results:allResults}):x})});continue}
-            addAudit(agent.id,"APPROVED by human","pass");setPaymentState("Approved");
-          }
-          if(result.checks)result.checks.forEach(function(c){addAudit(agent.id,c.name+": "+c.detail,c.status)});
+  const processPayment=useCallback(async(paymentData)=>{
+    if(isProcessing||killActive) return;
+    const payment={...paymentData,id:paymentData.id||genId(),timestamp:paymentData.timestamp||new Date().toISOString(),vertical};
+    setIsProcessing(true);
+    setAgentStatuses({});setAgentResults({});setSelectedRail(null);setTxState("Created");
+    setPayments(p=>[...p,{id:payment.id,payment,vertical,finalStatus:"pending"}]);
+    const allResults={};let aborted=false;
+    for(const agent of AGENTS){
+      if(killActive){aborted=true;break;}
+      await new Promise(r=>setTimeout(r,700+Math.random()*500));
+      setAgentStatuses(p=>({...p,[agent.id]:"running"}));
+      setSelectedAgent(agent.id);
+      if(agent.id==="orchestrator") setTxState("Validated");
+      if(agent.id==="governance") setTxState("Risk Assessed");
+      if(agent.id==="control") setTxState("Routed");
+      const result=simulateAgent(agent.id,payment,vertical,policies);
+      allResults[agent.id]=result;
+      setAgentResults(p=>({...p,[agent.id]:result}));
+      if(agent.id==="governance"){
+        if(result.approved===false){
+          setAgentStatuses(p=>({...p,[agent.id]:"failed"}));
+          addAudit(agent.id,`REJECTED — ${result.summary}`,"fail");
+          result.checks?.filter(c=>c.status==="fail").forEach(c=>addAudit(agent.id,`✗ ${c.name}: ${c.detail}`,"fail"));
+          aborted=true;
+          setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",results:allResults}:x));
+          break;
         }
-        if(agent.id==="control"&&result.recommendedRail){
-          setSelectedRail(result.recommendedRail.id);
-          addAudit(agent.id,"Rail: "+result.recommendedRail.name+" \u2014 "+result.recommendedRail.reason,"pass");
-          addAudit(agent.id,"Risk: "+result.riskScore+"/100 ("+result.riskLevel+")",result.riskLevel==="low"?"pass":"warning");
+        if(result.escalationRequired){
+          addAudit(agent.id,`ESCALATION: ${result.escalationReason}`,"warning");
+          setHitl({payment,reason:result.escalationReason});
+          const approved=await new Promise(res=>{escRef.current=res;});
+          setHitl(null);
+          if(!approved){
+            addAudit(agent.id,"REJECTED by human reviewer","fail");
+            setAgentStatuses(p=>({...p,[agent.id]:"failed"}));
+            aborted=true;
+            setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"rejected",results:allResults}:x));
+            break;
+          }
+          addAudit(agent.id,"APPROVED by human reviewer — pipeline resumed","pass");
+          setTxState("Approved");
         }
-        if(agent.id==="execution"){setPaymentState("Settled");addAudit(agent.id,result.status.toUpperCase()+" via "+result.selectedRail+" ["+result.provider+"]",result.status==="settled"?"pass":"warning");if(result.fees)addAudit(agent.id,"Fees: $"+result.fees.total,null)}
-        if(agent.id==="audit"){setPaymentState("Reconciled");if(result.decisionChain)result.decisionChain.forEach(function(d){addAudit(agent.id,"["+d.reasonCode+"] "+d.agent+": "+d.decision,null)})}
-        setAgentStatuses(function(p){var n=Object.assign({},p);n[agent.id]="complete";return n});addAudit(agent.id,result.summary||"Complete","pass");
+        result.checks?.forEach(c=>addAudit(agent.id,`${c.name}: ${c.detail}`,c.status));
       }
-      if(!aborted){setPayments(function(p){return p.map(function(x){return x.id===payment.id?Object.assign({},x,{finalStatus:"settled",results:allResults}):x})});var fs={};AGENTS.forEach(function(a){fs[a.id]="complete"});setAgentStatuses(fs)}
-      setIsProcessing(false);
-    };
-    runAgents();
-  },[vertical,policies,killActive,addAudit,isMobile]);
+      if(agent.id==="control"&&result.recommendedRail){
+        setSelectedRail(result.recommendedRail.id);
+        addAudit(agent.id,`Rail: ${result.recommendedRail.name} — ${result.recommendedRail.reason}`,"pass");
+        addAudit(agent.id,`Risk: ${result.riskScore}/100 (${result.riskLevel})`,result.riskLevel==="low"?"pass":"warning");
+      }
+      if(agent.id==="execution"){
+        setTxState("Settled");
+        addAudit(agent.id,`SETTLED via ${result.selectedRail} [${result.provider}]`,"pass");
+        addAudit(agent.id,`TX: ${result.transactionId} | Fees: $${result.fees.total}`);
+        if(result.convertedAmount) addAudit(agent.id,`FX: ${payment.currency} ${fmtAmt(payment.amount)} → ${payment.toCurrency} ${fmtAmt(result.convertedAmount)} @ ${result.fxRate}`,"pass");
+      }
+      if(agent.id==="audit"){
+        setTxState("Reconciled");
+        result.decisionChain?.forEach(d=>addAudit(agent.id,`[${d.reasonCode}] ${d.agent}: ${d.decision}`));
+        addAudit(agent.id,result.summary,"pass");
+      }
+      setAgentStatuses(p=>({...p,[agent.id]:"complete"}));
+      if(agent.id!=="audit") addAudit(agent.id,result.summary||"Complete","pass");
+    }
+    if(!aborted){
+      setPayments(p=>p.map(x=>x.id===payment.id?{...x,finalStatus:"settled",results:allResults}:x));
+    }
+    setIsProcessing(false);
+  },[vertical,policies,killActive,isProcessing,addAudit]);
 
-  var runAutoDemo=useCallback(function(){
-    setShowHero(false);setVertical("treasury");setPolicies(VERTICALS.treasury.policies);
-    setTimeout(function(){processPayment(Object.assign({},VERTICALS.treasury.defaults,{intentSource:"erp",id:genId(),timestamp:new Date().toISOString(),vertical:"treasury"}))},300);
+  const runAutoDemo=useCallback(()=>{
+    setShowHero(false);setVertical("treasury");setPolicies({...VERTICALS.treasury.policies});
+    setTimeout(()=>processPayment({...VERTICALS.treasury.defaults,id:genId(),timestamp:new Date().toISOString()}),300);
   },[processPayment]);
 
-  if(showHero)return React.createElement(Hero,{onEnter:function(){setShowHero(false)},onAutoDemo:runAutoDemo});
+  if(showHero) return <><StyleInjector/><Hero onEnter={()=>setShowHero(false)} onAutoDemo={runAutoDemo}/></>;
 
-  var mobileTabs=[{id:"payment",label:"Payment"},{id:"pipeline",label:"Agent Detail"},{id:"audit",label:"Audit ("+auditEntries.length+")"},{id:"policy",label:"Governance"},{id:"landscape",label:"Landscape"},{id:"analytics",label:"Analytics"}];
+  const leftTabs=[{id:"payment",label:"Payment"},{id:"policy",label:"Governance"},{id:"analytics",label:"Analytics"},{id:"landscape",label:"Landscape"}];
+  const rightTabs=[{id:"pipeline",label:"Agent Detail"},{id:"audit",label:`Audit (${auditEntries.length})`}];
 
-  return React.createElement("div",{style:{height:"100vh",display:"flex",flexDirection:"column",background:"var(--bg)",overflow:"hidden"}},
-    React.createElement("style",null,"input:focus,select:focus{border-color:"+v.accent+" !important;outline:none}input[type=range]{-webkit-appearance:none;background:var(--border);border-radius:4px;height:3px;cursor:pointer}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:"+v.accent+"}details summary{cursor:pointer}details summary:hover{color:#94a3b8}"),
-    // HEADER
-    React.createElement("div",{style:{padding:"8px 14px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"var(--surface)",flexShrink:0}},
-      React.createElement("div",{style:{display:"flex",alignItems:"center",gap:"8px"}},React.createElement("div",{onClick:function(){setShowHero(true)},style:{width:"28px",height:"28px",borderRadius:"7px",background:"linear-gradient(135deg,"+v.accent+","+v.accent+"88)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:"13px",fontWeight:800,color:"#000",cursor:"pointer"}},"R"),React.createElement("div",null,React.createElement("div",{style:{fontFamily:"var(--m)",fontSize:"13px",fontWeight:700}},"REVVYN"),!isMobile?React.createElement("div",{style:{fontSize:"10px",color:"var(--muted)",fontFamily:"var(--m)"}},"The Governance Layer \u2014 Protocol-Agnostic"):null)),
-      React.createElement("div",{onClick:function(){setKillActive(!killActive);addAudit("orchestrator",killActive?"System resumed":"\u26D4 KILL SWITCH",killActive?"pass":"fail")},style:{display:"flex",alignItems:"center",gap:"5px",padding:"5px 12px",borderRadius:"6px",cursor:"pointer",background:killActive?"#ef444412":"#10b98108",border:"1px solid "+(killActive?"#ef444440":"#10b98130")}},React.createElement("div",{style:{width:"7px",height:"7px",borderRadius:"50%",background:killActive?"#ef4444":"#10b981",boxShadow:"0 0 6px "+(killActive?"#ef4444":"#10b981")}}),React.createElement("span",{style:{fontFamily:"var(--m)",fontSize:"9px",fontWeight:700,color:killActive?"#ef4444":"#10b981"}},killActive?"HALTED":"LIVE"))
-    ),
-    // VERTICALS
-    React.createElement("div",{style:{display:"flex",gap:"3px",padding:"6px 10px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}},Object.values(VERTICALS).map(function(vt){return React.createElement("button",{key:vt.id,onClick:function(){setVertical(vt.id)},style:{padding:"5px 10px",borderRadius:"6px",border:"1px solid "+(vertical===vt.id?vt.accent:"transparent"),background:vertical===vt.id?vt.accent+"12":"transparent",cursor:"pointer",fontFamily:"var(--m)",fontSize:isMobile?"8px":"9px",fontWeight:600,color:vertical===vt.id?vt.accent:"var(--muted)",whiteSpace:"nowrap"}},vt.icon+" "+(isMobile?vt.id.toUpperCase():vt.label.toUpperCase()))})),
-    // PIPELINE
-    React.createElement(PipelineRow,{statuses:agentStatuses,selected:selectedAgent,onSelect:function(sid){setSelectedAgent(sid);if(isMobile)setMainTab("pipeline");else setRightTab("pipeline")},isMobile:isMobile}),
-    paymentState?React.createElement(StateMachine,{current:paymentState}):null,
-    React.createElement(StackDiagram,{selectedRail:selectedRail,intentSource:intentSource,isMobile:isMobile}),
-    // CONTENT
-    isMobile?React.createElement(React.Fragment,null,
-      React.createElement(Tabs,{tabs:mobileTabs,active:mainTab,onChange:setMainTab,accent:v.accent}),
-      React.createElement("div",{style:{flex:1,overflowY:"auto"}},
-        mainTab==="payment"?React.createElement(PaymentForm,{vertical:vertical,onSubmit:processPayment,isProcessing:isProcessing,killActive:killActive}):null,
-        mainTab==="pipeline"?React.createElement(AgentDetail,{agentId:selectedAgent||"orchestrator",results:agentResults}):null,
-        mainTab==="audit"?React.createElement(AuditTrail,{entries:auditEntries}):null,
-        mainTab==="policy"?React.createElement(PolicyEditor,{vertical:vertical,policies:policies,onChange:setPolicies}):null,
-        mainTab==="landscape"?React.createElement(CompetitiveLandscape,null):null,
-        mainTab==="analytics"?React.createElement(Analytics,{payments:payments,vertical:vertical}):null)
-    ):React.createElement("div",{style:{flex:1,display:"flex",overflow:"hidden"}},
-      React.createElement("div",{style:{flex:"0 0 45%",maxWidth:"520px",borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",overflow:"hidden"}},
-        React.createElement(Tabs,{tabs:[{id:"payment",label:"Payment"},{id:"policy",label:"Governance"},{id:"landscape",label:"Landscape"},{id:"analytics",label:"Analytics"}],active:mainTab,onChange:setMainTab,accent:v.accent}),
-        React.createElement("div",{style:{flex:1,overflowY:"auto"}},
-          mainTab==="payment"?React.createElement(PaymentForm,{vertical:vertical,onSubmit:processPayment,isProcessing:isProcessing,killActive:killActive}):null,
-          mainTab==="policy"?React.createElement(PolicyEditor,{vertical:vertical,policies:policies,onChange:setPolicies}):null,
-          mainTab==="landscape"?React.createElement(CompetitiveLandscape,null):null,
-          mainTab==="analytics"?React.createElement(Analytics,{payments:payments,vertical:vertical}):null)),
-      React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}},
-        React.createElement(Tabs,{tabs:[{id:"pipeline",label:"Agent Detail"},{id:"audit",label:"Audit ("+auditEntries.length+")"}],active:rightTab,onChange:setRightTab,accent:v.accent}),
-        React.createElement("div",{style:{flex:1,overflowY:"auto"}},
-          rightTab==="pipeline"?React.createElement(AgentDetail,{agentId:selectedAgent||"orchestrator",results:agentResults}):null,
-          rightTab==="audit"?React.createElement(AuditTrail,{entries:auditEntries}):null))
-    ),
-    escalation?React.createElement(EscalationModal,{payment:escalation.payment,result:escalation.result,onApprove:function(){if(escRef.current)escRef.current(true)},onReject:function(){if(escRef.current)escRef.current(false)}}):null
-  );
+  return <div style={{height:"100vh",display:"flex",flexDirection:"column",background:"var(--bg)",overflow:"hidden"}}>
+    <StyleInjector/>
+    {/* Header */}
+    <div style={{padding:"7px 14px",borderBottom:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"space-between",background:"var(--surface)",flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:9}}>
+        <div onClick={()=>setShowHero(true)} style={{width:28,height:28,borderRadius:3,background:"linear-gradient(135deg,#C49A2C,#A8821E)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#000",cursor:"pointer"}}>R</div>
+        <div>
+          <div style={{fontSize:14,fontWeight:700,letterSpacing:"-.2px"}}>Revvyn</div>
+          <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",letterSpacing:".08em"}}>GOVERNANCE SIMULATOR</div>
+        </div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:7}}>
+        <button onClick={()=>setTheme(t=>t==="dark"?"light":"dark")} style={{padding:"6px 11px",borderRadius:2,border:"1px solid var(--border)",background:"transparent",color:"var(--muted)",fontFamily:"var(--mono)",fontSize:9,cursor:"pointer",letterSpacing:".06em"}}>
+          {theme==="dark"?"◑ Light":"◐ Dark"}
+        </button>
+        <button className={"btn-kill"+(killActive?" halted":"")} onClick={()=>{setKillActive(k=>!k);addAudit("orchestrator",killActive?"System resumed":"⛔ KILL SWITCH — All processing halted",killActive?"pass":"fail");}}>
+          {killActive?"⛔ HALTED":"■ KILL SWITCH"}
+        </button>
+        <button className="btn-access" onClick={()=>window.open("mailto:daniel@revvyn.io?subject=Revvyn%20Access%20Request","_blank")}>
+          Request Access
+        </button>
+      </div>
+    </div>
+    {/* Verticals */}
+    <div style={{display:"flex",gap:2,padding:"6px 10px",borderBottom:"1px solid var(--border)",background:"var(--surface)",flexShrink:0,overflowX:"auto"}}>
+      {Object.values(VERTICALS).map(vt=><button key={vt.id} onClick={()=>{setVertical(vt.id);setAgentStatuses({});setAgentResults({});setAuditEntries([]);setSelectedAgent(null);setTxState(null);setSelectedRail(null);}} style={{padding:"5px 11px",borderRadius:2,border:`1px solid ${vertical===vt.id?vt.accent:"transparent"}`,background:vertical===vt.id?vt.accent+"10":"transparent",cursor:"pointer",fontFamily:"var(--sans)",fontSize:11,fontWeight:600,color:vertical===vt.id?vt.accent:"var(--muted)",whiteSpace:"nowrap",transition:"all .15s"}}>
+        {vt.icon} {vt.label}
+      </button>)}
+    </div>
+    {/* Agent pipeline */}
+    <AgentPipeline statuses={agentStatuses} selected={selectedAgent} onSelect={id=>{setSelectedAgent(id);setRightTab("pipeline");}}/>
+    {txState&&<TxStateBar current={txState}/>}
+    {/* Main content */}
+    <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+      {/* Left panel */}
+      <div style={{width:"44%",maxWidth:500,borderRight:"1px solid var(--border)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <TabBar tabs={leftTabs} active={leftTab} onChange={setLeftTab} accent={v.accent}/>
+        <div style={{flex:1,overflowY:"auto"}}>
+          {leftTab==="payment"&&<PaymentForm vertical={vertical} onSubmit={processPayment} isProcessing={isProcessing} killActive={killActive}/>}
+          {leftTab==="policy"&&<PolicyEditor vertical={vertical} policies={policies} onChange={setPolicies}/>}
+          {leftTab==="analytics"&&<Analytics payments={payments}/>}
+          {leftTab==="landscape"&&<Landscape/>}
+        </div>
+      </div>
+      {/* Right panel */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <TabBar tabs={rightTabs} active={rightTab} onChange={setRightTab}/>
+        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          {rightTab==="pipeline"&&<AgentDetail agentId={selectedAgent||"orchestrator"} results={agentResults}/>}
+          {rightTab==="audit"&&<AuditTrail entries={auditEntries}/>}
+        </div>
+      </div>
+    </div>
+    {hitl&&<HITLModal payment={hitl.payment} reason={hitl.reason} onApprove={()=>{if(escRef.current)escRef.current(true);}} onReject={()=>{if(escRef.current)escRef.current(false);}}/>}
+  </div>;
 }
 
-var root=ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App));
+const root=ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App/>);
 </script>
 </body>
 </html>

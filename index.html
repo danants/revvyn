@@ -120,9 +120,10 @@ const INTENT_SOURCES=[
 ];
 
 const TRUST_SIGNALS=[
-  {id:"mvi",   label:"Mastercard Verifiable Intent",short:"MVI",color:"#E05252",desc:"Cryptographic proof of payment authorisation. Proves intent — not permission."},
-  {id:"erc8004",label:"ERC-8004",                  short:"8004",color:"#8B72D4",desc:"On-chain agent reputation standard. Scores the agent — Revvyn enforces the policy."},
-  {id:"visa_tap",label:"Visa TAP",                 short:"TAP", color:"#4A9EFF",desc:"Token Attestation Protocol. Validates payment token — not whether the spend is permitted."},
+  {id:"mvi",     label:"Mastercard Verifiable Intent",short:"MVI", color:"#E05252",desc:"Cryptographic proof of payment authorisation. Proves intent — not permission."},
+  {id:"erc8004", label:"ERC-8004",                   short:"8004",color:"#8B72D4",desc:"On-chain agent reputation standard. Scores the agent — Revvyn enforces the policy."},
+  {id:"visa_tap",label:"Visa TAP",                   short:"TAP", color:"#4A9EFF",desc:"Token Attestation Protocol. Validates payment token — not whether the spend is permitted."},
+  {id:"ap2",     label:"Google AP2 Mandate",         short:"AP2", color:"#3DB88A",desc:"Cryptographically-signed Intent + Cart Mandate. Proves the user authorised the agent's action — Revvyn enforces whether acting on it is permitted."},
 ];
 
 const COUNTRIES=["US","UK","DE","JP","SG","BR","NG","AE","IN","AU","FR","CA","NL","CH","KP","IR","SY","CU","RU","BY","VE","MM"];
@@ -222,7 +223,7 @@ function computeResult(agentId,payment,vertical,policies,sdn){
     intentClassification:`${isHV?"High-value ":""}${isCross?"cross-border ":""}${vertical} payment`,
     priority:isHV?"high":"medium",agentInitiated:isAgentInitiated,
     intentSource:payment.intentSource,amount:payment.amount,currency:payment.currency,
-    trustSignals:{mvi:policies.verifiableIntent&&isAgentInitiated,erc8004:isAgentInitiated,visa_tap:["visa","mastercard"].includes(rail.id)},
+    trustSignals:{mvi:policies.verifiableIntent&&isAgentInitiated,erc8004:isAgentInitiated,visa_tap:["visa","mastercard"].includes(rail.id),ap2:["google_ucp","openai","erp","custom_agent"].includes(payment.intentSource)},
     summary:`Classified ${isHV?"high-value ":""}${isCross?"cross-border ":""}payment intent. Priority: ${isHV?"high":"medium"}. Source: ${INTENT_SOURCES.find(s=>s.id===payment.intentSource)?.name||payment.intentSource}.`
   };
 
@@ -254,6 +255,7 @@ function computeResult(agentId,payment,vertical,policies,sdn){
       mvi:{active:policies.verifiableIntent&&isAgentInitiated,label:"Mastercard Verifiable Intent",desc:"Cryptographic proof of authorisation. Proves the intent — Revvyn decides the policy."},
       erc8004:{active:isAgentInitiated,label:"ERC-8004",desc:"Agent reputation score consumed as input. Revvyn enforces the decision."},
       visa_tap:{active:["visa","mastercard"].includes(rail.id),label:"Visa TAP",desc:"Token attestation validated. Credential confirmed — governance layer still applies."},
+      ap2:{active:["google_ucp","openai","erp","custom_agent"].includes(payment.intentSource),label:"Google AP2 Mandate",desc:"Cryptographically-signed Intent + Cart Mandate. Proves the user authorised the agent's action — Revvyn enforces whether acting on it is permitted."},
     };
     const checks=[
       {name:"Entity Sanctions Screen",status:"pass",detail:`"${payment.beneficiary}" screened against ${liveLabel} · ${totalEntities.toLocaleString()} entities (OFAC, EU, UN). No matches.`,live:sdn.status==="live"},
@@ -393,7 +395,12 @@ function buildKYARecord(payment,existing){
     firstSeen:payment.timestamp,lastSeen:payment.timestamp,
     txCount:0,totalVolume:0,blockedCount:0,
     mandateScope:getMandateScope(payment.intentSource),
-    trustSignals:{mvi:payment.intentSource!=="human",erc8004:payment.intentSource!=="human",visa_tap:false},
+    trustSignals:{
+      mvi:payment.intentSource!=="human",
+      erc8004:payment.intentSource!=="human",
+      visa_tap:["erp","human"].includes(payment.intentSource),
+      ap2:["google_ucp","openai","erp","custom_agent"].includes(payment.intentSource),
+    },
     behaviouralFlags:[],riskHistory:[],
     agentProofScore:Math.floor(Math.random()*40)+50,
   };
