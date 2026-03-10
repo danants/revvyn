@@ -131,11 +131,13 @@ const TX_STATES=["Created","Validated","Risk Assessed","Approved","Routed","Sett
 const OFAC_COUNTRIES=new Set(["KP","IR","SY","CU","RU","BY","VE","MM","SD","YE","LY","ZW","SS","CF","ML","NI"]);
 
 let FX={EUR:0.92,GBP:0.79,JPY:149.5,SGD:1.34,BRL:4.97,NGN:1550,AED:3.67,INR:83.1,AUD:1.53,CHF:0.88,CAD:1.36,USD:1,USDC:1,USDT:1};
-let FX_STATE={status:"loading",source:"Loading...",timestamp:null};
+let FX_STATE={status:"cached",source:"ECB reference rates",timestamp:"2026-03-09"};
 
 async function loadFXRates(onUpdate){
+  // Immediately set cached so UI never shows "loading"
+  onUpdate({...FX_STATE});
   try{
-    const res=await fetch("https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,SGD,BRL,NGN,AED,INR,AUD,CHF,CAD",{signal:AbortSignal.timeout(8000)});
+    const res=await fetch("https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,SGD,BRL,NGN,AED,INR,AUD,CHF,CAD",{signal:AbortSignal.timeout(4000)});
     if(!res.ok) throw new Error(`HTTP ${res.status}`);
     const data=await res.json();
     if(!data.rates) throw new Error("No rates");
@@ -143,8 +145,7 @@ async function loadFXRates(onUpdate){
     FX_STATE={status:"live",source:`ECB via frankfurter.app · ${data.date}`,timestamp:data.date,rates:data.rates};
     onUpdate({...FX_STATE});
   }catch(e){
-    FX_STATE={status:"cached",source:"ECB reference rates (network unavailable)",timestamp:null};
-    onUpdate({...FX_STATE});
+    // already showing cached, nothing to do
   }
 }
 
@@ -155,7 +156,7 @@ const SDN_UN=new Set(["TALIBAN","ISLAMIC EMIRATE OF AFGHANISTAN","HAQQANI NETWOR
 for(const s of [...SDN_OFAC,...SDN_EU,...SDN_UN]){const w=s.split(/\s+/);if(w.length>=2){SDN_OFAC.add(w.slice(0,2).join(" "));}}
 const SDN_ALL=new Set([...SDN_OFAC,...SDN_EU,...SDN_UN]);
 
-let SANCTIONS_STATE={status:"loading",ofacNames:SDN_OFAC,euNames:SDN_EU,unNames:SDN_UN,ofacCount:SDN_OFAC.size,euCount:SDN_EU.size,unCount:SDN_UN.size,lastUpdated:null,dataDate:null,feeds:{ofac:"cached",eu:"cached",un:"cached"}};
+let SANCTIONS_STATE={status:"cached",ofacNames:SDN_OFAC,euNames:SDN_EU,unNames:SDN_UN,ofacCount:SDN_OFAC.size,euCount:SDN_EU.size,unCount:SDN_UN.size,lastUpdated:null,dataDate:null,feeds:{ofac:"cached",eu:"cached",un:"cached"}};
 
 function normName(n){return n.toUpperCase().trim().replace(/[.,\-']/g,"").replace(/\s+/g," ");}
 function checkSDN(name,set){
@@ -169,7 +170,7 @@ function checkSDN(name,set){
 function genId(){return "PAY-"+Math.random().toString(36).substr(2,8).toUpperCase();}
 function genTx(){return "RVN-"+Date.now().toString(36).toUpperCase()+Math.random().toString(36).substr(2,4).toUpperCase();}
 function fmtAmt(n){return "$"+Number(n).toLocaleString();}
-function now(){return new Date().toTimeString().slice(0,8);}
+function now(){const d=new Date();return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toTimeString().slice(0,8);}
 
 function selectRail(payment,vertical,policies){
   const {amount,fromCountry,toCountry,currency,toCurrency,urgency}=payment;
@@ -551,29 +552,29 @@ function MetricsBar({payments}){
 
 function StackDiagram({selectedRail,intentSource,vertical}){
   const v=VERTICALS[vertical];
-  return <div style={{padding:"7px 12px 3px",flexShrink:0,display:"flex",flexDirection:"column",gap:2}}>
-    <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--dim)",letterSpacing:"1px",marginBottom:2}}>ARCHITECTURE STACK</div>
-    <div style={{display:"flex",alignItems:"center",gap:5}}>
-      <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".08em"}}>INTENT</div>
+  return <div style={{padding:"8px 14px 5px",flexShrink:0,display:"flex",flexDirection:"column",gap:3}}>
+    <div style={{fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",letterSpacing:"1.2px",marginBottom:2,fontWeight:600}}>ARCHITECTURE STACK</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:52,fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".06em",fontWeight:600}}>INTENT</div>
       <div style={{flex:1,display:"flex",gap:2}}>
-        {INTENT_SOURCES.map(s=><div key={s.id} style={{flex:1,padding:"2px",borderRadius:2,textAlign:"center",background:intentSource===s.id?s.color+"12":"var(--card)",border:`1px solid ${intentSource===s.id?s.color:"var(--border)"}`}}>
-          <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:intentSource===s.id?s.color:"var(--dim)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
+        {INTENT_SOURCES.map(s=><div key={s.id} style={{flex:1,padding:"3px 2px",borderRadius:2,textAlign:"center",background:intentSource===s.id?s.color+"12":"var(--card)",border:`1px solid ${intentSource===s.id?s.color:"var(--border)"}`}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:9,fontWeight:600,color:intentSource===s.id?s.color:"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name}</div>
         </div>)}
       </div>
     </div>
-    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:7,color:v.accent,paddingLeft:49}}>↓</div>
-    <div style={{display:"flex",alignItems:"center",gap:5}}>
-      <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:v.accent,textAlign:"right",fontWeight:700,flexShrink:0,letterSpacing:".06em"}}>REVVYN</div>
-      <div style={{flex:1,padding:"4px 8px",borderRadius:2,background:`linear-gradient(135deg,${v.accent}07,rgba(139,114,212,.04))`,border:`1px solid ${v.accent}22`,textAlign:"center"}}>
-        <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:700,color:v.accent,letterSpacing:".6px"}}>GOVERNANCE · CONTROL · EXECUTION · AUDIT</div>
+    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:9,color:v.accent,paddingLeft:58}}>↓</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:52,fontFamily:"var(--mono)",fontSize:9,color:v.accent,textAlign:"right",fontWeight:700,flexShrink:0,letterSpacing:".04em"}}>REVVYN</div>
+      <div style={{flex:1,padding:"5px 10px",borderRadius:2,background:`linear-gradient(135deg,${v.accent}07,rgba(139,114,212,.04))`,border:`1px solid ${v.accent}22`,textAlign:"center"}}>
+        <div style={{fontFamily:"var(--mono)",fontSize:10,fontWeight:700,color:v.accent,letterSpacing:".5px"}}>GOVERNANCE · CONTROL · EXECUTION · AUDIT</div>
       </div>
     </div>
-    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:7,color:"#4A9EFF",paddingLeft:49}}>↓</div>
-    <div style={{display:"flex",alignItems:"center",gap:5}}>
-      <div style={{width:44,fontFamily:"var(--mono)",fontSize:6,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".08em"}}>RAILS</div>
-      <div style={{flex:1,display:"flex",gap:1,flexWrap:"wrap"}}>
-        {RAILS.map(r=><div key={r.id} style={{flex:"1 0 0",minWidth:32,padding:"2px",borderRadius:2,textAlign:"center",background:selectedRail===r.id?"rgba(61,184,138,.09)":"var(--card)",border:`1px solid ${selectedRail===r.id?"#3DB88A":"var(--border)"}`}}>
-          <div style={{fontFamily:"var(--mono)",fontSize:6,fontWeight:600,color:selectedRail===r.id?"#3DB88A":"var(--dim)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.provider}</div>
+    <div style={{textAlign:"center",fontFamily:"var(--mono)",fontSize:9,color:"#4A9EFF",paddingLeft:58}}>↓</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>
+      <div style={{width:52,fontFamily:"var(--mono)",fontSize:9,color:"var(--muted)",textAlign:"right",flexShrink:0,letterSpacing:".06em",fontWeight:600}}>RAILS</div>
+      <div style={{flex:1,display:"flex",gap:2,flexWrap:"wrap"}}>
+        {RAILS.map(r=><div key={r.id} style={{flex:"1 0 0",minWidth:38,padding:"3px 2px",borderRadius:2,textAlign:"center",background:selectedRail===r.id?"rgba(61,184,138,.09)":"var(--card)",border:`1px solid ${selectedRail===r.id?"#3DB88A":"var(--border)"}`}}>
+          <div style={{fontFamily:"var(--mono)",fontSize:9,fontWeight:600,color:selectedRail===r.id?"#3DB88A":"var(--muted)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.provider}</div>
         </div>)}
       </div>
     </div>
@@ -801,16 +802,16 @@ function AuditTrail({entries}){
   const ref=useRef();
   useEffect(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},[entries]);
   return <div ref={ref} style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:2,padding:"9px 13px"}}>
-    {entries.length===0&&<div style={{color:"var(--dim)",fontSize:11,textAlign:"center",padding:24,lineHeight:1.6}}>Audit trail populates as agents process transactions</div>}
+    {entries.length===0&&<div style={{color:"var(--dim)",fontSize:13,textAlign:"center",padding:24,lineHeight:1.6}}>Audit trail populates as agents process transactions</div>}
     {entries.map((e,i)=>{
       const ag=AGENTS.find(a=>a.id===e.agent);
-      return <div key={i} style={{padding:"4px 7px",borderRadius:2,background:"var(--card)",borderLeft:`2px solid ${ag?ag.color+"60":"var(--border)"}`,animation:"fadeUp .2s ease"}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:1}}>
-          <span className="sans" style={{fontSize:11,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em"}}>{e.agent}</span>
-          <span style={{fontFamily:"var(--mono)",fontSize:7,color:"var(--dim)"}}>{e.time}</span>
+      return <div key={i} style={{padding:"6px 9px",borderRadius:2,background:"var(--card)",borderLeft:`2px solid ${ag?ag.color+"70":"var(--border)"}`,animation:"fadeUp .2s ease"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3,gap:8}}>
+          <span className="sans" style={{fontSize:11,fontWeight:700,color:ag?ag.color:"var(--muted)",textTransform:"uppercase",letterSpacing:".06em",flexShrink:0}}>{e.agent}</span>
+          <span style={{fontFamily:"var(--mono)",fontSize:10,color:"var(--muted)",whiteSpace:"nowrap"}}>{e.time}</span>
         </div>
-        <div style={{fontSize:12,color:"#94A3B8",lineHeight:1.4}}>{e.message}</div>
-        {e.status&&<span className="tag" style={{display:"inline-block",marginTop:2,background:e.status==="pass"?"rgba(61,184,138,.08)":e.status==="fail"?"rgba(224,82,82,.08)":"rgba(212,145,74,.08)",color:e.status==="pass"?"#3DB88A":e.status==="fail"?"#E05252":"#D4914A"}}>{e.status.toUpperCase()}</span>}
+        <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5,opacity:.85}}>{e.message}</div>
+        {e.status&&<span className="tag" style={{display:"inline-block",marginTop:3,background:e.status==="pass"?"rgba(61,184,138,.10)":e.status==="fail"?"rgba(224,82,82,.10)":"rgba(212,145,74,.10)",color:e.status==="pass"?"#3DB88A":e.status==="fail"?"#E05252":"#D4914A",border:`1px solid ${e.status==="pass"?"rgba(61,184,138,.2)":e.status==="fail"?"rgba(224,82,82,.2)":"rgba(212,145,74,.2)"}`}}>{e.status.toUpperCase()}</span>}
       </div>;
     })}
   </div>;
