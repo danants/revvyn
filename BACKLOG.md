@@ -1,10 +1,21 @@
 # Revvyn — Product Backlog
 
-Last updated: 2026-03-07
+Last updated: 2026-03-11
 
 ---
 
 ## 🔴 Phase 1 — Build Now (Pre-Seed / Design Partner Stage)
+
+### Company Policy Document Upload
+Allow a company to upload their existing expense/payments policy (PDF, Word doc, or spreadsheet) and have Revvyn parse and enforce it automatically across all agents operating under that company's mandate.
+- Ingests common formats: PDF, DOCX, XLSX
+- Extracts rules: spend limits by role, merchant category restrictions, travel tiers, approval thresholds
+- Confirmation step: company reviews and validates what Revvyn extracted before rules go live
+- Rules apply at company level — one upload governs every agent operating under that mandate
+- Policy versioning — all transactions auditable against the ruleset active at time of execution
+- **Why now:** Most companies already have this documented. Zero rebuild required — they upload what exists. Dramatically lowers onboarding friction for enterprise design partners
+- **Demo value:** Upload a sample expense policy PDF in the sandbox and show rules being enforced in real time — makes the "how does a company actually use this" question trivially easy to answer
+- **Effort:** Medium — LLM extraction layer + rule confirmation UI + policy versioning
 
 ### Live OFAC SDN Sanctions Feed
 Replace simulated sanctions screening in the sandbox with a real, live data check against the OFAC Specially Designated Nationals list.
