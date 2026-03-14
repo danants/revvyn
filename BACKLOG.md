@@ -1,115 +1,105 @@
-# Revvyn — Product Backlog
+# Revvyn — Backlog
 
-Last updated: 2026-03-11
-
----
-
-## 🔴 Phase 1 — Build Now (Pre-Seed / Design Partner Stage)
-
-### Company Policy Document Upload
-Allow a company to upload their existing expense/payments policy (PDF, Word doc, or spreadsheet) and have Revvyn parse and enforce it automatically across all agents operating under that company's mandate.
-- Ingests common formats: PDF, DOCX, XLSX
-- Extracts rules: spend limits by role, merchant category restrictions, travel tiers, approval thresholds
-- Confirmation step: company reviews and validates what Revvyn extracted before rules go live
-- Rules apply at company level — one upload governs every agent operating under that mandate
-- Policy versioning — all transactions auditable against the ruleset active at time of execution
-- **Why now:** Most companies already have this documented. Zero rebuild required — they upload what exists. Dramatically lowers onboarding friction for enterprise design partners
-- **Demo value:** Upload a sample expense policy PDF in the sandbox and show rules being enforced in real time — makes the "how does a company actually use this" question trivially easy to answer
-- **Effort:** Medium — LLM extraction layer + rule confirmation UI + policy versioning
-
-### Live OFAC SDN Sanctions Feed
-Replace simulated sanctions screening in the sandbox with a real, live data check against the OFAC Specially Designated Nationals list.
-- Source: https://sanctionslist.ofac.treas.gov/Home/SdnList (free, public, updated daily)
-- Every transaction run in the sandbox checks the beneficiary and destination country against the live list
-- When it hits, the block is real — not simulated
-- **Why now:** When an investor asks "is the sanctions screening real?" the answer becomes yes
-- **Effort:** Low — JSON feed, no auth required
-
-### EU Consolidated Sanctions Feed
-- Source: https://webgate.ec.europa.eu/fsd/fsf (free, public)
-- Complements OFAC for European corridors
-- **Effort:** Low
-
-### UN Sanctions Feed
-- Source: https://scsanctions.un.org/feed/ (free, public)
-- Covers KP, IR, SY and others
-- **Effort:** Low
+Last updated: March 14, 2026
 
 ---
 
-## 🟡 Phase 2 — Specialist Agent Layer (Post First Design Partner)
+## IMMEDIATE (Next Session)
 
-### Regulatory Intelligence Agent
-A dedicated agent that monitors live regulatory changes and automatically updates policy rules without manual intervention.
-- OFAC/EU/UN sanctions list changes → auto-update blocked country lists
-- FinCEN advisories — free RSS feed
-- FATF grey/black list changes
-- MiCA updates (EU crypto regulation)
-- PSD2 amendments
-- Feeds into Governance Agent in real time
-- **Value:** Revvyn stays current without human oversight — a genuine moat
+- [ ] Expose rail scoring breakdown in control agent audit output (show all candidate scores, not just winner)
+- [ ] Add rail scoring comparison to dashboard (SEPA: 72 / Bridge: 89 / x402: 45 → Selected: Bridge)
+- [ ] Surface ERC-8004 / Verifiable Intent status in KYA dashboard panel
+- [ ] Add "11 rails · BaseRail extensible" message to rails tab
+- [ ] Update seed_dev.sql with registered_agents insert
+- [ ] Add CORS `*` for dev environment so dashboard works without Python server workaround
+- [ ] Add static file route to FastAPI so dashboard serves at `/dashboard`
+- [ ] Record demo — 90 seconds, dashboard + Stripe split screen, 3 scenarios (approved, rejected, kill switch)
+- [ ] Write voiceover script for the demo
 
-### Counterparty Risk Agent
-Pulls live data on the beneficiary before Governance makes a decision.
-- OpenCorporates API — free tier, basic company registry checks
-- Companies House (UK) — free API
-- SEC EDGAR — free for US entities
-- Adverse media screening (open sources)
-- PEP (Politically Exposed Persons) flag
-- **Value:** Real counterparty verification, not simulated
+## THIS WEEK
 
-### FX & Liquidity Agent
-Live rate feeds and execution optimisation for cross-border transactions.
-- Open Exchange Rates — free tier
-- frankfurter.app — completely free, real-time
-- Hedging recommendations
-- Pre-funded corridor management
-- Optimal execution timing
-- **Value:** Real FX savings calculations, not estimated
+- [ ] Build pitch deck in Gamma with insert content (4 slides ready)
+- [ ] Update one-pager with KYA, 3 rails, competitive landscape
+- [ ] Update bible with KYA agent, x402 rail, Bridge rail, Circle hackathon evidence
+- [ ] LinkedIn post with demo video (same playbook as CloseLoop)
+- [ ] DM Simon Taylor with demo — reference March 3 conversation
 
-### Fraud Pattern Agent
-Trained on transaction history to detect behavioural anomalies.
-- Velocity spike detection
-- Unusual corridor flagging
-- Amount pattern analysis
-- Feeds risk signal into Control Agent
-- **Value:** Behavioural risk layer on top of static policy rules
+## POST-DEMO
 
-### Jurisdictional Compliance Agent
-Country-specific rules engine.
-- Capital controls by corridor
-- Local reporting thresholds (e.g. $10K CTR in US)
-- Local licensing requirements
-- Knows Brazil ≠ Germany for compliance purposes
-- **Value:** Automated jurisdiction-aware compliance — removes manual legal research
+- [ ] Human-in-the-loop approval flow for escalated payments (resolve via API endpoint already exists)
+- [ ] Agent transaction history auto-updating (daily_spent, monthly_spent, total_transactions increment on settlement)
+- [ ] Wire real AgentProof API as trust signal input to KYA agent
+- [ ] Refund pipeline — reverse governance (payment flows backwards through same 6 agents with same enforcement)
+- [ ] Serve dashboard on Render alongside API
+- [ ] Landing page for revvyn.com
+
+## SERIES A — Agent Accounts
+
+KYA already contains the account primitives: identity, trust score, exposure ceiling, currency permissions, transaction history. Adding balance and credit transforms Revvyn from governance middleware into the financial kernel for the AI economy.
+
+- [ ] Agent balance field (hold funds)
+- [ ] Agent credit system (exposure ceiling → credit line)
+- [ ] Agent-to-agent settlement
+- [ ] Agent account dashboard (balance, credit, exposure, history)
+- [ ] Regulatory assessment for custody/credit implications
+
+Architecture:
+
+```
+AI Agents
+    │
+Agent Accounts
+(identity · balance · exposure · trust)
+    │
+Revvyn Financial Kernel
+(KYA · Governance · Control · Execution · Audit)
+    │
+Payment Rails
+(SEPA · Stablecoin · x402 · Cards · DeFi)
+```
+
+## SERIES A — x402 Middleware (Option 2)
+
+Revvyn becomes a transparent proxy in the HTTP flow between agents and x402 endpoints. Agent doesn't know Revvyn is there — makes an x402 request, Revvyn intercepts, governs, forwards or blocks.
+
+Requires:
+- [ ] HTTP proxy architecture (intercept 402 responses)
+- [ ] x402 SDK integration (parse payment instructions)
+- [ ] Wallet management (hold and release USDC on behalf of agents)
+- [ ] Real-time settlement monitoring on Base/Solana
+- [ ] Production infrastructure
+
+## SERIES A — Regulatory & Compliance Infrastructure
+
+- [ ] Regulatory reporting automation — one-click compliance reports (PSD2, FATF, FinCEN, MiCA)
+- [ ] Jurisdiction policy templates — pre-built configs (US/FinCEN, EU/MiCA, UK/FCA, SG/MAS, UAE/VARA) with auto-updates when regulations change
+- [ ] SOC2 Type 1 certification timeline
+
+## PARKED
+
+- [ ] Stripe Financial Accounts / Bridge live integration (requires $10-20K/month — revisit post-funding)
+- [ ] Circle API live USDC integration (requires onboarding)
+
+## GITHUB HOUSEKEEPING
+
+- [ ] Fix git committer name/email (`git config --global --edit`)
+- [ ] Add `.DS_Store` to `.gitignore`
+- [ ] Tag current state as `v0.2.0` — KYA + multi-rail
 
 ---
 
-## 🟢 Phase 3 — Platform Layer (Post Seed Raise)
+## GUARDRAILS
 
-### Customer Support Vertical
-Governance layer for AI agents handling refunds, chargebacks, and compensation payments.
-- Target platforms: Zendesk, Freshdesk, Intercom, Jira Service Management
-- Agents making financial decisions on support tickets need spend limits, audit trails, escalation paths
-- **Why:** Large addressable market, clear pain point, easy to demo
+Before building anything, it must pass:
 
-### Extensible Agent Marketplace
-Allow enterprise clients to plug in only the specialist agents they need for their vertical.
-- Treasury clients → FX Agent + Jurisdictional Agent
-- Marketplace clients → Fraud Agent + Counterparty Agent
-- Consumer AI clients → Yield Guardian + Self-custody Agent
-- **Why:** Turns Revvyn from a point solution into a platform — dramatically increases TAM and defensibility
+1. Does this strengthen agent payment governance?
+2. Does this increase the trust/compliance story?
+3. Does this move toward the financial kernel vision?
+4. Would removing this weaken the demo?
 
-### ERP Integration Layer
-Native connectors to SAP, Oracle, NetSuite for Enterprise Treasury vertical.
-- Payment intent originates in ERP, Revvyn governs execution
-- Closes the loop from intent to settlement to reconciliation
-- **Why:** Enterprise sales motion, high switching costs, strong NRR
-
----
-
-## Notes
-
-- All Phase 1 items use free public data — no API keys or budget required
-- Phase 2 specialist agents are the roadmap story for investor conversations
-- Phase 3 is the platform narrative — builds moat and justifies Series A
+**Explicitly rejected:**
+- Analytics dashboards without governance purpose
+- Agent productivity scoring
+- AI predictions / speculative risk models
+- Workflow builder features
+- Any feature that observes without enforcing
